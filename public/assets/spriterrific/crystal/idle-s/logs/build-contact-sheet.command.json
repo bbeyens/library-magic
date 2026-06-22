@@ -1,0 +1,31 @@
+{
+  "stage": "build-contact-sheet",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/animated_spritesheets/scripts/build_contact_sheet.py",
+    "--input-dir",
+    "public/assets/spriterrific/crystal/idle-s/normalized",
+    "--glob",
+    "frame-*.png",
+    "--rows",
+    "2",
+    "--cols",
+    "5",
+    "--out",
+    "public/assets/spriterrific/crystal/idle-s/review/contact.png",
+    "--font-path",
+    "/System/Library/Fonts/Supplemental/Verdana Bold.ttf"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:11:18.655363Z",
+  "completedAt": "2026-06-22T15:11:18.748639Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/idle-s/logs/build-contact-sheet.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/idle-s/logs/build-contact-sheet.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

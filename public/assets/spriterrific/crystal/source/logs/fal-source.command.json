@@ -1,0 +1,36 @@
+{
+  "stage": "fal-source",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/fal_ai_image/scripts/fal_queue_image_run.py",
+    "--model-alias",
+    "gpt-image-2-t2i",
+    "--prompt-file",
+    "public/assets/spriterrific/crystal/source/input/source-prompt.txt",
+    "--out-dir",
+    "public/assets/spriterrific/crystal/source/source-fal",
+    "--filename-prefix",
+    "user-input-source",
+    "--task-slug",
+    "source-source",
+    "--image-size",
+    "square_hd",
+    "--output-format",
+    "png",
+    "--quality",
+    "high",
+    "--seed",
+    "220622"
+  ],
+  "cwd": null,
+  "status": "running",
+  "startedAt": "2026-06-22T15:04:54.803860Z",
+  "updatedAt": "2026-06-22T15:04:54.803860Z",
+  "stdout": "public/assets/spriterrific/crystal/source/logs/fal-source.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/source/logs/fal-source.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

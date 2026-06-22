@@ -1,0 +1,6 @@
+{
+  "request_id": "019eefdc-fb40-7c43-9181-31f6693a9fad",
+  "response_url": "https://queue.fal.run/openai/gpt-image-2/requests/019eefdc-fb40-7c43-9181-31f6693a9fad",
+  "status_url": "https://queue.fal.run/openai/gpt-image-2/requests/019eefdc-fb40-7c43-9181-31f6693a9fad/status",
+  "cancel_url": "https://queue.fal.run/openai/gpt-image-2/requests/019eefdc-fb40-7c43-9181-31f6693a9fad/cancel"
+}

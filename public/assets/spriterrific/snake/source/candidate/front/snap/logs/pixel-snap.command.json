@@ -1,0 +1,23 @@
+{
+  "stage": "pixel-snap",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/pixel_snapper/scripts/pixel_snapper.py",
+    "public/assets/spriterrific/snake/source/candidate/front/snap/input/source.png",
+    "public/assets/spriterrific/snake/source/candidate/front/snap/snapped/snapped.png",
+    "--k-colors",
+    "14"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:39:09.358634Z",
+  "completedAt": "2026-06-22T15:39:23.460085Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/snake/source/candidate/front/snap/logs/pixel-snap.stdout.txt",
+  "stderr": "public/assets/spriterrific/snake/source/candidate/front/snap/logs/pixel-snap.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

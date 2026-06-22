@@ -1,0 +1,9 @@
+{
+  "status": "IN_PROGRESS",
+  "request_id": "019ef002-b528-7ba2-a9d3-9ea10e3cc97b",
+  "response_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef002-b528-7ba2-a9d3-9ea10e3cc97b",
+  "status_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef002-b528-7ba2-a9d3-9ea10e3cc97b/status",
+  "cancel_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef002-b528-7ba2-a9d3-9ea10e3cc97b/cancel",
+  "logs": [],
+  "metrics": {}
+}

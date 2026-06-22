@@ -1,0 +1,179 @@
+{
+  "version": 1,
+  "mode": "padded-native-review",
+  "description": "Recovered components placed on a shared padded canvas without scaling.",
+  "canvasSize": [
+    384,
+    448
+  ],
+  "minCanvasSize": [
+    384,
+    448
+  ],
+  "placement": {
+    "centerX": 192,
+    "bottomY": 440
+  },
+  "frames": [
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-01.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-01.png",
+      "sourceSize": [
+        210,
+        351
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        87,
+        89
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-02.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-02.png",
+      "sourceSize": [
+        207,
+        353
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        89,
+        87
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-03.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-03.png",
+      "sourceSize": [
+        199,
+        350
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        93,
+        90
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-04.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-04.png",
+      "sourceSize": [
+        203,
+        353
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        91,
+        87
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-05.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-05.png",
+      "sourceSize": [
+        197,
+        346
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        94,
+        94
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-06.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-06.png",
+      "sourceSize": [
+        192,
+        336
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        96,
+        104
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-07.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-07.png",
+      "sourceSize": [
+        192,
+        336
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        96,
+        104
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-08.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-08.png",
+      "sourceSize": [
+        191,
+        333
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        97,
+        107
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-09.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-09.png",
+      "sourceSize": [
+        192,
+        334
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        96,
+        106
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/snake/idle-s/recovered/frame-10.png",
+      "output": "public/assets/spriterrific/snake/idle-s/recovered-native/frames/frame-10.png",
+      "sourceSize": [
+        192,
+        332
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        96,
+        108
+      ]
+    }
+  ]
+}

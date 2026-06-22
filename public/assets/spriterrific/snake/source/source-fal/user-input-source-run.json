@@ -1,0 +1,93 @@
+{
+  "timestamp": "2026-06-22T15:33:35Z",
+  "task_slug": "source-source",
+  "provider": "fal",
+  "model_alias": "gpt-image-2-t2i",
+  "family": "gpt-image-2",
+  "endpoint_id": "openai/gpt-image-2",
+  "task_type": "text-to-image",
+  "status": "completed",
+  "prompt_text": "Intended use: create a clean user-input source character for a pixel-sprite animation pipeline.\n\nCharacter concept from the user:\ncute magical serpent familiar, coiled snake shaped like an S, teal and violet scales, glowing blue eyes, small mana orb markings, centered game prop, readable silhouette, no text, no background\n\nInterpret the user concept as the character identity only. Do not follow any implied photographic, cinematic, realistic, 3D, painterly, or environment style from the user text.\nUse these constraints when the source is intended to continue into pixel snapping and animation anchors. Higher-fidelity game art can be valid when mixels are acceptable at the target resolution, but it should not be treated as a pixel-snap-ready source without a low-bit distillation step.\nIf the user supplies a detailed image, use it as identity input only. The eventual production candidate must remove complexity and conform to the opinionated low-bit pixel-sprite style before snapping.\n\nCreate one full-body character on a 1024x1024 square canvas.\n\n\n\nStyle target:\n- deliberately simple 16-bit-era pixel art, not polished high-detail JRPG art\n- low-fidelity game character art with a limited 8 to 12 color feeling\n- big pixel clusters, crisp chunky edges, and flat readable color masses\n- simplified shapes and fewer fine details\n- strong readable silhouette at small size\n- compact body proportions where appropriate for a game sprite\n- simplify the outfit into large readable color blocks and only a few major identity cues\n- dark outline clusters\n- no tiny accessories, ornate trim, jewelry, stitching, buttons, buckles, texture noise, fabric weave, cloth-fold detail, or layered micro-props\n- no realistic photo, no photorealism, no cinematic render, no 3D model look\n\nComposition:\n- exactly one full-body character\n- neutral upright pose\n- front-facing or slight three-quarter game sprite stance\n- centered\n- full body visible from hair to feet\n- generous margin on all sides\n- readable at future 256x256 animation-cell scale\n\n\n\nBackground:\n- opaque exact flat light gray background #D9D9D9\n- no scenery\n- no castle, room, landscape, props, or ground plane\n- no gradients\n- no texture\n- no shadows\n- no checkerboard\n- no faux transparency\n\nAvoid:\n- text, labels, logos, frame numbers\n- extra characters\n- cropped limbs\n- transparent background\n- photographic lighting\n- high-fidelity concept art rendering",
+  "prompt_hash": "4e09f7c55d42e0efb0532e374c562d290a1f9399fcb5057ea8b7bd97761997f7",
+  "input_source": {
+    "image_files": [],
+    "image_urls": [],
+    "input_image_field": null
+  },
+  "resolved_arguments": {
+    "num_images": 1,
+    "image_size": "square_hd",
+    "output_format": "png",
+    "quality": "high",
+    "prompt": "Intended use: create a clean user-input source character for a pixel-sprite animation pipeline.\n\nCharacter concept from the user:\ncute magical serpent familiar, coiled snake shaped like an S, teal and violet scales, glowing blue eyes, small mana orb markings, centered game prop, readable silhouette, no text, no background\n\nInterpret the user concept as the character identity only. Do not follow any implied photographic, cinematic, realistic, 3D, painterly, or environment style from the user text.\nUse these constraints when the source is intended to continue into pixel snapping and animation anchors. Higher-fidelity game art can be valid when mixels are acceptable at the target resolution, but it should not be treated as a pixel-snap-ready source without a low-bit distillation step.\nIf the user supplies a detailed image, use it as identity input only. The eventual production candidate must remove complexity and conform to the opinionated low-bit pixel-sprite style before snapping.\n\nCreate one full-body character on a 1024x1024 square canvas.\n\n\n\nStyle target:\n- deliberately simple 16-bit-era pixel art, not polished high-detail JRPG art\n- low-fidelity game character art with a limited 8 to 12 color feeling\n- big pixel clusters, crisp chunky edges, and flat readable color masses\n- simplified shapes and fewer fine details\n- strong readable silhouette at small size\n- compact body proportions where appropriate for a game sprite\n- simplify the outfit into large readable color blocks and only a few major identity cues\n- dark outline clusters\n- no tiny accessories, ornate trim, jewelry, stitching, buttons, buckles, texture noise, fabric weave, cloth-fold detail, or layered micro-props\n- no realistic photo, no photorealism, no cinematic render, no 3D model look\n\nComposition:\n- exactly one full-body character\n- neutral upright pose\n- front-facing or slight three-quarter game sprite stance\n- centered\n- full body visible from hair to feet\n- generous margin on all sides\n- readable at future 256x256 animation-cell scale\n\n\n\nBackground:\n- opaque exact flat light gray background #D9D9D9\n- no scenery\n- no castle, room, landscape, props, or ground plane\n- no gradients\n- no texture\n- no shadows\n- no checkerboard\n- no faux transparency\n\nAvoid:\n- text, labels, logos, frame numbers\n- extra characters\n- cropped limbs\n- transparent background\n- photographic lighting\n- high-fidelity concept art rendering",
+    "seed": 220626
+  },
+  "preset_defaults": {
+    "num_images": 1,
+    "image_size": "landscape_4_3",
+    "output_format": "png",
+    "quality": "high"
+  },
+  "explicit_overrides": {
+    "image_size": "square_hd",
+    "output_format": "png",
+    "quality": "high",
+    "seed": 220626
+  },
+  "headers": {
+    "X-Fal-Store-IO": "1",
+    "x-app-fal-disable-fallback": "true"
+  },
+  "request_id": "019eeff7-37a1-75c2-89db-74bd0cdd3b15",
+  "output_files": [
+    "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-output-01.png"
+  ],
+  "output_urls": [
+    "https://v3b.fal.media/files/b/0a9f5561/8JgGmHs2V6xYWf-mF2IvK_GYchcgxy.png"
+  ],
+  "estimated_cost": {
+    "estimate_type": "unit_price",
+    "total_cost": 1,
+    "currency": "USD"
+  },
+  "estimated_cost_method": "unit_price",
+  "reconciled_cost": null,
+  "cost_currency": "USD",
+  "raw_files": {
+    "create_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-create.json",
+    "create_meta_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-create-meta.json",
+    "status_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-status.json",
+    "status_meta_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-status-meta.json",
+    "final_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-final.json",
+    "final_meta_json": "/Users/zbeyens/Documents/Library magic/public/assets/spriterrific/snake/source/source-fal/user-input-source-final-meta.json"
+  },
+  "notes": [],
+  "completed_at": "2026-06-22T15:36:14Z",
+  "billable_units_header": "0.2134",
+  "request_headers_seen": {
+    "status": {
+      "date": "Mon, 22 Jun 2026 15:36:12 GMT",
+      "content-type": "application/json",
+      "content-length": "454",
+      "connection": "close",
+      "vary": "origin, access-control-request-method, access-control-request-headers",
+      "access-control-allow-credentials": "true",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-robots-tag": "noindex"
+    },
+    "result": {
+      "date": "Mon, 22 Jun 2026 15:36:13 GMT",
+      "content-type": "application/json",
+      "content-length": "216",
+      "connection": "close",
+      "x-fal-billable-units": "0.2134",
+      "x-envoy-upstream-service-time": "148333",
+      "x-fal-served-from": "6935d2b1-9a74-440e-b25e-00959b36849e",
+      "x-fal-request-id": "019eeff7-37a1-75c2-89db-74bd0cdd3b15",
+      "vary": "origin, access-control-request-method, access-control-request-headers",
+      "access-control-allow-credentials": "true",
+      "strict-transport-security": "max-age=31536000; includeSubDomains",
+      "x-robots-tag": "noindex"
+    }
+  }
+}

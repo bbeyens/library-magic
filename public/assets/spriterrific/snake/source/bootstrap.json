@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "type": "bootstrap-anchors",
+  "status": "completed",
+  "updatedAt": "2026-06-22T15:39:24.126486Z",
+  "character": "mana-snake",
+  "directions": [],
+  "candidateFacing": "front",
+  "sourceMode": "text",
+  "sourceImage": "public/assets/spriterrific/snake/source/input/source.png",
+  "sourceOriginal": null,
+  "sourceModelInput": null,
+  "sourceInputMetadata": null,
+  "sourceUserImage": null,
+  "sourcePromptFile": null,
+  "candidatePromptPreset": "lobit-v1",
+  "pixelSnapAnchor": true,
+  "candidatePromptSource": "preset:lobit-v1",
+  "gameView": "generic",
+  "anchorRole": "prop",
+  "anchorContext": "A clickable magical snake familiar for an incremental mini-game UI; compact centered sprite, non scary, no background.",
+  "candidateAnchor": "public/assets/spriterrific/snake/source/candidate/front/snapped-1024-chroma.png",
+  "anchors": {},
+  "canonicalOutputs": {
+    "source": "public/assets/spriterrific/snake/source/input/source.png",
+    "sourceOriginal": null,
+    "sourceModelInput": null,
+    "sourceInputMetadata": null,
+    "candidateRaw": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png",
+    "candidateAnchor1024Chroma": "public/assets/spriterrific/snake/source/candidate/front/anchor-1024-chroma.png",
+    "candidateSnapped1024Chroma": "public/assets/spriterrific/snake/source/candidate/front/snapped-1024-chroma.png",
+    "directionAnchors": {},
+    "character": "public/assets/spriterrific/snake/source/character.json",
+    "review": "public/assets/spriterrific/snake/source/review/index.md"
+  },
+  "config": {
+    "request": "public/assets/spriterrific/snake/source/config/bootstrap-request.json",
+    "candidatePromptRendered": "public/assets/spriterrific/snake/source/config/candidate-prompt-rendered.txt",
+    "sourcePromptRendered": "public/assets/spriterrific/snake/source/config/source-prompt-rendered.txt"
+  },
+  "chroma": "#00FF00",
+  "kColors": 14,
+  "models": {
+    "source": "gpt-image-2-t2i",
+    "candidate": "gpt-image-2-edit",
+    "anchor": "gpt-image-2-edit"
+  },
+  "resume": false,
+  "dryFal": false
+}

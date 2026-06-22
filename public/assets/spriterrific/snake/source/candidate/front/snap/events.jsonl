@@ -1,0 +1,4 @@
+{"timestamp": "2026-06-22T15:39:09.358491Z", "event": "snap_run_started", "source": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png"}
+{"timestamp": "2026-06-22T15:39:09.358645Z", "event": "stage_started", "stage": "pixel-snap", "args": ["/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python", "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/pixel_snapper/scripts/pixel_snapper.py", "public/assets/spriterrific/snake/source/candidate/front/snap/input/source.png", "public/assets/spriterrific/snake/source/candidate/front/snap/snapped/snapped.png", "--k-colors", "14"]}
+{"timestamp": "2026-06-22T15:39:23.461324Z", "event": "stage_completed", "stage": "pixel-snap", "exitCode": 0}
+{"timestamp": "2026-06-22T15:39:23.860123Z", "event": "snap_run_completed", "snappedSize": [95, 96], "targetSize": [1024, 1024], "anchorScale": 10.0, "anchorOffset": [37, 32]}

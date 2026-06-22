@@ -1,0 +1,30 @@
+{
+  "stage": "baseline-audit-fix",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/gamedev_assets/scripts/asset_sprite_baseline.py",
+    "public/assets/spriterrific/crystal/idle-s/export/spritesheet.raw.png",
+    "--frame",
+    "256x256",
+    "--target-bottom",
+    "255",
+    "--target-center-x",
+    "128",
+    "--out",
+    "public/assets/spriterrific/crystal/idle-s/export/spritesheet.png",
+    "--json",
+    "public/assets/spriterrific/crystal/idle-s/export/baseline-report.json"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:11:18.569992Z",
+  "completedAt": "2026-06-22T15:11:18.654303Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/idle-s/logs/baseline-audit-fix.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/idle-s/logs/baseline-audit-fix.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

@@ -1,0 +1,53 @@
+Intended use: create a clean user-input source character for a pixel-sprite animation pipeline.
+
+Character concept from the user:
+cute magical serpent familiar, coiled snake shaped like an S, teal and violet scales, glowing blue eyes, small mana orb markings, centered game prop, readable silhouette, no text, no background
+
+Interpret the user concept as the character identity only. Do not follow any implied photographic, cinematic, realistic, 3D, painterly, or environment style from the user text.
+Use these constraints when the source is intended to continue into pixel snapping and animation anchors. Higher-fidelity game art can be valid when mixels are acceptable at the target resolution, but it should not be treated as a pixel-snap-ready source without a low-bit distillation step.
+If the user supplies a detailed image, use it as identity input only. The eventual production candidate must remove complexity and conform to the opinionated low-bit pixel-sprite style before snapping.
+
+Create one full-body character on a 1024x1024 square canvas.
+
+
+
+Style target:
+- deliberately simple 16-bit-era pixel art, not polished high-detail JRPG art
+- low-fidelity game character art with a limited 8 to 12 color feeling
+- big pixel clusters, crisp chunky edges, and flat readable color masses
+- simplified shapes and fewer fine details
+- strong readable silhouette at small size
+- compact body proportions where appropriate for a game sprite
+- simplify the outfit into large readable color blocks and only a few major identity cues
+- dark outline clusters
+- no tiny accessories, ornate trim, jewelry, stitching, buttons, buckles, texture noise, fabric weave, cloth-fold detail, or layered micro-props
+- no realistic photo, no photorealism, no cinematic render, no 3D model look
+
+Composition:
+- exactly one full-body character
+- neutral upright pose
+- front-facing or slight three-quarter game sprite stance
+- centered
+- full body visible from hair to feet
+- generous margin on all sides
+- readable at future 256x256 animation-cell scale
+
+
+
+Background:
+- opaque exact flat light gray background #D9D9D9
+- no scenery
+- no castle, room, landscape, props, or ground plane
+- no gradients
+- no texture
+- no shadows
+- no checkerboard
+- no faux transparency
+
+Avoid:
+- text, labels, logos, frame numbers
+- extra characters
+- cropped limbs
+- transparent background
+- photographic lighting
+- high-fidelity concept art rendering

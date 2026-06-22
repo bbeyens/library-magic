@@ -1,0 +1,23 @@
+{
+  "stage": "make-alternating-guide",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/animated_spritesheets/scripts/make_alternating_sheet.py",
+    "--size",
+    "1536x1152",
+    "--out",
+    "public/assets/spriterrific/crystal/idle-s/guide/alternating-1536x1152-4x3-pose-board.png"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:08:36.881643Z",
+  "completedAt": "2026-06-22T15:08:37.151929Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/idle-s/logs/make-alternating-guide.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/idle-s/logs/make-alternating-guide.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

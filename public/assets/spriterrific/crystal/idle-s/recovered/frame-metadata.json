@@ -1,0 +1,145 @@
+{
+  "sheet": "public/assets/spriterrific/crystal/idle-s/generated/sheet.png",
+  "rows": 3,
+  "cols": 4,
+  "count": 8,
+  "keying": {
+    "chromaRgb": [
+      0,
+      255,
+      0
+    ],
+    "threshold": 90.0,
+    "minComponentArea": 500,
+    "removedPixels": 1404338,
+    "keptPixelsBeforeDespeckle": 365134,
+    "bbox": [
+      107,
+      73,
+      1422,
+      823
+    ]
+  },
+  "frames": [
+    {
+      "frame": "01",
+      "bbox": [
+        107,
+        120,
+        319,
+        427
+      ],
+      "area": 43368,
+      "center": [
+        213.0,
+        273.5
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-01.png"
+    },
+    {
+      "frame": "02",
+      "bbox": [
+        465,
+        74,
+        698,
+        427
+      ],
+      "area": 53495,
+      "center": [
+        581.5,
+        250.5
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-02.png"
+    },
+    {
+      "frame": "03",
+      "bbox": [
+        832,
+        73,
+        1065,
+        427
+      ],
+      "area": 53583,
+      "center": [
+        948.5,
+        250.0
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-03.png"
+    },
+    {
+      "frame": "04",
+      "bbox": [
+        1211,
+        120,
+        1422,
+        427
+      ],
+      "area": 43348,
+      "center": [
+        1316.5,
+        273.5
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-04.png"
+    },
+    {
+      "frame": "05",
+      "bbox": [
+        109,
+        515,
+        319,
+        823
+      ],
+      "area": 43620,
+      "center": [
+        214.0,
+        669.0
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-05.png"
+    },
+    {
+      "frame": "06",
+      "bbox": [
+        477,
+        522,
+        685,
+        823
+      ],
+      "area": 42033,
+      "center": [
+        581.0,
+        672.5
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-06.png"
+    },
+    {
+      "frame": "07",
+      "bbox": [
+        847,
+        531,
+        1052,
+        823
+      ],
+      "area": 40373,
+      "center": [
+        949.5,
+        677.0
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-07.png"
+    },
+    {
+      "frame": "08",
+      "bbox": [
+        1211,
+        516,
+        1422,
+        823
+      ],
+      "area": 43783,
+      "center": [
+        1316.5,
+        669.5
+      ],
+      "path": "public/assets/spriterrific/crystal/idle-s/recovered/frame-08.png"
+    }
+  ]
+}

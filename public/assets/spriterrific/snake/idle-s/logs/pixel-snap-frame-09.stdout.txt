@@ -1,0 +1,1 @@
+Snapped public/assets/spriterrific/snake/idle-s/recovered/frame-09.png -> public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-09.png (46x78)

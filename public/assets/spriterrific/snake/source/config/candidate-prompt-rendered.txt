@@ -1,0 +1,48 @@
+Intended use: create a deliberately simple low-bit production sprite anchor for a pixel-snap animation pipeline.
+
+Input image role: identity reference only. Treat any supplied prompt or image as raw identity material, not as a style or detail reference. Preserve only the broad character identity, silhouette, outfit color blocks, proportions, and readable personality.
+
+Do not preserve the high-detail rendering style, native resolution, accessory density, or tiny costume details. Force the reference through an opinionated low-bit pixel-sprite distillation step before it can become a pixel-snap anchor.
+This constrained style is required because this candidate will be pixel-snapped and used as an animation anchor. If the goal is a non-pixel-snap-bound game asset where mixels are acceptable at the target resolution, use a custom candidate prompt instead of this preset.
+
+Create one full-body front-facing character identity anchor on a 1024x1024 square canvas.
+
+
+Style target:
+- deliberately simple 16-bit-era pixel art, not polished high-detail JRPG art
+- low fidelity, chunky, readable from far away
+- limited 8 to 12 color feeling, with flat color clusters rather than rich gradients
+- big pixel clusters and clean stepped edges
+- compact body proportions and a readable full-body silhouette
+- simplify costume into large readable color blocks; collapse small identity details into one or two big cues
+- no tiny accessories, ornate trim, jewelry, stitching, buttons, buckles, texture noise, fabric weave, cloth-fold detail, or layered micro-props
+- dark outline clusters and clear internal separations
+- designed to fit cleanly inside future 256x256 animation cells
+- after pixel snapping, the character should feel like a roughly 100 to 130 pixel tall native sprite, not a 200+ pixel high-detail illustration
+
+Composition:
+- exactly one full-body character
+- facing the viewer / screen-front
+- centered
+- full body visible
+- generous margin on all sides
+
+
+- neutral upright pose
+
+Background:
+- opaque exact flat chroma green #00FF00 background
+- no gradients
+- no texture
+- no shadows
+- no checkerboard
+- no faux transparency
+- no matte-color spill
+
+Avoid:
+- text, labels, frame numbers
+- props beyond the character concept
+- scenery
+- extra characters
+- cropped limbs
+- transparent background

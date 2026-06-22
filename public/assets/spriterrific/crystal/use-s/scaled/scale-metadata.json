@@ -1,0 +1,166 @@
+{
+  "targetHeight": 210,
+  "maxWidth": 220,
+  "sourceMaxVisibleSize": [
+    65,
+    91
+  ],
+  "mode": "shared",
+  "allowUpscale": true,
+  "scale": 2.3076923076923075,
+  "sharedScale": 2.3076923076923075,
+  "frames": [
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-01.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-01.png",
+      "sourceBBox": [
+        0,
+        0,
+        59,
+        89
+      ],
+      "sourceVisibleSize": [
+        59,
+        89
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        136,
+        205
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-02.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-02.png",
+      "sourceBBox": [
+        0,
+        0,
+        65,
+        72
+      ],
+      "sourceVisibleSize": [
+        65,
+        72
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        150,
+        166
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-03.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-03.png",
+      "sourceBBox": [
+        0,
+        0,
+        12,
+        19
+      ],
+      "sourceVisibleSize": [
+        12,
+        19
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        28,
+        44
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-04.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-04.png",
+      "sourceBBox": [
+        0,
+        0,
+        39,
+        60
+      ],
+      "sourceVisibleSize": [
+        39,
+        60
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        90,
+        138
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-05.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-05.png",
+      "sourceBBox": [
+        0,
+        0,
+        11,
+        18
+      ],
+      "sourceVisibleSize": [
+        11,
+        18
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        25,
+        42
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-06.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-06.png",
+      "sourceBBox": [
+        0,
+        0,
+        12,
+        17
+      ],
+      "sourceVisibleSize": [
+        12,
+        17
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        28,
+        39
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-07.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-07.png",
+      "sourceBBox": [
+        0,
+        0,
+        57,
+        91
+      ],
+      "sourceVisibleSize": [
+        57,
+        91
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        132,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/use-s/pixel-snapped/native/frame-08.png",
+      "output": "public/assets/spriterrific/crystal/use-s/scaled/frame-08.png",
+      "sourceBBox": [
+        0,
+        0,
+        56,
+        88
+      ],
+      "sourceVisibleSize": [
+        56,
+        88
+      ],
+      "scale": 2.3076923076923075,
+      "outputSize": [
+        129,
+        203
+      ]
+    }
+  ]
+}

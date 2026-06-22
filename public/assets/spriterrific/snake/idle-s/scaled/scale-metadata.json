@@ -1,0 +1,204 @@
+{
+  "targetHeight": 210,
+  "maxWidth": 220,
+  "sourceMaxVisibleSize": [
+    46,
+    81
+  ],
+  "mode": "per-frame",
+  "allowUpscale": true,
+  "scale": 2.5925925925925926,
+  "sharedScale": 2.5925925925925926,
+  "frames": [
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-01.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-01.png",
+      "sourceBBox": [
+        0,
+        0,
+        45,
+        78
+      ],
+      "sourceVisibleSize": [
+        45,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        121,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-02.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-02.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        78
+      ],
+      "sourceVisibleSize": [
+        46,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        124,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-03.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-03.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        79
+      ],
+      "sourceVisibleSize": [
+        46,
+        79
+      ],
+      "scale": 2.6582278481012658,
+      "outputSize": [
+        122,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-04.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-04.png",
+      "sourceBBox": [
+        0,
+        0,
+        45,
+        78
+      ],
+      "sourceVisibleSize": [
+        45,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        121,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-05.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-05.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        78
+      ],
+      "sourceVisibleSize": [
+        46,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        124,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-06.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-06.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        81
+      ],
+      "sourceVisibleSize": [
+        46,
+        81
+      ],
+      "scale": 2.5925925925925926,
+      "outputSize": [
+        119,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-07.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-07.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        80
+      ],
+      "sourceVisibleSize": [
+        46,
+        80
+      ],
+      "scale": 2.625,
+      "outputSize": [
+        121,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-08.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-08.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        78
+      ],
+      "sourceVisibleSize": [
+        46,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        124,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-09.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-09.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        78
+      ],
+      "sourceVisibleSize": [
+        46,
+        78
+      ],
+      "scale": 2.6923076923076925,
+      "outputSize": [
+        124,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/snake/idle-s/pixel-snapped/native/frame-10.png",
+      "output": "public/assets/spriterrific/snake/idle-s/scaled/frame-10.png",
+      "sourceBBox": [
+        0,
+        0,
+        46,
+        79
+      ],
+      "sourceVisibleSize": [
+        46,
+        79
+      ],
+      "scale": 2.6582278481012658,
+      "outputSize": [
+        122,
+        210
+      ]
+    }
+  ]
+}

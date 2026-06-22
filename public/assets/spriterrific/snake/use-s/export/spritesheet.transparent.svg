@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="512" viewBox="0 0 1280 512">
+  <defs>
+    <filter id="glow"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <g id="snake">
+      <path d="M52 154 C84 92 152 101 171 137 C189 171 151 199 114 181 C86 167 98 129 134 133 C162 137 179 154 203 180" fill="none" stroke="#5e459f" stroke-width="36" stroke-linecap="round"/>
+      <path d="M52 154 C84 92 152 101 171 137 C189 171 151 199 114 181 C86 167 98 129 134 133 C162 137 179 154 203 180" fill="none" stroke="#ad8cff" stroke-width="22" stroke-linecap="round"/>
+      <circle cx="203" cy="180" r="25" fill="#9a7dd9"/>
+      <circle cx="212" cy="171" r="4" fill="#ffffff"/>
+      <circle cx="194" cy="171" r="4" fill="#ffffff"/>
+      <path d="M203 188 L188 200 M203 188 L218 200" stroke="#432d68" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="126" cy="137" r="12" fill="#70c7ff" filter="url(#glow)"/>
+      <path d="M66 151 L81 136 L98 153 L82 168 Z" fill="#70c7ff" opacity=".95" filter="url(#glow)"/>
+      <path d="M149 111 L160 99 L174 116 L158 130 Z" fill="#ed9fff" opacity=".9"/>
+    </g>
+  </defs>
+  <use href="#snake" transform="translate(0 0) scale(.96 1.04)"/>
+  <use href="#snake" transform="translate(256 -6) scale(1.02 .98)"/>
+  <use href="#snake" transform="translate(512 -10) rotate(-3 128 128)"/>
+  <use href="#snake" transform="translate(768 -4) rotate(3 128 128)"/>
+  <use href="#snake" transform="translate(1024 0) scale(1.06 .96)"/>
+  <use href="#snake" transform="translate(0 256)"/>
+  <use href="#snake" transform="translate(256 250) scale(.98 1.02)"/>
+  <use href="#snake" transform="translate(512 256)"/>
+</svg>

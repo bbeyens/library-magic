@@ -1,0 +1,1 @@
+public/assets/spriterrific/crystal/idle-s/normalized

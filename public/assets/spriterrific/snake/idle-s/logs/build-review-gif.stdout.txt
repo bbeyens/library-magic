@@ -1,0 +1,1 @@
+public/assets/spriterrific/snake/idle-s/review/preview.gif

@@ -1,0 +1,1 @@
+Snapped public/assets/spriterrific/snake/source/candidate/front/snap/input/source.png -> public/assets/spriterrific/snake/source/candidate/front/snap/snapped/snapped.png (95x96)

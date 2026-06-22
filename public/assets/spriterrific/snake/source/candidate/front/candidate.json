@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "createdAt": "2026-06-22T15:39:23.866753Z",
+  "candidateFacing": "front",
+  "legacyDirection": null,
+  "candidateGenerationMode": "generated-candidate",
+  "raw": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png",
+  "pixelSnapped": true,
+  "anchorStyle": "lobit-v1",
+  "anchor1024": "public/assets/spriterrific/snake/source/candidate/front/anchor-1024.png",
+  "anchor1024Chroma": "public/assets/spriterrific/snake/source/candidate/front/anchor-1024-chroma.png",
+  "snappedNative": "public/assets/spriterrific/snake/source/candidate/front/snapped-native.png",
+  "snapped1024": "public/assets/spriterrific/snake/source/candidate/front/snapped-1024.png",
+  "snapped1024Chroma": "public/assets/spriterrific/snake/source/candidate/front/snapped-1024-chroma.png",
+  "snapRun": "public/assets/spriterrific/snake/source/candidate/front/snap",
+  "snappedSize": [
+    95,
+    96
+  ],
+  "unsnappedTransform": null,
+  "kColors": 14,
+  "chroma": "#00FF00",
+  "seed": 220626,
+  "candidateBackgroundCheck": {
+    "version": 1,
+    "image": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "alphaRange": [
+      255,
+      255
+    ],
+    "opaqueRatio": 1.0,
+    "transparentRatio": 0.0,
+    "chromaLikeRatio": 0.752589225769043,
+    "neutralLightRatio": 0.000545501708984375,
+    "secondNeutralBucketRatio": 0.000194549560546875,
+    "cornerLightNeutralCount": 0,
+    "cornerChromaLikeCount": 0,
+    "sampledNeutralTransitionRatio": 0.0009765625,
+    "chroma": "#00FF00",
+    "strict": false,
+    "passed": true
+  }
+}

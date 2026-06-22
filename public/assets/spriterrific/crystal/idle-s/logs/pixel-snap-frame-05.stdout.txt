@@ -1,0 +1,1 @@
+Snapped public/assets/spriterrific/crystal/idle-s/recovered/frame-05.png -> public/assets/spriterrific/crystal/idle-s/pixel-snapped/native/frame-05.png (48x67)

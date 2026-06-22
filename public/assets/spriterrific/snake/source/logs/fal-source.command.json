@@ -1,0 +1,37 @@
+{
+  "stage": "fal-source",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/fal_ai_image/scripts/fal_queue_image_run.py",
+    "--model-alias",
+    "gpt-image-2-t2i",
+    "--prompt-file",
+    "public/assets/spriterrific/snake/source/input/source-prompt.txt",
+    "--out-dir",
+    "public/assets/spriterrific/snake/source/source-fal",
+    "--filename-prefix",
+    "user-input-source",
+    "--task-slug",
+    "source-source",
+    "--image-size",
+    "square_hd",
+    "--output-format",
+    "png",
+    "--quality",
+    "high",
+    "--seed",
+    "220626"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:33:35.645541Z",
+  "completedAt": "2026-06-22T15:36:14.760806Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/snake/source/logs/fal-source.stdout.txt",
+  "stderr": "public/assets/spriterrific/snake/source/logs/fal-source.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

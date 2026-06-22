@@ -1,0 +1,33 @@
+{
+  "stage": "normalize-frames",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/animated_spritesheets/scripts/normalize_frames.py",
+    "--input-dir",
+    "public/assets/spriterrific/crystal/use-s/scaled",
+    "--out-dir",
+    "public/assets/spriterrific/crystal/use-s/normalized",
+    "--glob",
+    "frame-*.png",
+    "--canvas",
+    "256x256",
+    "--center-x",
+    "128",
+    "--bottom-y",
+    "255",
+    "--flat-bg",
+    "#f0f0f0"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T15:14:05.142945Z",
+  "completedAt": "2026-06-22T15:14:05.213917Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/use-s/logs/normalize-frames.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/use-s/logs/normalize-frames.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

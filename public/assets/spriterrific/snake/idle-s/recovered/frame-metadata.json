@@ -1,0 +1,175 @@
+{
+  "sheet": "public/assets/spriterrific/snake/idle-s/generated/sheet.png",
+  "rows": 3,
+  "cols": 4,
+  "count": 10,
+  "keying": {
+    "chromaRgb": [
+      0,
+      255,
+      0
+    ],
+    "threshold": 90.0,
+    "minComponentArea": 500,
+    "removedPixels": 1329320,
+    "keptPixelsBeforeDespeckle": 440152,
+    "bbox": [
+      65,
+      59,
+      1476,
+      810
+    ]
+  },
+  "frames": [
+    {
+      "frame": "01",
+      "bbox": [
+        65,
+        59,
+        275,
+        410
+      ],
+      "area": 47865,
+      "center": [
+        170.0,
+        234.5
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-01.png"
+    },
+    {
+      "frame": "02",
+      "bbox": [
+        373,
+        60,
+        580,
+        413
+      ],
+      "area": 47238,
+      "center": [
+        476.5,
+        236.5
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-02.png"
+    },
+    {
+      "frame": "03",
+      "bbox": [
+        676,
+        60,
+        875,
+        410
+      ],
+      "area": 45798,
+      "center": [
+        775.5,
+        235.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-03.png"
+    },
+    {
+      "frame": "04",
+      "bbox": [
+        976,
+        59,
+        1179,
+        412
+      ],
+      "area": 46646,
+      "center": [
+        1077.5,
+        235.5
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-04.png"
+    },
+    {
+      "frame": "05",
+      "bbox": [
+        1279,
+        63,
+        1476,
+        409
+      ],
+      "area": 44451,
+      "center": [
+        1377.5,
+        236.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-05.png"
+    },
+    {
+      "frame": "06",
+      "bbox": [
+        72,
+        474,
+        264,
+        810
+      ],
+      "area": 41939,
+      "center": [
+        168.0,
+        642.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-06.png"
+    },
+    {
+      "frame": "07",
+      "bbox": [
+        373,
+        474,
+        565,
+        810
+      ],
+      "area": 41900,
+      "center": [
+        469.0,
+        642.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-07.png"
+    },
+    {
+      "frame": "08",
+      "bbox": [
+        678,
+        476,
+        869,
+        809
+      ],
+      "area": 41555,
+      "center": [
+        773.5,
+        642.5
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-08.png"
+    },
+    {
+      "frame": "09",
+      "bbox": [
+        974,
+        475,
+        1166,
+        809
+      ],
+      "area": 41519,
+      "center": [
+        1070.0,
+        642.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-09.png"
+    },
+    {
+      "frame": "10",
+      "bbox": [
+        1280,
+        478,
+        1472,
+        810
+      ],
+      "area": 41240,
+      "center": [
+        1376.0,
+        644.0
+      ],
+      "path": "public/assets/spriterrific/snake/idle-s/recovered/frame-10.png"
+    }
+  ]
+}

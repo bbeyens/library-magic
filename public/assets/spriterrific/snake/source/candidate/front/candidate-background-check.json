@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "image": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png",
+  "size": [
+    1024,
+    1024
+  ],
+  "alphaRange": [
+    255,
+    255
+  ],
+  "opaqueRatio": 1.0,
+  "transparentRatio": 0.0,
+  "chromaLikeRatio": 0.752589225769043,
+  "neutralLightRatio": 0.000545501708984375,
+  "secondNeutralBucketRatio": 0.000194549560546875,
+  "cornerLightNeutralCount": 0,
+  "cornerChromaLikeCount": 0,
+  "sampledNeutralTransitionRatio": 0.0009765625,
+  "chroma": "#00FF00",
+  "strict": false,
+  "passed": true
+}

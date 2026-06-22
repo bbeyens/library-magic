@@ -1,0 +1,153 @@
+# idle-s Review
+
+Quick review page for the `s` facing `idle` animation. Mode: `image`. Frames: `8`. FPS: `6`.
+
+## Review Assets
+
+### Generated Sheet
+
+Full opaque pose board produced by the image model. Image size: `1536x1152`. Expected generation canvas: `1536x1152`.
+
+![Generated Sheet](../generated/sheet.png)
+
+[Open file](../generated/sheet.png)
+
+### Rough Grid Review Crops
+
+First `8` implied grid cells cropped from the pose board for review only. These are not the runtime source of truth. Generation grid: `4x3`. Cell size: `384x384`. Review image size: `1352x204`.
+
+![Rough Grid Review Crops](grid-review-cell-contact.png)
+
+[Open file](grid-review-cell-contact.png)
+
+### Rough Grid Review GIF
+
+Implied grid crops looped for geometry review only. GIF canvas: `256x256`.
+
+![Rough Grid Review GIF](grid-review-cell-preview.gif)
+
+[Open file](grid-review-cell-preview.gif)
+
+### Recovered Component Contact Sheet
+
+Foreground components recovered from the full pose board and ordered by the declared grid. These recovered components are the runtime source. Review image size: `945x204`.
+
+![Recovered Component Contact Sheet](recovered-component-contact.png)
+
+[Open file](recovered-component-contact.png)
+
+### Recovered Native Contact Sheet
+
+Recovered components placed on a shared padded native review canvas without scaling. This is the first animation review checkpoint before pixel snap or 256x256 runtime normalization. Review image size: `1168x204`.
+
+![Recovered Native Contact Sheet](recovered-native-contact.png)
+
+[Open file](recovered-native-contact.png)
+
+### Recovered Native Preview GIF
+
+Recovered components looped on the padded native review canvas before runtime normalization. GIF canvas: `384x448`.
+
+![Recovered Native Preview GIF](recovered-native-preview.gif)
+
+[Open file](recovered-native-preview.gif)
+
+### Pixel-Snapped Raw Contact Sheet
+
+Raw real pixel-snapper outputs shown without padding; labels show discovered native frame sizes. This is diagnostic output, not runtime-ready. In chroma-layout runs the input canvas uses the run's configured chroma matte, but pixel snapper may remap the flat background to another solid color such as black during palette/resampling. Review image size: `1486x380`.
+
+![Pixel-Snapped Raw Contact Sheet](pixel-snapped-raw-contact.png)
+
+[Open file](pixel-snapped-raw-contact.png)
+
+### Pixel Snap To Runtime Comparison
+
+Single frame-by-frame comparison from source to runtime. For chroma-layout, read the rows as: recovered transparent component, chroma source canvas, raw pixel-snap output, background-cleaned snapped output, optional green-fringe-cleaned output when the matte is green, then final normalized transparent `256x256` runtime frame. Review image size: `2306x902`.
+
+![Pixel Snap To Runtime Comparison](compare-04-pixel-snap-to-runtime.png)
+
+[Open file](compare-04-pixel-snap-to-runtime.png)
+
+### Comparison 01: Grid Review To Recovered Components
+
+Before/after comparison showing why implied grid crops are review artifacts only. Review image size: `1032x352`.
+
+![Comparison 01: Grid Review To Recovered Components](compare-01-grid-review-to-recovered-components.png)
+
+[Open file](compare-01-grid-review-to-recovered-components.png)
+
+### Comparison 02: Recovered Components To Native Layout
+
+Before/after comparison showing variable-size recovered components padded to a shared native review canvas without scaling. Review image size: `896x352`.
+
+![Comparison 02: Recovered Components To Native Layout](compare-02-recovered-to-native-layout.png)
+
+[Open file](compare-02-recovered-to-native-layout.png)
+
+### Comparison 03: Recovered To Raw Pixel Snap
+
+Before/after comparison showing recovered components against raw variable-size pixel snap outputs. Review image size: `755x352`.
+
+![Comparison 03: Recovered To Raw Pixel Snap](compare-03-recovered-to-pixel-snapped-raw.png)
+
+[Open file](compare-03-recovered-to-pixel-snapped-raw.png)
+
+### Comparison 06: Cleaned To Scaled
+
+Before/after comparison for cleanup output to shared-scale layout input. Review image size: `754x352`.
+
+![Comparison 06: Cleaned To Scaled](compare-02-cleaned-to-scaled.png)
+
+[Open file](compare-02-cleaned-to-scaled.png)
+
+### Comparison 07: Scaled To Normalized
+
+Before/after comparison for final placement into runtime cells. Review image size: `1032x352`.
+
+![Comparison 07: Scaled To Normalized](compare-03-scaled-to-normalized.png)
+
+[Open file](compare-03-scaled-to-normalized.png)
+
+### Normalized Contact Sheet
+
+Final normalized frames after cleanup, scaling, and baseline alignment.
+
+![Normalized Contact Sheet](contact.png)
+
+[Open file](contact.png)
+
+### Normalized Preview GIF
+
+Final runtime-cell animation preview.
+
+![Normalized Preview GIF](preview.gif)
+
+[Open file](preview.gif)
+
+### Runtime Spritesheet
+
+Game-facing transparent spritesheet export. Image size: `1280x512`.
+
+![Runtime Spritesheet](../export/spritesheet.png)
+
+[Open file](../export/spritesheet.png)
+
+### Runtime Preview GIF
+
+Copy of the final preview GIF bundled with the export. GIF canvas: `256x256`.
+
+![Runtime Preview GIF](../export/preview.gif)
+
+[Open file](../export/preview.gif)
+
+### Export Manifest
+
+Machine-readable export metadata.
+
+[Open file](../export/manifest.json)
+
+### Baseline Report
+
+Baseline and center audit from the final spritesheet.
+
+[Open file](../export/baseline-report.json)

@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "runId": "snap",
+  "createdAt": "2026-06-22T15:39:09.358199Z",
+  "type": "snap",
+  "source": "public/assets/spriterrific/snake/source/candidate/front/snap/input/source.png",
+  "originalSource": "public/assets/spriterrific/snake/source/candidate/front/candidate-raw.png",
+  "snapped": "public/assets/spriterrific/snake/source/candidate/front/snap/snapped/snapped.png",
+  "anchor": "public/assets/spriterrific/snake/source/candidate/front/snap/output/anchor.png",
+  "chromaAnchor": "public/assets/spriterrific/snake/source/candidate/front/snap/output/anchor-chroma.png",
+  "targetSize": [
+    1024,
+    1024
+  ],
+  "kColors": 14,
+  "chroma": "#00FF00",
+  "status": "completed",
+  "snappedSize": [
+    95,
+    96
+  ],
+  "anchorScale": 10.0,
+  "anchorOffset": [
+    37,
+    32
+  ],
+  "completedAt": "2026-06-22T15:39:23.860374Z"
+}

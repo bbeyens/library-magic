@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "character": "mana-snake",
+  "updatedAt": "2026-06-22T15:39:24.124315Z",
+  "stage": "candidate",
+  "candidateFacing": "front",
+  "candidateAnchor": "public/assets/spriterrific/snake/source/candidate/front/snapped-1024-chroma.png",
+  "candidatePromptPreset": "lobit-v1",
+  "pixelSnapAnchor": true,
+  "anchors": {},
+  "chroma": "#00FF00",
+  "kColors": 14,
+  "seed": 220626,
+  "gameView": "generic",
+  "anchorRole": "prop",
+  "anchorContext": "A clickable magical snake familiar for an incremental mini-game UI; compact centered sprite, non scary, no background.",
+  "sourceMode": "text",
+  "sourcePrompt": "cute magical serpent familiar, coiled snake shaped like an S, teal and violet scales, glowing blue eyes, small mana orb markings, centered game prop, readable silhouette, no text, no background"
+}
