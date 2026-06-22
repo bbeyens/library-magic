@@ -1,6 +1,6 @@
 import { books, getBook, type BookId } from '../game/content/books';
 import { gameStore } from '../game/store';
-import type { GameState } from '../game/simulation/state';
+import type { GameState, SnakeCell, SnakeDirection } from '../game/simulation/state';
 
 let rootElement: HTMLDivElement | null = null;
 let openUpgradePanel: BookId | null = null;
@@ -9,12 +9,15 @@ let lastRenderSignature = '';
 let lastSelectedBook: BookId | null = null;
 let lastOpenUpgradePanel: BookId | null = null;
 let lastUpgradePanelMode: 'detail' | 'compact' = 'detail';
+let lastSnakeRewardMarker = '';
+let snakeControlsInstalled = false;
 
 export function mountHud(root: HTMLDivElement | null): void {
   rootElement = root;
   if (!rootElement) {
     throw new Error('Missing #hud-root');
   }
+  installSnakeControls();
   gameStore.subscribe(renderHud);
 }
 
@@ -100,13 +103,6 @@ function renderHud(state: GameState): void {
         upgradePanelMode = 'compact';
         renderHud(gameStore.snapshot);
       }
-      if (action === 'snakeStep') {
-        const beforeScales = gameStore.snapshot.resources.scales;
-        gameStore.dispatch({ type: 'snakeStep' });
-        const gainedScales = gameStore.snapshot.resources.scales - beforeScales;
-        showSnakeClickEffect();
-        showFloatingGain(gainedScales, '.snake-orb');
-      }
       if (action === 'buyUpgrade' && bookId) {
         gameStore.dispatch({ type: 'buyUpgrade', bookId });
       }
@@ -125,6 +121,14 @@ function renderHud(state: GameState): void {
       }
     });
   });
+
+  if (state.selectedBook === 'serpent' && state.snake.lastReward > 0) {
+    const marker = `${state.snake.score}:${Math.floor(state.resources.scales)}`;
+    if (marker !== lastSnakeRewardMarker) {
+      lastSnakeRewardMarker = marker;
+      showFloatingGain(state.snake.lastReward, '.snake-board');
+    }
+  }
 }
 
 function createHudSignature(state: GameState): string {
@@ -151,7 +155,12 @@ function createHudSignature(state: GameState): string {
     Math.floor(state.resources.spores),
     state.snake.score,
     state.snake.best,
-    state.snake.cursor,
+    state.snake.lastReward,
+    state.snake.direction,
+    state.snake.nextDirection,
+    state.snake.food.x,
+    state.snake.food.y,
+    state.snake.body.map((cell) => `${cell.x},${cell.y}`).join(';'),
     bookState,
   ].join('/');
 }
@@ -270,33 +279,40 @@ function showFloatingGain(amount: number, targetSelector = '.mana-orb'): void {
 }
 
 function snakePanel(state: GameState): string {
+  const snake = state.snake;
+  const bodyKeys = new Set(snake.body.map(cellKey));
+  const headKey = cellKey(snake.body[0]);
+  const foodKey = cellKey(snake.food);
+  const cells = Array.from({ length: snake.gridSize * snake.gridSize }, (_, index) => {
+    const cell = { x: index % snake.gridSize, y: Math.floor(index / snake.gridSize) };
+    const key = cellKey(cell);
+    const classNames = ['snake-cell'];
+    if (key === headKey) {
+      classNames.push('is-head');
+    } else if (bodyKeys.has(key)) {
+      classNames.push('is-body');
+    }
+    if (key === foodKey) {
+      classNames.push('is-food');
+    }
+    return `<i class="${classNames.join(' ')}"></i>`;
+  }).join('');
+
   return `
     <div class="snake-panel">
-      <button class="snake-orb" data-action="snakeStep" data-book-id="serpent" title="Charmer le serpent" aria-label="Charmer le serpent">
-        <span class="snake-aura"></span>
-        <span class="snake-sprite" aria-hidden="true"></span>
-        <span class="snake-score">${state.snake.score}</span>
-      </button>
+      <div class="snake-board-shell">
+        <div class="snake-stats" aria-label="Score du serpent">
+          <span>☉ ${Math.floor(state.resources.scales)}</span>
+          <span>◆ ${Math.floor(state.mana)}</span>
+          <span>◇ ${snake.score}</span>
+          <span>✦ ${snake.best}</span>
+        </div>
+        <div class="snake-board" role="img" aria-label="Mini jeu Snake du Livre du Serpent">
+          ${cells}
+        </div>
+      </div>
     </div>
   `;
-}
-
-function showSnakeClickEffect(): void {
-  const snakeOrb = rootElement?.querySelector<HTMLButtonElement>('.snake-orb');
-  if (!snakeOrb) {
-    return;
-  }
-
-  snakeOrb.classList.remove('is-clicked');
-  void snakeOrb.offsetWidth;
-  snakeOrb.classList.add('is-clicked');
-  const clickToken = String(performance.now());
-  snakeOrb.dataset.clickToken = clickToken;
-  window.setTimeout(() => {
-    if (snakeOrb.dataset.clickToken === clickToken) {
-      snakeOrb.classList.remove('is-clicked');
-    }
-  }, 900);
 }
 
 function placeholderPanel(bookId: BookId): string {
@@ -314,6 +330,57 @@ function placeholderPanel(bookId: BookId): string {
       <p>L'herbier sera une production passive avec recoltes timing.</p>
     </div>
   `;
+}
+
+function cellKey(cell: SnakeCell): string {
+  return `${cell.x}:${cell.y}`;
+}
+
+function installSnakeControls(): void {
+  if (snakeControlsInstalled) {
+    return;
+  }
+  snakeControlsInstalled = true;
+  window.addEventListener('keydown', (event) => {
+    const direction = snakeDirectionForKey(event.key);
+    if (!direction || event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+    const state = gameStore.snapshot;
+    if (state.selectedBook !== 'serpent' || !state.books.serpent.unlocked) {
+      return;
+    }
+    event.preventDefault();
+    gameStore.dispatch({ type: 'snakeTurn', direction });
+  });
+}
+
+function snakeDirectionForKey(key: string): SnakeDirection | null {
+  switch (key.toLowerCase()) {
+    case 'arrowup':
+    case 'w':
+    case 'z':
+      return 'up';
+    case 'arrowright':
+    case 'd':
+      return 'right';
+    case 'arrowdown':
+    case 's':
+      return 'down';
+    case 'arrowleft':
+    case 'a':
+    case 'q':
+      return 'left';
+    default:
+      return null;
+  }
+}
+
+function isTypingTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+  return target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName);
 }
 
 function unlockCard(bookId: BookId, state: GameState): string {

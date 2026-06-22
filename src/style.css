@@ -795,6 +795,17 @@ button.upgrade-entry {
   }
 }
 
+@keyframes snake-food-pulse {
+  0% {
+    transform: scale(0.88);
+    filter: brightness(0.95);
+  }
+  100% {
+    transform: scale(1.08);
+    filter: brightness(1.18);
+  }
+}
+
 .mini-progress,
 .pinned-meter {
   height: 14px;
@@ -823,76 +834,87 @@ button.upgrade-entry {
   place-items: center;
 }
 
-.snake-orb {
-  position: relative;
-  isolation: isolate;
+.snake-board-shell {
+  width: 300px;
+  display: grid;
+  gap: 10px;
+  justify-items: center;
+}
+
+.snake-stats {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.snake-stats span {
+  min-width: 0;
+  min-height: 28px;
   display: grid;
   place-items: center;
-  width: 276px;
-  height: 238px;
-  overflow: visible;
-  border: 0;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, rgba(167, 140, 255, 0.22), rgba(112, 199, 255, 0.07) 48%, transparent 70%),
-    radial-gradient(circle, rgba(237, 159, 255, 0.12), transparent 68%);
-  cursor: pointer;
-  transform: translateZ(0);
-  animation: snake-idle-float 2600ms ease-in-out infinite;
-}
-
-.snake-aura {
-  position: absolute;
-  inset: 16px;
-  z-index: -1;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(167, 140, 255, 0.26), transparent 66%);
-  animation: snake-aura 1800ms ease-in-out infinite alternate;
-}
-
-.snake-sprite {
-  width: 256px;
-  height: 256px;
-  background-image: url("/assets/spriterrific/snake/idle-s/export/spritesheet.transparent.svg");
-  background-repeat: no-repeat;
-  background-size: 1280px 512px;
-  filter:
-    drop-shadow(0 0 16px rgba(167, 140, 255, 0.72))
-    drop-shadow(0 14px 16px rgba(45, 28, 77, 0.34));
-  transform-origin: 50% 64%;
-  transform: scale(0.92);
-  animation: spriterrific-snake-idle 1333ms steps(1, end) infinite;
-}
-
-.snake-score {
-  position: absolute;
-  right: 30px;
-  bottom: 36px;
-  min-width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  border: 2px solid rgba(245, 229, 190, 0.72);
-  border-radius: 999px;
-  color: #f8e6bd;
-  font-size: 14px;
+  border: 2px solid rgba(139, 99, 69, 0.55);
+  border-radius: 8px;
+  color: #3a251c;
+  font-size: 12px;
   font-weight: 800;
-  background: #82583a;
+  background: rgba(255, 236, 198, 0.48);
 }
 
-.snake-orb:active {
-  filter: brightness(1.12);
+.snake-board {
+  width: 288px;
+  height: 288px;
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  grid-template-rows: repeat(9, 1fr);
+  gap: 3px;
+  padding: 10px;
+  border: 4px solid rgba(86, 58, 49, 0.72);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(167, 140, 255, 0.18), transparent 66%),
+    rgba(64, 43, 33, 0.24);
+  box-shadow:
+    inset 0 0 0 2px rgba(255, 244, 211, 0.28),
+    0 12px 22px rgba(52, 34, 26, 0.16);
 }
 
-.snake-orb.is-clicked {
-  animation:
-    snake-click 360ms cubic-bezier(0.18, 1.35, 0.32, 1),
-    snake-idle-float 2600ms ease-in-out 360ms infinite;
+.snake-cell {
+  display: block;
+  border-radius: 7px;
+  background: rgba(91, 61, 41, 0.16);
+  box-shadow: inset 0 0 0 1px rgba(93, 71, 44, 0.12);
 }
 
-.snake-orb.is-clicked .snake-sprite {
-  background-image: url("/assets/spriterrific/snake/use-s/export/spritesheet.transparent.svg");
-  animation: spriterrific-snake-use 1000ms steps(1, end) both;
+.snake-cell.is-body {
+  background:
+    linear-gradient(180deg, rgba(199, 179, 255, 0.95), rgba(116, 83, 168, 0.95));
+  box-shadow:
+    inset 0 -3px 0 rgba(45, 28, 77, 0.24),
+    0 0 10px rgba(167, 140, 255, 0.36);
+}
+
+.snake-cell.is-head {
+  background:
+    radial-gradient(circle at 62% 38%, #f2ecff 0 8%, transparent 9%),
+    radial-gradient(circle at 38% 38%, #f2ecff 0 8%, transparent 9%),
+    linear-gradient(180deg, #d9ccff, #7d5ebf);
+  box-shadow:
+    inset 0 -4px 0 rgba(45, 28, 77, 0.28),
+    0 0 16px rgba(167, 140, 255, 0.55);
+}
+
+.snake-cell.is-food {
+  background:
+    radial-gradient(circle, #eaf8ff 0 24%, #70c7ff 25% 56%, rgba(112, 199, 255, 0.22) 58% 100%);
+  box-shadow:
+    0 0 16px rgba(112, 199, 255, 0.75),
+    inset 0 -3px 0 rgba(42, 87, 119, 0.28);
+  animation: snake-food-pulse 900ms ease-in-out infinite alternate;
+}
+
+.snake-cell.is-head.is-food {
+  background: linear-gradient(180deg, #f3e5ff, #8e6be2);
 }
 
 .placeholder-panel {

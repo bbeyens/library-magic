@@ -12,7 +12,20 @@ export interface SnakeState {
   running: boolean;
   score: number;
   best: number;
-  cursor: number;
+  gridSize: number;
+  body: SnakeCell[];
+  direction: SnakeDirection;
+  nextDirection: SnakeDirection;
+  food: SnakeCell;
+  moveTimer: number;
+  lastReward: number;
+}
+
+export type SnakeDirection = 'up' | 'right' | 'down' | 'left';
+
+export interface SnakeCell {
+  x: number;
+  y: number;
 }
 
 export interface GameState {
@@ -67,7 +80,17 @@ export function createInitialState(): GameState {
       running: false,
       score: 0,
       best: 0,
-      cursor: 0,
+      gridSize: 9,
+      body: [
+        { x: 4, y: 4 },
+        { x: 3, y: 4 },
+        { x: 2, y: 4 },
+      ],
+      direction: 'right',
+      nextDirection: 'right',
+      food: { x: 6, y: 4 },
+      moveTimer: 0,
+      lastReward: 0,
     },
     lastTick: performance.now(),
   };
