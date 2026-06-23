@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "mode": "padded-native-review",
+  "description": "Recovered components placed on a shared padded canvas without scaling.",
+  "canvasSize": [
+    384,
+    448
+  ],
+  "minCanvasSize": [
+    384,
+    448
+  ],
+  "placement": {
+    "centerX": 192,
+    "bottomY": 440
+  },
+  "frames": [
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-01.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-01.png",
+      "sourceSize": [
+        241,
+        344
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        72,
+        96
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-02.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-02.png",
+      "sourceSize": [
+        240,
+        350
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        72,
+        90
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-03.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-03.png",
+      "sourceSize": [
+        242,
+        343
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        71,
+        97
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-04.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-04.png",
+      "sourceSize": [
+        244,
+        342
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        70,
+        98
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-05.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-05.png",
+      "sourceSize": [
+        240,
+        344
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        72,
+        96
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-06.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-06.png",
+      "sourceSize": [
+        241,
+        344
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        72,
+        96
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-07.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-07.png",
+      "sourceSize": [
+        242,
+        343
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        71,
+        97
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-08.png",
+      "output": "public/assets/spriterrific/crystal/use-s-v2/recovered-native/frames/frame-08.png",
+      "sourceSize": [
+        241,
+        343
+      ],
+      "canvasSize": [
+        384,
+        448
+      ],
+      "offset": [
+        72,
+        97
+      ]
+    }
+  ]
+}

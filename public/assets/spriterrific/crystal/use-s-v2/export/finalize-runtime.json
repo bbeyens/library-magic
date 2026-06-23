@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "kind": "runtime-finalization",
+  "createdAt": "2026-06-22T23:12:07+02:00",
+  "animationDir": "public/assets/spriterrific/crystal/use-s-v2/export",
+  "action": "use",
+  "direction": "s",
+  "requestedAnchorPolicy": "preserve-motion",
+  "anchorPolicy": "preserve-motion",
+  "targetBottomY": 255,
+  "targetCenterX": 128,
+  "cellSize": [
+    256,
+    256
+  ],
+  "columns": 5,
+  "frames": 8,
+  "fps": 8,
+  "framesAdjusted": 0,
+  "maxAbsDx": 0,
+  "maxAbsDy": 0,
+  "publicAssetReady": true,
+  "records": [
+    {
+      "frame": "frame-01.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        46,
+        46,
+        211,
+        256
+      ],
+      "outputBBox": [
+        46,
+        46,
+        211,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-02.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        43,
+        47,
+        208,
+        256
+      ],
+      "outputBBox": [
+        43,
+        47,
+        208,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-03.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        49,
+        45,
+        214,
+        255
+      ],
+      "outputBBox": [
+        49,
+        45,
+        214,
+        255
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-04.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        44,
+        46,
+        209,
+        256
+      ],
+      "outputBBox": [
+        44,
+        46,
+        209,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-05.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        48,
+        47,
+        213,
+        256
+      ],
+      "outputBBox": [
+        48,
+        47,
+        213,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-06.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        45,
+        45,
+        210,
+        255
+      ],
+      "outputBBox": [
+        45,
+        45,
+        210,
+        255
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-07.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        47,
+        46,
+        212,
+        256
+      ],
+      "outputBBox": [
+        47,
+        46,
+        212,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    },
+    {
+      "frame": "frame-08.png",
+      "policy": "preserve-motion",
+      "sourceBBox": [
+        46,
+        46,
+        211,
+        256
+      ],
+      "outputBBox": [
+        46,
+        46,
+        211,
+        256
+      ],
+      "dx": 0,
+      "dy": 0
+    }
+  ]
+}

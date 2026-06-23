@@ -1,0 +1,30 @@
+{
+  "stage": "baseline-audit-fix",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/gamedev_assets/scripts/asset_sprite_baseline.py",
+    "public/assets/spriterrific/crystal/use-s-v2/export/spritesheet.raw.png",
+    "--frame",
+    "256x256",
+    "--target-bottom",
+    "255",
+    "--target-center-x",
+    "128",
+    "--out",
+    "public/assets/spriterrific/crystal/use-s-v2/export/spritesheet.png",
+    "--json",
+    "public/assets/spriterrific/crystal/use-s-v2/export/baseline-report.json"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T16:54:37.944882Z",
+  "completedAt": "2026-06-22T16:54:38.058200Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/use-s-v2/logs/baseline-audit-fix.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/use-s-v2/logs/baseline-audit-fix.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

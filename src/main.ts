@@ -25,6 +25,7 @@ const game = new Phaser.Game(config);
 mountHud(document.querySelector<HTMLDivElement>('#hud-root'));
 installBurstClickHotkey();
 installDebugResourceHotkey();
+installDebugManaSkillHotkeys();
 
 window.addEventListener('beforeunload', () => {
   game.destroy(true);
@@ -117,6 +118,25 @@ function installDebugResourceHotkey(): void {
 
     event.preventDefault();
     gameStore.dispatch({ type: 'grantDebugResources' });
+  });
+}
+
+function installDebugManaSkillHotkeys(): void {
+  window.addEventListener('keydown', (event) => {
+    if (event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    if (key === 'i') {
+      event.preventDefault();
+      gameStore.dispatch({ type: 'maxManaSkills' });
+      return;
+    }
+    if (key === 'u') {
+      event.preventDefault();
+      gameStore.dispatch({ type: 'resetManaSkills' });
+    }
   });
 }
 

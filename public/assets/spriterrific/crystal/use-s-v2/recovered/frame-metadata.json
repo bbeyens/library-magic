@@ -1,0 +1,145 @@
+{
+  "sheet": "public/assets/spriterrific/crystal/use-s-v2/generated/sheet.png",
+  "rows": 3,
+  "cols": 4,
+  "count": 8,
+  "keying": {
+    "chromaRgb": [
+      0,
+      255,
+      0
+    ],
+    "threshold": 90.0,
+    "minComponentArea": 500,
+    "removedPixels": 1326171,
+    "keptPixelsBeforeDespeckle": 443301,
+    "bbox": [
+      76,
+      57,
+      1461,
+      810
+    ]
+  },
+  "frames": [
+    {
+      "frame": "01",
+      "bbox": [
+        76,
+        62,
+        317,
+        406
+      ],
+      "area": 55088,
+      "center": [
+        196.5,
+        234.0
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-01.png"
+    },
+    {
+      "frame": "02",
+      "bbox": [
+        456,
+        57,
+        696,
+        407
+      ],
+      "area": 54882,
+      "center": [
+        576.0,
+        232.0
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-02.png"
+    },
+    {
+      "frame": "03",
+      "bbox": [
+        836,
+        63,
+        1078,
+        406
+      ],
+      "area": 55137,
+      "center": [
+        957.0,
+        234.5
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-03.png"
+    },
+    {
+      "frame": "04",
+      "bbox": [
+        1217,
+        64,
+        1461,
+        406
+      ],
+      "area": 55016,
+      "center": [
+        1339.0,
+        235.0
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-04.png"
+    },
+    {
+      "frame": "05",
+      "bbox": [
+        76,
+        466,
+        316,
+        810
+      ],
+      "area": 54932,
+      "center": [
+        196.0,
+        638.0
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-05.png"
+    },
+    {
+      "frame": "06",
+      "bbox": [
+        456,
+        466,
+        697,
+        810
+      ],
+      "area": 54829,
+      "center": [
+        576.5,
+        638.0
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-06.png"
+    },
+    {
+      "frame": "07",
+      "bbox": [
+        836,
+        466,
+        1078,
+        809
+      ],
+      "area": 55002,
+      "center": [
+        957.0,
+        637.5
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-07.png"
+    },
+    {
+      "frame": "08",
+      "bbox": [
+        1217,
+        467,
+        1458,
+        810
+      ],
+      "area": 54915,
+      "center": [
+        1337.5,
+        638.5
+      ],
+      "path": "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-08.png"
+    }
+  ]
+}

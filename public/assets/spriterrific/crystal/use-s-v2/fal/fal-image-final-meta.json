@@ -1,0 +1,17 @@
+{
+  "status_code": 200,
+  "headers": {
+    "date": "Mon, 22 Jun 2026 16:54:18 GMT",
+    "content-type": "application/json",
+    "content-length": "216",
+    "connection": "close",
+    "x-fal-billable-units": "0.2201",
+    "x-fal-served-from": "704abe58-74bb-482e-81e6-4b51f760901c",
+    "x-fal-request-id": "019ef03e-b2a5-7a81-ab6c-310fb68ca5e4",
+    "x-envoy-upstream-service-time": "146572",
+    "vary": "origin, access-control-request-method, access-control-request-headers",
+    "access-control-allow-credentials": "true",
+    "strict-transport-security": "max-age=31536000; includeSubDomains",
+    "x-robots-tag": "noindex"
+  }
+}

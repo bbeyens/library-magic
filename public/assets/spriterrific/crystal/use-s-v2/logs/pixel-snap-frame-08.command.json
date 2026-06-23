@@ -1,0 +1,23 @@
+{
+  "stage": "pixel-snap-frame-08",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/pixel_snapper/scripts/pixel_snapper.py",
+    "public/assets/spriterrific/crystal/use-s-v2/recovered/frame-08.png",
+    "public/assets/spriterrific/crystal/use-s-v2/pixel-snapped/native/frame-08.png",
+    "--k-colors",
+    "14"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T16:54:36.072801Z",
+  "completedAt": "2026-06-22T16:54:37.710131Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/use-s-v2/logs/pixel-snap-frame-08.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/use-s-v2/logs/pixel-snap-frame-08.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

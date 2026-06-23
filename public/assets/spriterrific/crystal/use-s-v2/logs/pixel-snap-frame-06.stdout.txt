@@ -1,0 +1,1 @@
+Snapped public/assets/spriterrific/crystal/use-s-v2/recovered/frame-06.png -> public/assets/spriterrific/crystal/use-s-v2/pixel-snapped/native/frame-06.png (44x56)

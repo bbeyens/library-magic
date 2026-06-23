@@ -1,0 +1,11 @@
+{
+  "status": "COMPLETED",
+  "request_id": "019ef03e-b2a5-7a81-ab6c-310fb68ca5e4",
+  "response_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef03e-b2a5-7a81-ab6c-310fb68ca5e4",
+  "status_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef03e-b2a5-7a81-ab6c-310fb68ca5e4/status",
+  "cancel_url": "https://queue.fal.run/openai/gpt-image-2/requests/019ef03e-b2a5-7a81-ab6c-310fb68ca5e4/cancel",
+  "logs": [],
+  "metrics": {
+    "inference_time": 146.64545798301697
+  }
+}

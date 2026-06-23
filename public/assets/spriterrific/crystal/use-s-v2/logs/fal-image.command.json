@@ -1,0 +1,41 @@
+{
+  "stage": "fal-image",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/fal_ai_image/scripts/fal_queue_image_run.py",
+    "--model-alias",
+    "gpt-image-2-edit",
+    "--prompt",
+    "Intended use: a reusable use animation spritesheet for a 2D game.\n\nImage 1 role: identity anchor. Preserve the exact approved anchor sprite identity.\nImage 2 role: black-and-white alternating-pixel pose-board geometry guide at the exact target size. Use it only to preserve the output aspect ratio, full-board composition, pixel texture, and implied 4 column x 3 row pose-board layout. It is not a background, style, contact-sheet, border, or grid-line reference. Do not copy its black pixels, white pixels, checker pattern, grid lines, borders, labels, or presentation-sheet look into the final output.\n\nSubject:\n- Same already-approved sprite character.\n- Direction: front-facing, toward the viewer.\n- Keep this as the same character, not a redesign.\n\nPrimary request: create a 8-frame use sequence on a 1536x1152 pose board. Place the animation frames in the first 8 cells of an implied 4 column x 3 row grid, reading left to right, top to bottom.\n- Frame 1: idle start\n- Frame 2: anticipate reach\n- Frame 3: hand meets implied control\n- Frame 4: operate peak\n- Frame 5: brief hold\n- Frame 6: release\n- Frame 7: settle\n- Frame 8: return to idle\n\nLook and rendering:\n- High-resolution pixelated sprite art.\n- Crisp chunky sprite edges.\n- Preserve visible pixel structure.\n- No painterly rendering, no airbrushing, no soft gradients.\n- Keep the sprite large and centered in each frame area.\n\nComposition and background constraints:\n- Use the full canvas as a model-friendly pose board, not a packed runtime spritesheet.\n- The visible output must be only separate character sprites on one uninterrupted solid chroma background.\n- Do not render a contact sheet, proof sheet, storyboard page, panel layout, framed sheet, margin, border, white page, gray page, checkerboard, or visible guide.\n- Exact canvas size: 1536x1152.\n- Exact implied grid: 4 columns x 3 rows, 12 cells total.\n- Each implied generation cell is 384x384 pixels.\n- Each used cell contains one centered 256x256 runtime safe area.\n- Put frames 1 through 8 in cells 1 through 8, reading left to right, top to bottom.\n- Cells after frame 8 must remain entirely flat #00FF00 with no character, marks, shadows, labels, or texture.\n- Exactly one character figure per used frame cell.\n- Keep every full-body figure entirely inside the canvas and entirely inside its own implied frame area.\n- Leave clear empty chroma green #00FF00 margin around the left edge, right edge, top, bottom, and between neighboring figures.\n- The first and last figures must not touch or crop against the canvas edge.\n- Keep scale consistent across all frames.\n- Keep the same foot baseline across all frames.\n- Center each character inside the 256x256 safe area of its implied 384x384 cell.\n- Keep the figures separated and fully readable.\n- No overlapping between frame areas.\n- Use an opaque exact flat chroma green #00FF00 background.\n- Every non-character pixel must be exact solid #00FF00, including the outer edges, gutters between sprites, and unused cells.\n- No white, gray, black, neutral, paper, studio, transparent, or checkerboard background.\n- No gradients, texture, anti-aliased haze, lighting effects, checkerboards, or faux transparency on the background.\n- No cast shadow, ground shadow, contact shadow, glow, particles, or effects touching the background.\n- No matte-color spill on the character.\n- Keep effects compact and away from frame edges.\n- Do not add scenery, props, text, UI, labels, frame numbers, guide marks, grid lines, cell outlines, borders, decorative effects, or extra characters.\n\nAvoid:\n- redesigning the character\n- changing costume colors\n- making the sprite tiny\n- faux transparency patterns\n- floor shadows or environment backdrops\n- non-chroma backgrounds\n\nAdditional user action note:\n- Clickable blue mana crystal activation for a clicker UI. Keep the crystal large and stable in every frame, never shrink below 90 percent of its idle size. No tiny crystal frames. The click should be a subtle press, bright internal pulse, diagonal shine, and compact mana sparkle burst while preserving the same silhouette and centered position. No character limbs, no face, no background.\n\nApply the additional note only to the character action. Do not change the character identity, direction, camera, background, sheet layout, frame size, or output format.\n",
+    "--image-file",
+    "public/assets/spriterrific/crystal/use-s-v2/direction/anchor.png",
+    "--image-file",
+    "public/assets/spriterrific/crystal/use-s-v2/guide/alternating-1536x1152-4x3-pose-board.png",
+    "--out-dir",
+    "public/assets/spriterrific/crystal/use-s-v2/fal",
+    "--filename-prefix",
+    "fal-image",
+    "--task-slug",
+    "use-s-v2",
+    "--extra-json",
+    "{\"image_size\": {\"width\": 1536, \"height\": 1152}}",
+    "--output-format",
+    "png",
+    "--quality",
+    "high",
+    "--seed",
+    "220625"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-22T16:51:39.781991Z",
+  "completedAt": "2026-06-22T16:54:19.836276Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/use-s-v2/logs/fal-image.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/use-s-v2/logs/fal-image.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}

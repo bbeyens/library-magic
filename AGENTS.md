@@ -23,10 +23,12 @@ Do not use `autogoal` for tiny one-shot fixes. Do use it for feature work, debug
 Default workflow for a serious feature:
 
 ```text
-autogoal -> grill-with-docs -> to-prd -> to-issues -> implement -> game-playtest -> review
+grill-with-docs -> autogoal -> to-prd -> to-issues -> implement -> game-playtest -> review
 ```
 
-Use `auto` when the user wants that whole flow in one go. During `auto`, pause for human questions only in the `grill-with-docs` phase, unless there is a real blocker such as missing GitHub repo access, unsafe scope ambiguity, failing credentials, or destructive action.
+Use `auto` when the user wants that whole flow in one go. During `auto`, run `grill-with-docs` before starting `autogoal`, create the autogoal plan from `docs/plans/templates/auto.md`, then pause for human questions only in the `grill-with-docs` phase, unless there is a real blocker such as missing GitHub repo access, unsafe scope ambiguity, failing credentials, or destructive action.
+
+Use the `tdd` skill whenever there is a clean behavior to test before coding. Default to TDD for gameplay rules, state machines, progression, economy, save/load, scoring, parsing, data transforms, and bug fixes with a reproducible symptom. Skip it only for throwaway prototypes, pure visual polish, or changes where a test would be fake ceremony.
 
 For game or browser UI work, use `@browser-use` first for browser verification.
 

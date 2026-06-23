@@ -16,5 +16,13 @@
     "y": 255
   },
   "sourceRun": "idle-s",
-  "publicAssetReady": false
+  "publicAssetReady": true,
+  "runtimeFinalization": {
+    "anchorPolicy": "preserve-motion",
+    "requestedAnchorPolicy": "preserve-motion",
+    "targetBottomY": 255,
+    "targetCenterX": 128,
+    "framesAdjusted": 0,
+    "report": "finalize-runtime.json"
+  }
 }

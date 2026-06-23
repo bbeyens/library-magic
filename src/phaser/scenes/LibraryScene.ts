@@ -25,7 +25,7 @@ export class LibraryScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('bookshelf-reference', '/assets/decor/bookshelf-reference.png');
+    this.load.image('library-background', '/assets/decor/bookshelf-background-hires.png');
   }
 
   create(): void {
@@ -34,11 +34,10 @@ export class LibraryScene extends Phaser.Scene {
     this.drawBookcase();
 
     gameStore.subscribe(() => this.syncState());
-    this.time.addEvent({
-      delay: 500,
-      loop: true,
-      callback: () => gameStore.tick(performance.now()),
-    });
+  }
+
+  update(): void {
+    gameStore.tick(performance.now());
   }
 
   private drawRoom(): void {
@@ -48,7 +47,7 @@ export class LibraryScene extends Phaser.Scene {
     bg.fillGradientStyle(0x21181b, 0x21181b, 0x0f0c10, 0x0f0c10, 1);
     bg.fillRect(0, 0, world.width, world.height);
 
-    const decor = this.add.image(480, 270, 'bookshelf-reference');
+    const decor = this.add.image(480, 270, 'library-background');
     decor.setDisplaySize(676, 540);
     decor.setDepth(1);
 
@@ -90,7 +89,10 @@ export class LibraryScene extends Phaser.Scene {
     container.add([lockedVeil, selection]);
     container.setSize(84, 112);
     container.setInteractive({ useHandCursor: true });
-    container.on('pointerdown', () => {
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      if (isPointerInsideBookPanel(pointer)) {
+        return;
+      }
       const bookState = gameStore.snapshot.books[definition.id];
       if (bookState.unlocked) {
         gameStore.dispatch({ type: 'selectBook', bookId: definition.id });
@@ -132,6 +134,22 @@ export class LibraryScene extends Phaser.Scene {
       }
     }
   }
+}
+
+function isPointerInsideBookPanel(pointer: Phaser.Input.Pointer): boolean {
+  const panels = Array.from(document.querySelectorAll<HTMLElement>('.book-overlay'));
+  const canvas = document.querySelector<HTMLCanvasElement>('#game-root canvas');
+  if (panels.length === 0 || !canvas) {
+    return false;
+  }
+
+  const canvasRect = canvas.getBoundingClientRect();
+  const clientX = canvasRect.left + (pointer.x / world.width) * canvasRect.width;
+  const clientY = canvasRect.top + (pointer.y / world.height) * canvasRect.height;
+  return panels.some((panel) => {
+    const rect = panel.getBoundingClientRect();
+    return clientX >= rect.left && clientX <= rect.right && clientY >= rect.top && clientY <= rect.bottom;
+  });
 }
 
 function bookPosition(id: BookDefinition['id']): { x: number; y: number } {
