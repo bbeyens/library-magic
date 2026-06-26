@@ -75,6 +75,16 @@ const GID_FLIP_HORIZONTAL = 0x80000000;
 const GID_FLIP_VERTICAL = 0x40000000;
 const GID_FLIP_DIAGONAL = 0x20000000;
 const GID_MASK = 0x1fffffff;
+const DEFENSE_FOREGROUND_LAYER_NAMES = new Set([
+  'Rock',
+  'Mousse arbre/ tente/ fleur',
+  'Flag/camp',
+  'Forest',
+  'Forest 2 ombre',
+]);
+const DEFENSE_NON_OCCLUDING_OBJECT_TILES = new Set([2006, 2007, 2012, 2013, 2042, 2043, 2048, 2049, 2054, 2055, 2060, 2061, 2067, 2072, 2073]);
+
+type TileRenderMode = 'animated-only' | 'all';
 
 const TILESET_MANIFEST: Record<string, Omit<TilesetDefinition, 'firstgid'>> = {
   'TD.tsx': {
@@ -165,6 +175,7 @@ const TILESET_MANIFEST: Record<string, Omit<TilesetDefinition, 'firstgid'>> = {
 
 let loadPromise: Promise<void> | null = null;
 let renderedTerrain = '';
+let renderedForeground = '';
 
 export function hasDefenseTiledMap(): boolean {
   return renderedTerrain.length > 0;
@@ -179,11 +190,14 @@ export function loadDefenseTiledMap(): Promise<void> {
       return response.json() as Promise<TiledMapFile>;
     })
     .then((map) => {
-      renderedTerrain = renderTiledMap(map);
+      const renderedMap = renderTiledMap(map);
+      renderedTerrain = renderedMap.terrain;
+      renderedForeground = renderedMap.foreground;
     })
     .catch((error: unknown) => {
       console.warn(error);
       renderedTerrain = '';
+      renderedForeground = '';
     });
 
   return loadPromise;
@@ -201,7 +215,11 @@ export function renderDefenseTiledTerrain(): string {
   `;
 }
 
-function renderTiledMap(map: TiledMapFile): string {
+export function renderDefenseTiledForeground(): string {
+  return renderedForeground;
+}
+
+function renderTiledMap(map: TiledMapFile): { terrain: string; foreground: string } {
   const tilesets = map.tilesets
     .map((tileset) => normalizeTileset(tileset))
     .filter((tileset): tileset is TilesetDefinition => tileset !== null)
@@ -209,10 +227,17 @@ function renderTiledMap(map: TiledMapFile): string {
 
   const layers = map.layers
     .filter((layer) => layer.type === 'tilelayer' && layer.visible !== false)
-    .map((layer, index) => renderLayer(layer, index, tilesets))
+    .filter((layer) => !DEFENSE_FOREGROUND_LAYER_NAMES.has(layer.name))
+    .map((layer, index) => renderLayer(layer, index, tilesets, 'animated-only'))
+    .join('');
+  const foregroundLayers = map.layers
+    .filter((layer) => layer.type === 'tilelayer' && layer.visible !== false)
+    .filter((layer) => DEFENSE_FOREGROUND_LAYER_NAMES.has(layer.name))
+    .map((layer, index) => renderLayer(layer, index, tilesets, 'all'))
     .join('');
 
-  return `
+  return {
+    terrain: `
     <div
       class="defense-tiled-map"
       data-map-source="${DEFENSE_MAP_URL}"
@@ -220,12 +245,24 @@ function renderTiledMap(map: TiledMapFile): string {
     >
       ${layers}
     </div>
-  `;
+  `,
+    foreground: foregroundLayers
+      ? `
+    <div
+      class="defense-tiled-foreground"
+      data-map-source="${DEFENSE_MAP_URL}"
+      style="--td-map-width:${map.width}; --td-map-height:${map.height};"
+    >
+      ${foregroundLayers}
+    </div>
+  `
+      : '',
+  };
 }
 
-function renderLayer(layer: TiledTileLayer, index: number, tilesets: TilesetDefinition[]): string {
+function renderLayer(layer: TiledTileLayer, index: number, tilesets: TilesetDefinition[], mode: TileRenderMode): string {
   const tiles = layer.data
-    .map((rawGid, tileIndex) => renderTile(rawGid, tileIndex, layer.width, tilesets))
+    .map((rawGid, tileIndex) => renderTile(rawGid, tileIndex, layer.width, tilesets, mode))
     .join('');
 
   return `
@@ -239,7 +276,13 @@ function renderLayer(layer: TiledTileLayer, index: number, tilesets: TilesetDefi
   `;
 }
 
-function renderTile(rawGid: number, tileIndex: number, layerWidth: number, tilesets: TilesetDefinition[]): string {
+function renderTile(
+  rawGid: number,
+  tileIndex: number,
+  layerWidth: number,
+  tilesets: TilesetDefinition[],
+  mode: TileRenderMode,
+): string {
   if (rawGid === 0) {
     return '';
   }
@@ -255,6 +298,9 @@ function renderTile(rawGid: number, tileIndex: number, layerWidth: number, tiles
   if (localId < 0 || localId >= tileset.tileCount) {
     return '';
   }
+  if (mode === 'all' && tileset.name === 'Object Tileset TD' && DEFENSE_NON_OCCLUDING_OBJECT_TILES.has(localId)) {
+    return '';
+  }
 
   const column = localId % tileset.columns;
   const row = Math.floor(localId / tileset.columns);
@@ -266,7 +312,7 @@ function renderTile(rawGid: number, tileIndex: number, layerWidth: number, tiles
   const animation = tileset.animations.get(localId) ?? fallbackAnimation(tileset);
   const frames = animation.frames;
   const frameCount = frames.length;
-  if (frameCount === 1) {
+  if (mode === 'animated-only' && frameCount === 1) {
     return '';
   }
 
@@ -275,8 +321,9 @@ function renderTile(rawGid: number, tileIndex: number, layerWidth: number, tiles
 
   return `
     <span
-      class="defense-tiled-tile is-animated"
+      class="defense-tiled-tile ${frameCount > 1 ? 'is-animated' : 'is-static'}"
       data-tileset="${escapeAttribute(tileset.name)}"
+      data-local-id="${localId}"
       data-frame-count="${frameCount}"
       style="
         grid-column:${gridColumn};

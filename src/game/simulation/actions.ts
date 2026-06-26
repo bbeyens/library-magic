@@ -52,7 +52,7 @@ import {
   type SnakeDirection,
   type TargetInstance,
 } from './state';
-import { defenseEnemyInTowerRange } from './defenseRules';
+import { defenseEnemyInTowerHitbox, defenseEnemyInTowerRange, nextDefenseSpeedMultiplier } from './defenseRules';
 import { canQueueSnakeDirection, committedSnakeDirection, snakeMoveIntervalForSpeedLevel } from './snakeRules';
 
 export type ManaSkillId = 'power' | 'automation' | 'criticalHit' | 'criticalEffect' | 'extraWands';
@@ -93,6 +93,7 @@ const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
 };
 
 const BOOK_PANEL_SLOTS: BookPanelSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const DEFENSE_ENEMY_DEATH_DURATION = 0.62;
 
 export type GameAction =
   | { type: 'selectBook'; bookId: BookId }
@@ -125,6 +126,7 @@ export type GameAction =
   | { type: 'digMiningBlock'; blockId: number }
   | { type: 'trainSlime'; commandId: SlimeTrainerCommandId }
   | { type: 'enemyAttackSlime' }
+  | { type: 'cycleDefenseSpeed' }
   | { type: 'grantDebugResources' };
 
 export function applyAction(state: GameState, action: GameAction): void {
@@ -221,6 +223,9 @@ export function applyAction(state: GameState, action: GameAction): void {
       return;
     case 'enemyAttackSlime':
       enemyAttackSlime(state);
+      return;
+    case 'cycleDefenseSpeed':
+      state.defense.speedMultiplier = nextDefenseSpeedMultiplier(state.defense.speedMultiplier);
       return;
     case 'grantDebugResources':
       grantDebugResources(state);
@@ -1089,10 +1094,11 @@ function tickDefense(state: GameState, deltaSeconds: number): void {
   }
 
   defense.running = true;
-  defense.tower.cooldown = Math.max(0, defense.tower.cooldown - deltaSeconds);
-  tickDefenseShot(state, deltaSeconds);
-  spawnDefenseEnemies(state, deltaSeconds);
-  moveDefenseEnemies(state, deltaSeconds);
+  const scaledDeltaSeconds = deltaSeconds * defense.speedMultiplier;
+  defense.tower.cooldown = Math.max(0, defense.tower.cooldown - scaledDeltaSeconds);
+  tickDefenseShot(state, scaledDeltaSeconds);
+  spawnDefenseEnemies(state, scaledDeltaSeconds);
+  moveDefenseEnemies(state, scaledDeltaSeconds);
   fireDefenseTower(state);
   completeDefenseWaveIfReady(state);
 }
@@ -1120,6 +1126,8 @@ function spawnDefenseEnemies(state: GameState, deltaSeconds: number): void {
     distance: 1,
     health: maxHealth,
     maxHealth,
+    state: 'walking',
+    deathTimer: 0,
   });
   defense.nextEnemyId += 1;
 }
@@ -1130,8 +1138,16 @@ function moveDefenseEnemies(state: GameState, deltaSeconds: number): void {
   const survivors: DefenseEnemy[] = [];
 
   for (const enemy of defense.enemies) {
+    if (enemy.state === 'dying') {
+      const deathTimer = enemy.deathTimer - deltaSeconds;
+      if (deathTimer > 0) {
+        survivors.push({ ...enemy, deathTimer });
+      }
+      continue;
+    }
+
     const nextDistance = enemy.distance - speed * deltaSeconds;
-    if (nextDistance <= 0.11) {
+    if (defenseEnemyInTowerHitbox({ ...enemy, distance: nextDistance })) {
       defense.towerHealth = Math.max(0, defense.towerHealth - 1);
       defense.score = 0;
       continue;
@@ -1152,6 +1168,7 @@ function fireDefenseTower(state: GameState): void {
   }
 
   const target = defense.enemies
+    .filter((enemy) => enemy.state !== 'dying')
     .filter((enemy) => defenseEnemyInTowerRange(enemy, defense.tower.range))
     .sort((first, second) => first.distance - second.distance)[0];
   if (!target) {
@@ -1173,7 +1190,8 @@ function fireDefenseTower(state: GameState): void {
   }
 
   const reward = 1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(defense.wave / 4);
-  defense.enemies = defense.enemies.filter((enemy) => enemy.id !== target.id);
+  target.state = 'dying';
+  target.deathTimer = DEFENSE_ENEMY_DEATH_DURATION;
   defense.score += reward;
   defense.best = Math.max(defense.best, defense.score);
   defense.lastReward = reward;

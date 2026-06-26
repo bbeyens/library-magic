@@ -1,5 +1,10 @@
 import { books, getBook, type BookId } from '../game/content/books';
-import { hasDefenseTiledMap, loadDefenseTiledMap, renderDefenseTiledTerrain } from '../game/content/tdTiledMap';
+import {
+  hasDefenseTiledMap,
+  loadDefenseTiledMap,
+  renderDefenseTiledForeground,
+  renderDefenseTiledTerrain,
+} from '../game/content/tdTiledMap';
 import { defenseEnemyPosition } from '../game/simulation/defenseRules';
 import { gameStore } from '../game/store';
 import {
@@ -324,6 +329,9 @@ function renderHud(state: GameState): void {
           gameStore.dispatch({ type: 'trainSlime', commandId });
         }
       }
+      if (action === 'cycleDefenseSpeed') {
+        gameStore.dispatch({ type: 'cycleDefenseSpeed' });
+      }
       if (action === 'toggleUpgradePanel' && bookId) {
         const isSamePanel = openUpgradePanel === bookId && upgradePanelMode === 'detail';
         openUpgradePanel = isSamePanel ? null : bookId;
@@ -541,6 +549,7 @@ function updateDynamicDefensePanel(state: GameState): void {
       enemyElement.style.setProperty('--enemy-x', `${position.x}%`);
       enemyElement.style.setProperty('--enemy-y', `${position.y}%`);
       enemyElement.style.setProperty('--enemy-health', `${health}%`);
+      enemyElement.classList.toggle('is-dying', enemy.state === 'dying');
     }
   }
 
@@ -1132,6 +1141,7 @@ function createHudSignature(state: GameState): string {
     state.defense.score,
     state.defense.best,
     state.defense.lastReward,
+    state.defense.speedMultiplier,
     blackjack.phase,
     blackjack.round,
     blackjack.playerRerollsUsed,
@@ -2531,6 +2541,7 @@ function defensePanel(state: GameState): string {
         <div class="defense-actors" aria-hidden="true">
           ${defenseActorsMarkup(defense)}
         </div>
+        ${hasTiledTerrain ? `<div class="defense-foreground" aria-hidden="true">${renderDefenseTiledForeground()}</div>` : ''}
         ${
           hasTiledTerrain
             ? ''
@@ -2541,6 +2552,7 @@ function defensePanel(state: GameState): string {
         <div class="defense-mini-stats" aria-label="Bastion">
           <span>▲ <strong>${defenseTowerDamage(state)}</strong></span>
           <span>⌁ <strong>${attackInterval}s</strong></span>
+          <button class="defense-speed-toggle" data-action="cycleDefenseSpeed" data-book-id="defense" title="Vitesse du jeu TD" aria-label="Changer la vitesse du tower defense">x${defense.speedMultiplier}</button>
           <span>◎ <strong data-dynamic-value="defense-enemy-count">${defense.enemies.length}</strong>/${defenseWaveEnemyCount(state)}</span>
         </div>
       </div>
@@ -2558,7 +2570,7 @@ function defenseEnemyMarkup(enemy: GameState['defense']['enemies'][number]): str
 
   return `
     <i
-      class="defense-enemy"
+      class="defense-enemy ${enemy.state === 'dying' ? 'is-dying' : ''}"
       data-enemy-id="${enemy.id}"
       style="--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-health:${health}%"
       aria-hidden="true"

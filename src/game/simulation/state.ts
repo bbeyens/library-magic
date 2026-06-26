@@ -66,6 +66,8 @@ export interface DefenseEnemy {
   distance: number;
   health: number;
   maxHealth: number;
+  state: 'walking' | 'dying';
+  deathTimer: number;
 }
 
 export interface DefenseShot {
@@ -81,9 +83,12 @@ export interface DefenseTowerState {
   cooldown: number;
 }
 
+export type DefenseSpeedMultiplier = 1 | 2 | 4;
+
 export interface DefenseState {
   running: boolean;
   wave: number;
+  speedMultiplier: DefenseSpeedMultiplier;
   towerHealth: number;
   score: number;
   best: number;
@@ -453,6 +458,7 @@ export function createInitialState(): GameState {
     defense: {
       running: false,
       wave: 1,
+      speedMultiplier: 1,
       towerHealth: 10,
       score: 0,
       best: 0,
