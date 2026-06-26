@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "character": "mana-crystal-relic",
+  "updatedAt": "2026-06-26T08:58:32.978187Z",
+  "stage": "candidate",
+  "candidateFacing": "front",
+  "candidateAnchor": "public/assets/spriterrific/crystal/relic-source/candidate/front/snapped-1024-chroma.png",
+  "candidatePromptPreset": "high-fidelity-v1",
+  "pixelSnapAnchor": false,
+  "anchors": {},
+  "chroma": "#00FF00",
+  "kColors": 256,
+  "seed": 260626,
+  "gameView": "generic",
+  "anchorRole": "prop",
+  "anchorContext": "front-facing magical mana crystal relic for a clicker UI; large faceted clear icy-blue crystal, carved antique gold pedestal, circular gold base, inner white-blue glow, readable centered game object; preserve the reference's crystal, socle, proportions, and premium fantasy mood; remove UI buttons and text from the reference; no characters",
+  "sourceMode": "image",
+  "sourcePrompt": null
+}

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "type": "bootstrap-anchors",
+  "status": "completed",
+  "updatedAt": "2026-06-26T08:58:32.979736Z",
+  "character": "mana-crystal-relic",
+  "directions": [],
+  "candidateFacing": "front",
+  "sourceMode": "image",
+  "sourceImage": "public/assets/spriterrific/crystal/relic-source/input/source.png",
+  "sourceOriginal": "public/assets/spriterrific/crystal/relic-source/input/source-original.png",
+  "sourceModelInput": "public/assets/spriterrific/crystal/relic-source/input/source-model-input.png",
+  "sourceInputMetadata": "public/assets/spriterrific/crystal/relic-source/input/source.json",
+  "sourceUserImage": "/var/folders/v0/m9v03dm522qgkml9w0kr6m_m0000gn/T/TemporaryItems/NSIRD_screencaptureui_6ikz2u/Screenshot 2026-06-26 at 10.46.20.png",
+  "sourcePromptFile": null,
+  "candidatePromptPreset": "high-fidelity-v1",
+  "pixelSnapAnchor": false,
+  "candidatePromptSource": "preset:high-fidelity-v1",
+  "gameView": "generic",
+  "anchorRole": "prop",
+  "anchorContext": "front-facing magical mana crystal relic for a clicker UI; large faceted clear icy-blue crystal, carved antique gold pedestal, circular gold base, inner white-blue glow, readable centered game object; preserve the reference's crystal, socle, proportions, and premium fantasy mood; remove UI buttons and text from the reference; no characters",
+  "candidateAnchor": "public/assets/spriterrific/crystal/relic-source/candidate/front/snapped-1024-chroma.png",
+  "anchors": {},
+  "canonicalOutputs": {
+    "source": "public/assets/spriterrific/crystal/relic-source/input/source.png",
+    "sourceOriginal": "public/assets/spriterrific/crystal/relic-source/input/source-original.png",
+    "sourceModelInput": "public/assets/spriterrific/crystal/relic-source/input/source-model-input.png",
+    "sourceInputMetadata": "public/assets/spriterrific/crystal/relic-source/input/source.json",
+    "candidateRaw": "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-raw.png",
+    "candidateAnchor1024Chroma": "public/assets/spriterrific/crystal/relic-source/candidate/front/anchor-1024-chroma.png",
+    "candidateSnapped1024Chroma": "public/assets/spriterrific/crystal/relic-source/candidate/front/snapped-1024-chroma.png",
+    "directionAnchors": {},
+    "character": "public/assets/spriterrific/crystal/relic-source/character.json",
+    "review": "public/assets/spriterrific/crystal/relic-source/review/index.md"
+  },
+  "config": {
+    "request": "public/assets/spriterrific/crystal/relic-source/config/bootstrap-request.json",
+    "candidatePromptRendered": "public/assets/spriterrific/crystal/relic-source/config/candidate-prompt-rendered.txt",
+    "sourcePromptRendered": null
+  },
+  "chroma": "#00FF00",
+  "kColors": 256,
+  "models": {
+    "source": "gpt-image-2-t2i",
+    "candidate": "gpt-image-2-edit",
+    "anchor": "gpt-image-2-edit"
+  },
+  "resume": false,
+  "dryFal": false
+}

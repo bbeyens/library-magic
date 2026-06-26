@@ -3,9 +3,11 @@ import { books, type BookDefinition } from '../../game/content/books';
 import { gameStore } from '../../game/store';
 
 const world = {
-  width: 960,
-  height: 540,
+  width: 1280,
+  height: 720,
 };
+const WORLD_SCALE = world.width / 960;
+const scaled = (value: number): number => value * WORLD_SCALE;
 
 interface BookView {
   definition: BookDefinition;
@@ -47,13 +49,13 @@ export class LibraryScene extends Phaser.Scene {
     bg.fillGradientStyle(0x21181b, 0x21181b, 0x0f0c10, 0x0f0c10, 1);
     bg.fillRect(0, 0, world.width, world.height);
 
-    const decor = this.add.image(480, 270, 'library-background');
-    decor.setDisplaySize(676, 540);
+    const decor = this.add.image(scaled(480), scaled(270), 'library-background');
+    decor.setDisplaySize(scaled(676), world.height);
     decor.setDepth(1);
 
     const frame = this.add.graphics().setDepth(2);
     frame.lineStyle(3, 0xb3835a, 0.9);
-    frame.strokeRoundedRect(142, 0, 676, 540, 6);
+    frame.strokeRoundedRect(scaled(142), 0, scaled(676), world.height, scaled(6));
   }
 
   private drawManaBar(): void {
@@ -61,15 +63,15 @@ export class LibraryScene extends Phaser.Scene {
     this.add.graphics()
       .setDepth(depth)
       .fillStyle(0x3c2b2f, 1)
-      .fillRoundedRect(344, 26, 272, 28, 14)
+      .fillRoundedRect(scaled(344), scaled(26), scaled(272), scaled(28), scaled(14))
       .lineStyle(2, 0xb3835a, 1)
-      .strokeRoundedRect(344, 26, 272, 28, 14);
-    this.add.circle(354, 40, 18, 0x25304f).setStrokeStyle(2, 0xb3835a).setDepth(depth + 1);
-    this.add.text(346, 28, '♦', { color: '#75cfff', fontSize: '24px' }).setDepth(depth + 2);
-    this.manaBar = this.add.rectangle(464, 40, 168, 14, 0x70c7ff).setOrigin(0.5).setDepth(depth + 1);
-    this.manaLabel = this.add.text(418, 32, 'Mana 0', {
+      .strokeRoundedRect(scaled(344), scaled(26), scaled(272), scaled(28), scaled(14));
+    this.add.circle(scaled(354), scaled(40), scaled(18), 0x25304f).setStrokeStyle(2, 0xb3835a).setDepth(depth + 1);
+    this.add.text(scaled(346), scaled(28), '♦', { color: '#75cfff', fontSize: `${scaled(24)}px` }).setDepth(depth + 2);
+    this.manaBar = this.add.rectangle(scaled(464), scaled(40), scaled(168), scaled(14), 0x70c7ff).setOrigin(0.5).setDepth(depth + 1);
+    this.manaLabel = this.add.text(scaled(418), scaled(32), 'Mana 0', {
       color: '#f4dfbc',
-      fontSize: '14px',
+      fontSize: `${scaled(14)}px`,
       fontFamily: 'Georgia, serif',
     }).setDepth(depth + 2);
   }
@@ -83,11 +85,11 @@ export class LibraryScene extends Phaser.Scene {
 
   private createBookHotspot(definition: BookDefinition, x: number, y: number): BookView {
     const container = this.add.container(x, y).setDepth(8);
-    const lockedVeil = this.add.rectangle(0, 0, 78, 104, 0x120d12, 0.52).setOrigin(0.5);
-    const selection = this.add.rectangle(0, 0, 84, 112, 0xffffff, 0).setOrigin(0.5);
+    const lockedVeil = this.add.rectangle(0, 0, scaled(78), scaled(104), 0x120d12, 0.52).setOrigin(0.5);
+    const selection = this.add.rectangle(0, 0, scaled(84), scaled(112), 0xffffff, 0).setOrigin(0.5);
     selection.setStrokeStyle(3, 0xf3d28b, 0);
     container.add([lockedVeil, selection]);
-    container.setSize(84, 112);
+    container.setSize(scaled(84), scaled(112));
     container.setInteractive({ useHandCursor: true });
     container.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (isPointerInsideBookPanel(pointer)) {
@@ -106,8 +108,8 @@ export class LibraryScene extends Phaser.Scene {
 
   private syncState(): void {
     const state = gameStore.snapshot;
-    const manaWidth = Phaser.Math.Clamp(state.mana / 400, 0.08, 1) * 168;
-    this.manaBar?.setDisplaySize(manaWidth, 14);
+    const manaWidth = Phaser.Math.Clamp(state.mana / 400, 0.08, 1) * scaled(168);
+    this.manaBar?.setDisplaySize(manaWidth, scaled(14));
     this.manaLabel?.setText(`Mana ${Math.floor(state.mana)}`);
 
     for (const view of this.bookViews) {
@@ -119,9 +121,9 @@ export class LibraryScene extends Phaser.Scene {
         state.selectedBook === view.definition.id ? 0.95 : 0,
       );
       if (!book.unlocked && !view.lock) {
-        view.lock = this.add.text(-10, -22, '×', {
+        view.lock = this.add.text(scaled(-10), scaled(-22), '×', {
           color: '#f0d7aa',
-          fontSize: '32px',
+          fontSize: `${scaled(32)}px`,
           fontFamily: 'Georgia, serif',
           stroke: '#23181a',
           strokeThickness: 4,
@@ -155,12 +157,24 @@ function isPointerInsideBookPanel(pointer: Phaser.Input.Pointer): boolean {
 function bookPosition(id: BookDefinition['id']): { x: number; y: number } {
   switch (id) {
     case 'mana':
-      return { x: 336, y: 162 };
+      return { x: scaled(336), y: scaled(162) };
     case 'serpent':
-      return { x: 616, y: 162 };
+      return { x: scaled(616), y: scaled(162) };
     case 'typing':
-      return { x: 615, y: 285 };
+      return { x: scaled(615), y: scaled(285) };
     case 'herbarium':
-      return { x: 522, y: 162 };
+      return { x: scaled(522), y: scaled(162) };
+    case 'defense':
+      return { x: scaled(429), y: scaled(285) };
+    case 'blackjack':
+      return { x: scaled(708), y: scaled(285) };
+    case 'hundred':
+      return { x: scaled(429), y: scaled(532) };
+    case 'mine':
+      return { x: scaled(615), y: scaled(532) };
+    case 'targets':
+      return { x: scaled(708), y: scaled(532) };
+    case 'slimeTrainer':
+      return { x: scaled(336), y: scaled(285) };
   }
 }

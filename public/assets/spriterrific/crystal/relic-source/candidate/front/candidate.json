@@ -1,0 +1,63 @@
+{
+  "version": 1,
+  "createdAt": "2026-06-26T08:58:32.853890Z",
+  "candidateFacing": "front",
+  "legacyDirection": null,
+  "candidateGenerationMode": "generated-candidate",
+  "raw": "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-raw.png",
+  "pixelSnapped": false,
+  "anchorStyle": "high-fidelity-v1",
+  "anchor1024": "public/assets/spriterrific/crystal/relic-source/candidate/front/anchor-1024.png",
+  "anchor1024Chroma": "public/assets/spriterrific/crystal/relic-source/candidate/front/anchor-1024-chroma.png",
+  "snappedNative": null,
+  "snapped1024": "public/assets/spriterrific/crystal/relic-source/candidate/front/snapped-1024.png",
+  "snapped1024Chroma": "public/assets/spriterrific/crystal/relic-source/candidate/front/snapped-1024-chroma.png",
+  "snapRun": null,
+  "snappedSize": null,
+  "unsnappedTransform": {
+    "source": "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-raw.png",
+    "sourceSize": [
+      1024,
+      1024
+    ],
+    "targetSize": [
+      1024,
+      1024
+    ],
+    "preservedCanvas": true,
+    "scale": 1.0,
+    "offset": [
+      0,
+      0
+    ],
+    "resampling": "none",
+    "backgroundCleanup": "corner-connected",
+    "chroma": "#00FF00"
+  },
+  "kColors": 256,
+  "chroma": "#00FF00",
+  "seed": 260626,
+  "candidateBackgroundCheck": {
+    "version": 1,
+    "image": "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-raw.png",
+    "size": [
+      1024,
+      1024
+    ],
+    "alphaRange": [
+      255,
+      255
+    ],
+    "opaqueRatio": 1.0,
+    "transparentRatio": 0.0,
+    "chromaLikeRatio": 0.789393424987793,
+    "neutralLightRatio": 0.010457992553710938,
+    "secondNeutralBucketRatio": 0.0010328292846679688,
+    "cornerLightNeutralCount": 0,
+    "cornerChromaLikeCount": 2,
+    "sampledNeutralTransitionRatio": 0.0216064453125,
+    "chroma": "#00FF00",
+    "strict": false,
+    "passed": true
+  }
+}

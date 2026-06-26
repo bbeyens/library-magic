@@ -1,0 +1,166 @@
+{
+  "targetHeight": 210,
+  "maxWidth": 220,
+  "sourceMaxVisibleSize": [
+    214,
+    535
+  ],
+  "mode": "per-frame",
+  "allowUpscale": true,
+  "scale": 0.3925233644859813,
+  "sharedScale": 0.3925233644859813,
+  "frames": [
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-01.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-01.png",
+      "sourceBBox": [
+        0,
+        0,
+        212,
+        521
+      ],
+      "sourceVisibleSize": [
+        212,
+        521
+      ],
+      "scale": 0.40307101727447214,
+      "outputSize": [
+        85,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-02.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-02.png",
+      "sourceBBox": [
+        0,
+        0,
+        213,
+        529
+      ],
+      "sourceVisibleSize": [
+        213,
+        529
+      ],
+      "scale": 0.39697542533081287,
+      "outputSize": [
+        85,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-03.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-03.png",
+      "sourceBBox": [
+        0,
+        0,
+        214,
+        535
+      ],
+      "sourceVisibleSize": [
+        214,
+        535
+      ],
+      "scale": 0.3925233644859813,
+      "outputSize": [
+        84,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-04.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-04.png",
+      "sourceBBox": [
+        0,
+        0,
+        214,
+        526
+      ],
+      "sourceVisibleSize": [
+        214,
+        526
+      ],
+      "scale": 0.39923954372623577,
+      "outputSize": [
+        85,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-05.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-05.png",
+      "sourceBBox": [
+        0,
+        0,
+        211,
+        519
+      ],
+      "sourceVisibleSize": [
+        211,
+        519
+      ],
+      "scale": 0.4046242774566474,
+      "outputSize": [
+        85,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-06.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-06.png",
+      "sourceBBox": [
+        0,
+        0,
+        212,
+        525
+      ],
+      "sourceVisibleSize": [
+        212,
+        525
+      ],
+      "scale": 0.4,
+      "outputSize": [
+        85,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-07.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-07.png",
+      "sourceBBox": [
+        0,
+        0,
+        213,
+        523
+      ],
+      "sourceVisibleSize": [
+        213,
+        523
+      ],
+      "scale": 0.40152963671128106,
+      "outputSize": [
+        86,
+        210
+      ]
+    },
+    {
+      "input": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-08.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/scaled/frame-08.png",
+      "sourceBBox": [
+        0,
+        0,
+        214,
+        530
+      ],
+      "sourceVisibleSize": [
+        214,
+        530
+      ],
+      "scale": 0.39622641509433965,
+      "outputSize": [
+        85,
+        210
+      ]
+    }
+  ]
+}

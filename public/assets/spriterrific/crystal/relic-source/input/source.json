@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "createdAt": "2026-06-26T08:55:36.824129Z",
+  "source": "public/assets/spriterrific/crystal/relic-source/input/source.png",
+  "sourceOriginal": "public/assets/spriterrific/crystal/relic-source/input/source-original.png",
+  "sourceModelInput": "public/assets/spriterrific/crystal/relic-source/input/source-model-input.png",
+  "alphaNormalizedForModel": false,
+  "alphaRange": [
+    255,
+    255
+  ],
+  "transparentPixelRatio": 0.0,
+  "chroma": "#00FF00"
+}

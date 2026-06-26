@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "image": "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-raw.png",
+  "size": [
+    1024,
+    1024
+  ],
+  "alphaRange": [
+    255,
+    255
+  ],
+  "opaqueRatio": 1.0,
+  "transparentRatio": 0.0,
+  "chromaLikeRatio": 0.789393424987793,
+  "neutralLightRatio": 0.010457992553710938,
+  "secondNeutralBucketRatio": 0.0010328292846679688,
+  "cornerLightNeutralCount": 0,
+  "cornerChromaLikeCount": 2,
+  "sampledNeutralTransitionRatio": 0.0216064453125,
+  "chroma": "#00FF00",
+  "strict": false,
+  "passed": true
+}

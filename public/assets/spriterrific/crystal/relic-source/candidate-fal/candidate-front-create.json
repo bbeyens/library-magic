@@ -1,0 +1,6 @@
+{
+  "request_id": "019f0324-511a-7043-8d6e-ea3d14344653",
+  "response_url": "https://queue.fal.run/openai/gpt-image-2/requests/019f0324-511a-7043-8d6e-ea3d14344653",
+  "status_url": "https://queue.fal.run/openai/gpt-image-2/requests/019f0324-511a-7043-8d6e-ea3d14344653/status",
+  "cancel_url": "https://queue.fal.run/openai/gpt-image-2/requests/019f0324-511a-7043-8d6e-ea3d14344653/cancel"
+}

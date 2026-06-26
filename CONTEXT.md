@@ -48,6 +48,30 @@ _Avoid_: Text input, typing form, Mana typing
 The herbarium-themed book mini-game. It is expected to generate Spores through slow, gentle production.
 _Avoid_: Farm mode, garden screen
 
+**Bastion Arcanique**:
+The tower-defense book mini-game. It uses one unique tower inside a Book Page to repel waves and generate Sceaux.
+_Avoid_: Tower mode, defense screen, tower placement game
+
+**Table du Blackjack**:
+The blackjack-themed book mini-game. It produces Jetons through short card hands where the player deals, hits, stands, and resolves against the dealer.
+_Avoid_: Casino mode, card app
+
+**Calcul du Cent**:
+The number-draw Book Mini-Game. It produces Fragments by reaching 100 without exceeding the current target band.
+_Avoid_: Number mode, math app
+
+**Galerie des Cibles**:
+The target-clicking Book Mini-Game. It produces Marques by clicking targets, improving damage, and later automating shots.
+_Avoid_: Target mode, aim trainer
+
+**Mine des Profondeurs**:
+The digging Book Mini-Game. It produces Minerais by breaking Blocs de terre in a 3x5 grid, where deeper replacement blocks have more hit points.
+_Avoid_: Mining mode, digging app
+
+**Slime Trainer**:
+The creature-battle Book Mini-Game. It produces Gels by training one slime against monsters through four command slots that unlock as the slime gains levels.
+_Avoid_: Pokemon clone, battle screen, pet app
+
 ### Resources
 
 **Ecailles**:
@@ -61,6 +85,38 @@ _Avoid_: Glyph points, typing points
 **Spores**:
 The unique resource produced by Herbier Enchante.
 _Avoid_: Seeds, plant points
+
+**Sceaux**:
+The unique resource produced by Bastion Arcanique.
+_Avoid_: Tokens, tower points, defense coins
+
+**Jetons**:
+The unique resource produced by Table du Blackjack.
+_Avoid_: Money, cash, coins
+
+**Fragments**:
+The unique resource produced by Calcul du Cent.
+_Avoid_: Points, numbers
+
+**Marques**:
+The unique resource produced by Galerie des Cibles.
+_Avoid_: Target points, score
+
+**Minerais**:
+The unique resource produced by Mine des Profondeurs.
+_Avoid_: Ore points, dirt points, crystals
+
+**Gels**:
+The unique resource produced by Slime Trainer.
+_Avoid_: Slime points, slime coins, XP
+
+**Bloc de terre**:
+A diggable cell inside Mine des Profondeurs. Each block has hit points and is replaced by a deeper block when broken.
+_Avoid_: Tile, square, rock
+
+**Profondeur**:
+The escalating layer of a Bloc de terre. Greater Profondeur means the replacement block has more hit points.
+_Avoid_: Stage, wave, level
 
 ### Progression
 

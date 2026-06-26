@@ -1,17 +1,65 @@
 import { books, getBook, type BookId } from '../content/books';
 import { runeWords } from '../content/runeWords';
 import {
+  hundredOptionRange,
+  hundredReward,
+  hundredTargetMax,
+  rollHundredOption,
+  type HundredOptionId,
+} from './hundredRules';
+import {
+  targetAttackDamage,
+  targetAutomationInterval,
+  targetMaxActiveTargets,
+  targetReward,
+  targetSpawnInterval,
+  type TargetSkillId,
+} from './targetRules';
+export { targetAttackDamage, targetAutomationInterval, targetMaxActiveTargets, targetSpawnInterval } from './targetRules';
+import {
+  slimeTrainerCommandDamage,
+  slimeTrainerCommandUnlocked,
+  slimeTrainerEnemyAttackDamage,
+  slimeTrainerEnemyForVictoryCount,
+  slimeTrainerResourceReward,
+  slimeTrainerXpReward,
+  slimeTrainerXpToNextLevel,
+  type SlimeTrainerCommandId,
+} from './slimeTrainerRules';
+export {
+  SLIME_TRAINER_COMMANDS,
+  slimeTrainerAvailableCommands,
+  slimeTrainerCommandDamage,
+  slimeTrainerCommandUnlocked,
+  slimeTrainerEnemyAttackDamage,
+  slimeTrainerXpToNextLevel,
+} from './slimeTrainerRules';
+import {
   createStartingSnakeBody,
+  miningBlockMaxHealth,
+  MINING_GRID_COLUMNS,
   randomSnakeFood,
+  snakeGridSizeForLevel,
+  type BlackjackCard,
+  type BlackjackRank,
+  type BlackjackSuit,
   type BookPanelSlot,
+  type DefenseEnemy,
   type GameState,
+  type MiningBlock,
   type SnakeBonusFruitType,
   type SnakeCell,
   type SnakeDirection,
+  type TargetInstance,
 } from './state';
+import { defenseEnemyInTowerRange } from './defenseRules';
+import { canQueueSnakeDirection, committedSnakeDirection, snakeMoveIntervalForSpeedLevel } from './snakeRules';
 
 export type ManaSkillId = 'power' | 'automation' | 'criticalHit' | 'criticalEffect' | 'extraWands';
-export type SnakeSkillId = 'speed' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
+export type SnakeSkillId = 'speed' | 'gridSize' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
+export type MiningSkillId = 'pickaxeForce' | 'splashDamage' | 'automation';
+export type BlackjackSkillId = 'rerollPlayer' | 'rerollDealer' | 'revealDealer' | 'aceBias';
+export type { TargetSkillId };
 
 const DEBUG_MANA_SKILL_MAX_LEVELS: Record<ManaSkillId, number> = {
   power: 50,
@@ -22,13 +70,29 @@ const DEBUG_MANA_SKILL_MAX_LEVELS: Record<ManaSkillId, number> = {
 };
 
 const DEBUG_SNAKE_SKILL_MAX_LEVELS: Record<SnakeSkillId, number> = {
-  speed: 23,
+  speed: 26,
+  gridSize: 5,
   automation: 10,
   baseMultiplier: 40,
   bonusFruit: 3,
-  extraLife: 3,
+  extraLife: 2,
   edgeWrap: 1,
 };
+
+const DEBUG_TARGET_SKILL_MAX_LEVELS: Record<TargetSkillId, number> = {
+  spawnSpeed: 10,
+  targetCount: 5,
+  damage: 20,
+  automation: 10,
+};
+
+const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
+  pickaxeForce: 30,
+  splashDamage: 12,
+  automation: 20,
+};
+
+const BOOK_PANEL_SLOTS: BookPanelSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 
 export type GameAction =
   | { type: 'selectBook'; bookId: BookId }
@@ -37,7 +101,12 @@ export type GameAction =
   | { type: 'chargeMana' }
   | { type: 'buyManaSkill'; skillId: ManaSkillId }
   | { type: 'buySnakeSkill'; skillId: SnakeSkillId }
+  | { type: 'buyTargetSkill'; skillId: TargetSkillId }
+  | { type: 'buyMiningSkill'; skillId: MiningSkillId }
+  | { type: 'buyBlackjackSkill'; skillId: BlackjackSkillId }
   | { type: 'maxManaSkills' }
+  | { type: 'maxSnakeSkills' }
+  | { type: 'maxMiningSkills' }
   | { type: 'resetManaSkills' }
   | { type: 'buyUpgrade'; bookId: BookId }
   | { type: 'togglePin'; bookId: BookId }
@@ -45,6 +114,17 @@ export type GameAction =
   | { type: 'snakeTurn'; direction: SnakeDirection }
   | { type: 'toggleSnakeAutomation' }
   | { type: 'typeRuneKey'; key: string }
+  | { type: 'dealBlackjack' }
+  | { type: 'hitBlackjack' }
+  | { type: 'standBlackjack' }
+  | { type: 'rerollPlayerBlackjackCard' }
+  | { type: 'rerollDealerBlackjackCard' }
+  | { type: 'revealBlackjackDealerCard' }
+  | { type: 'chooseHundredOption'; optionId: HundredOptionId }
+  | { type: 'attackTarget'; targetId: number }
+  | { type: 'digMiningBlock'; blockId: number }
+  | { type: 'trainSlime'; commandId: SlimeTrainerCommandId }
+  | { type: 'enemyAttackSlime' }
   | { type: 'grantDebugResources' };
 
 export function applyAction(state: GameState, action: GameAction): void {
@@ -70,8 +150,23 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'buySnakeSkill':
       buySnakeSkill(state, action.skillId);
       return;
+    case 'buyTargetSkill':
+      buyTargetSkill(state, action.skillId);
+      return;
+    case 'buyMiningSkill':
+      buyMiningSkill(state, action.skillId);
+      return;
+    case 'buyBlackjackSkill':
+      buyBlackjackSkill(state, action.skillId);
+      return;
     case 'maxManaSkills':
       maxManaSkills(state);
+      return;
+    case 'maxSnakeSkills':
+      maxSnakeSkills(state);
+      return;
+    case 'maxMiningSkills':
+      maxMiningSkills(state);
       return;
     case 'resetManaSkills':
       resetManaSkills(state);
@@ -93,6 +188,39 @@ export function applyAction(state: GameState, action: GameAction): void {
       return;
     case 'typeRuneKey':
       typeRuneKey(state, action.key);
+      return;
+    case 'dealBlackjack':
+      dealBlackjack(state);
+      return;
+    case 'hitBlackjack':
+      hitBlackjack(state);
+      return;
+    case 'standBlackjack':
+      standBlackjack(state);
+      return;
+    case 'rerollPlayerBlackjackCard':
+      rerollPlayerBlackjackCard(state);
+      return;
+    case 'rerollDealerBlackjackCard':
+      rerollDealerBlackjackCard(state);
+      return;
+    case 'revealBlackjackDealerCard':
+      revealBlackjackDealerCard(state);
+      return;
+    case 'chooseHundredOption':
+      chooseHundredOption(state, action.optionId);
+      return;
+    case 'attackTarget':
+      attackTarget(state, action.targetId);
+      return;
+    case 'digMiningBlock':
+      digMiningBlock(state, action.blockId);
+      return;
+    case 'trainSlime':
+      trainSlime(state, action.commandId);
+      return;
+    case 'enemyAttackSlime':
+      enemyAttackSlime(state);
       return;
     case 'grantDebugResources':
       grantDebugResources(state);
@@ -120,6 +248,10 @@ export function tickState(state: GameState, now: number): void {
 
   tickManaAutomation(state, deltaSeconds);
   tickSnake(state, deltaSeconds);
+  tickDefense(state, deltaSeconds);
+  tickTargets(state, deltaSeconds);
+  tickMining(state, deltaSeconds);
+  tickSlimeTrainer(state, deltaSeconds);
 }
 
 function chargeMana(state: GameState): void {
@@ -213,7 +345,11 @@ export function manaSkillMaxLevel(skillId: ManaSkillId): number | null {
 }
 
 export function snakeMoveInterval(state: GameState): number {
-  return Math.max(0.25, 0.7 - state.snakeSkills.speed * 0.02);
+  return snakeMoveIntervalForSpeedLevel(state.snakeSkills.speed);
+}
+
+export function snakeGridSize(state: GameState): number {
+  return snakeGridSizeForLevel(state.snakeSkills.gridSize);
 }
 
 export function snakeBaseMultiplier(state: GameState): number {
@@ -266,6 +402,8 @@ export function snakeSkillCost(state: GameState, skillId: SnakeSkillId): number 
   switch (skillId) {
     case 'speed':
       return Math.round(25 * Math.pow(1.28, level));
+    case 'gridSize':
+      return Math.round(70 * Math.pow(1.38, level));
     case 'automation':
       return Math.round(160 * Math.pow(1.42, level));
     case 'baseMultiplier':
@@ -277,6 +415,58 @@ export function snakeSkillCost(state: GameState, skillId: SnakeSkillId): number 
     case 'edgeWrap':
       return Math.round(900 * Math.pow(2, level));
   }
+}
+
+export function targetSkillMaxLevel(skillId: TargetSkillId): number {
+  return DEBUG_TARGET_SKILL_MAX_LEVELS[skillId];
+}
+
+export function targetSkillCost(state: GameState, skillId: TargetSkillId): number {
+  const level = state.targetSkills[skillId];
+  switch (skillId) {
+    case 'spawnSpeed':
+      return Math.round(85 * Math.pow(1.32, level));
+    case 'targetCount':
+      return Math.round(150 * Math.pow(1.58, level));
+    case 'damage':
+      return Math.round(100 * Math.pow(1.28, level));
+    case 'automation':
+      return Math.round(260 * Math.pow(1.44, level));
+  }
+}
+
+export function miningSkillMaxLevel(skillId: MiningSkillId): number {
+  return DEBUG_MINING_SKILL_MAX_LEVELS[skillId];
+}
+
+export function miningSkillCost(state: GameState, skillId: MiningSkillId): number {
+  const level = state.miningSkills[skillId];
+  switch (skillId) {
+    case 'pickaxeForce':
+      return Math.round(70 * Math.pow(1.28, level));
+    case 'splashDamage':
+      return Math.round(180 * Math.pow(1.42, level));
+    case 'automation':
+      return Math.round(280 * Math.pow(1.46, level));
+  }
+}
+
+export function miningPickaxeDamage(state: GameState): number {
+  return 1 + state.miningSkills.pickaxeForce;
+}
+
+export function miningSplashDamage(state: GameState): number {
+  if (state.miningSkills.splashDamage <= 0) {
+    return 0;
+  }
+  return 1 + Math.floor(state.miningSkills.splashDamage / 3);
+}
+
+export function miningAutomationInterval(level: number): number {
+  if (level <= 0) {
+    return 0;
+  }
+  return Math.max(0.55, 3.5 - (level - 1) * 0.16);
 }
 
 export function runeTypingCurrentWord(state: GameState): string {
@@ -364,12 +554,64 @@ function buySnakeSkill(state: GameState, skillId: SnakeSkillId): void {
 
   state.mana -= cost;
   state.snakeSkills[skillId] += 1;
+  if (skillId === 'gridSize') {
+    resizeSnakeGrid(state);
+  }
   if (skillId === 'automation') {
     state.snakeSkills.automationEnabled = true;
   }
   if (skillId === 'bonusFruit' && !state.snake.bonusFood) {
     state.snake.bonusFood = nextBonusFood(state);
   }
+}
+
+function buyTargetSkill(state: GameState, skillId: TargetSkillId): void {
+  const maxLevel = targetSkillMaxLevel(skillId);
+  if (state.targetSkills[skillId] >= maxLevel) {
+    return;
+  }
+
+  const cost = targetSkillCost(state, skillId);
+  if (state.mana < cost) {
+    return;
+  }
+
+  state.mana -= cost;
+  state.targetSkills[skillId] += 1;
+}
+
+function buyMiningSkill(state: GameState, skillId: MiningSkillId): void {
+  const maxLevel = miningSkillMaxLevel(skillId);
+  if (state.miningSkills[skillId] >= maxLevel) {
+    return;
+  }
+
+  const cost = miningSkillCost(state, skillId);
+  if (state.mana < cost) {
+    return;
+  }
+
+  state.mana -= cost;
+  state.miningSkills[skillId] += 1;
+}
+
+function buyBlackjackSkill(state: GameState, skillId: BlackjackSkillId): void {
+  if (!state.books.blackjack.unlocked) {
+    return;
+  }
+
+  const maxLevel = blackjackSkillMaxLevel(skillId);
+  if (state.blackjackSkills[skillId] >= maxLevel) {
+    return;
+  }
+
+  const cost = blackjackSkillCost(state, skillId);
+  if (state.resources.chips < cost) {
+    return;
+  }
+
+  state.resources.chips -= cost;
+  state.blackjackSkills[skillId] += 1;
 }
 
 function toggleSnakeAutomation(state: GameState): void {
@@ -401,6 +643,33 @@ function maxManaSkills(state: GameState): void {
   state.manaSkills.criticalEffect = DEBUG_MANA_SKILL_MAX_LEVELS.criticalEffect;
   state.manaSkills.extraWands = DEBUG_MANA_SKILL_MAX_LEVELS.extraWands;
   state.manaSkills.automationTimer = 0;
+}
+
+function maxSnakeSkills(state: GameState): void {
+  state.snakeSkills.speed = DEBUG_SNAKE_SKILL_MAX_LEVELS.speed;
+  state.snakeSkills.gridSize = DEBUG_SNAKE_SKILL_MAX_LEVELS.gridSize;
+  state.snakeSkills.automation = DEBUG_SNAKE_SKILL_MAX_LEVELS.automation;
+  state.snakeSkills.baseMultiplier = DEBUG_SNAKE_SKILL_MAX_LEVELS.baseMultiplier;
+  state.snakeSkills.bonusFruit = DEBUG_SNAKE_SKILL_MAX_LEVELS.bonusFruit;
+  state.snakeSkills.extraLife = DEBUG_SNAKE_SKILL_MAX_LEVELS.extraLife;
+  state.snakeSkills.edgeWrap = DEBUG_SNAKE_SKILL_MAX_LEVELS.edgeWrap;
+  state.snakeSkills.automationEnabled = true;
+  resizeSnakeGrid(state);
+  if (!state.snake.bonusFood) {
+    state.snake.bonusFood = nextBonusFood(state);
+  }
+}
+
+function maxMiningSkills(state: GameState): void {
+  state.miningSkills.pickaxeForce = DEBUG_MINING_SKILL_MAX_LEVELS.pickaxeForce;
+  state.miningSkills.splashDamage = DEBUG_MINING_SKILL_MAX_LEVELS.splashDamage;
+  state.miningSkills.automation = DEBUG_MINING_SKILL_MAX_LEVELS.automation;
+  state.miningSkills.automationTimer = 0;
+}
+
+function resizeSnakeGrid(state: GameState): void {
+  state.snake.gridSize = snakeGridSize(state);
+  resetSnakeRun(state);
 }
 
 function resetManaSkills(state: GameState): void {
@@ -484,8 +753,8 @@ function openBookPanel(state: GameState, bookId: BookId): void {
   }
 
   const usedSlots = new Set(state.openBookPanels.map((panel) => panel.slot));
-  const nextSlot: BookPanelSlot = usedSlots.has('right') ? 'left' : 'right';
-  if (state.openBookPanels.length < 2) {
+  const nextSlot = BOOK_PANEL_SLOTS.find((slot) => !usedSlots.has(slot)) ?? BOOK_PANEL_SLOTS[0];
+  if (state.openBookPanels.length < BOOK_PANEL_SLOTS.length) {
     state.openBookPanels.push({ bookId, slot: nextSlot });
     return;
   }
@@ -509,7 +778,7 @@ function moveBookPanel(state: GameState, bookId: BookId): void {
     return;
   }
 
-  const nextSlot: BookPanelSlot = currentPanel.slot === 'right' ? 'left' : 'right';
+  const nextSlot = BOOK_PANEL_SLOTS[(BOOK_PANEL_SLOTS.indexOf(currentPanel.slot) + 1) % BOOK_PANEL_SLOTS.length];
   const otherPanel = state.openBookPanels.find((panel) => panel.slot === nextSlot);
   if (otherPanel) {
     otherPanel.slot = currentPanel.slot;
@@ -527,7 +796,7 @@ function snakeTurn(state: GameState, direction: SnakeDirection): void {
     return;
   }
 
-  if (isOppositeDirection(state.snake.direction, direction)) {
+  if (!canQueueSnakeDirection(state.snake.direction, state.snake.nextDirection, direction)) {
     return;
   }
 
@@ -560,16 +829,20 @@ function tickSnake(state: GameState, deltaSeconds: number): void {
 
 function advanceSnake(state: GameState): void {
   const snake = state.snake;
-  const direction = snake.nextDirection;
+  const direction = committedSnakeDirection(snake.direction, snake.nextDirection);
+  snake.nextDirection = direction;
   const head = snake.body[0];
   const nextHead = nextSnakeHead(state, head, direction);
+  const hitWall = isOutOfBounds(nextHead, snake.gridSize);
+  const hitBody = snake.body.some((cell) => cellsMatch(cell, nextHead));
 
-  if (isOutOfBounds(nextHead, snake.gridSize) || snake.body.some((cell) => cellsMatch(cell, nextHead))) {
+  if (hitWall || (hitBody && snake.invincibleTimer <= 0)) {
     handleSnakeCollision(state);
     return;
   }
 
   snake.direction = direction;
+  snake.moveFrame = ((snake.moveFrame ?? 0) + 1) % 2;
   const ateFood = cellsMatch(nextHead, snake.food);
   const ateBonusFood = snake.bonusFood ? cellsMatch(nextHead, snake.bonusFood.cell) : false;
   snake.body = [nextHead, ...snake.body];
@@ -618,12 +891,14 @@ function resetSnakeRun(state: GameState): void {
   snake.comboSteps = 0;
   snake.extraLivesUsed = 0;
   snake.invincibleTimer = 0;
-  snake.body = createStartingSnakeBody();
+  snake.gridSize = snakeGridSize(state);
+  snake.body = createStartingSnakeBody(snake.gridSize);
   snake.direction = 'right';
   snake.nextDirection = 'right';
   snake.food = randomSnakeFood(snake.body, snake.gridSize);
   snake.bonusFood = nextBonusFood(state);
   snake.moveTimer = 0;
+  snake.moveFrame = 0;
   snake.running = true;
   snake.lastReward = 0;
 }
@@ -673,29 +948,21 @@ function nextBonusFood(state: GameState): GameState['snake']['bonusFood'] {
 }
 
 function snakeBonusFruitType(state: GameState): SnakeBonusFruitType | null {
-  if (state.snakeSkills.bonusFruit >= 3) {
-    return 'banana';
+  const unlockedTypes: SnakeBonusFruitType[] = [];
+  if (state.snakeSkills.bonusFruit >= 1) {
+    unlockedTypes.push('orange');
   }
   if (state.snakeSkills.bonusFruit >= 2) {
-    return 'pear';
+    unlockedTypes.push('pear');
   }
-  if (state.snakeSkills.bonusFruit >= 1) {
-    return 'orange';
+  if (state.snakeSkills.bonusFruit >= 3) {
+    unlockedTypes.push('banana');
   }
-  return null;
+  return unlockedTypes.length > 0 ? unlockedTypes[Math.floor(Math.random() * unlockedTypes.length)] : null;
 }
 
 function excludedSnakeFoodCells(state: GameState): SnakeCell[] {
   return state.snake.bonusFood ? [...state.snake.body, state.snake.food, state.snake.bonusFood.cell] : [...state.snake.body, state.snake.food];
-}
-
-function isOppositeDirection(current: SnakeDirection, next: SnakeDirection): boolean {
-  return (
-    (current === 'up' && next === 'down') ||
-    (current === 'down' && next === 'up') ||
-    (current === 'left' && next === 'right') ||
-    (current === 'right' && next === 'left')
-  );
 }
 
 function automatedSnakeDirection(state: GameState): SnakeDirection | null {
@@ -706,7 +973,7 @@ function automatedSnakeDirection(state: GameState): SnakeDirection | null {
   let best: { direction: SnakeDirection; distance: number } | null = null;
 
   for (const direction of candidates) {
-    if (isOppositeDirection(snake.direction, direction)) {
+    if (!canQueueSnakeDirection(snake.direction, snake.nextDirection, direction)) {
       continue;
     }
 
@@ -724,9 +991,798 @@ function automatedSnakeDirection(state: GameState): SnakeDirection | null {
   return best?.direction ?? null;
 }
 
+export function defenseWaveEnemyCount(state: GameState): number {
+  return 4 + Math.min(10, state.defense.wave + state.books.defense.level);
+}
+
+export function defenseTowerDamage(state: GameState): number {
+  return 1 + Math.floor(state.books.defense.level * 0.55);
+}
+
+export function defenseTowerAttackInterval(state: GameState): number {
+  return Math.max(0.28, 0.78 - state.books.defense.level * 0.035);
+}
+
+export function defenseWaveProgress(state: GameState): number {
+  return state.defense.spawnedThisWave / defenseWaveEnemyCount(state);
+}
+
+export function blackjackHandValue(hand: BlackjackCard[]): number {
+  let total = 0;
+  let aces = 0;
+
+  for (const card of hand) {
+    if (card.rank === 'A') {
+      aces += 1;
+      total += 11;
+    } else if (['K', 'Q', 'J'].includes(card.rank)) {
+      total += 10;
+    } else {
+      total += Number(card.rank);
+    }
+  }
+
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces -= 1;
+  }
+
+  return total;
+}
+
+export function blackjackSkillMaxLevel(skillId: BlackjackSkillId): number {
+  switch (skillId) {
+    case 'rerollPlayer':
+      return 3;
+    case 'rerollDealer':
+      return 3;
+    case 'revealDealer':
+      return 1;
+    case 'aceBias':
+      return 5;
+  }
+}
+
+export function blackjackSkillCost(state: GameState, skillId: BlackjackSkillId): number {
+  const level = state.blackjackSkills[skillId];
+  switch (skillId) {
+    case 'rerollPlayer':
+      return 4 + level * 5;
+    case 'rerollDealer':
+      return 5 + level * 6;
+    case 'revealDealer':
+      return 8;
+    case 'aceBias':
+      return 6 + level * 7;
+  }
+}
+
+export function blackjackAceBiasChance(state: GameState): number {
+  return Math.min(0.25, state.blackjackSkills.aceBias * 0.05);
+}
+
+export function blackjackVisibleDealerValue(state: GameState): number {
+  if (
+    state.blackjack.phase === 'player' &&
+    !state.blackjack.dealerCardRevealed &&
+    state.blackjackSkills.revealDealer <= 0
+  ) {
+    return blackjackHandValue(state.blackjack.dealerHand.slice(0, 1));
+  }
+  return blackjackHandValue(state.blackjack.dealerHand);
+}
+
+export function blackjackCardLabel(card: BlackjackCard): string {
+  return `${card.rank}${blackjackSuitSymbol(card.suit)}`;
+}
+
+export { hundredOptionRange, hundredTargetMax };
+
+function tickDefense(state: GameState, deltaSeconds: number): void {
+  const book = state.books.defense;
+  const defense = state.defense;
+  defense.lastReward = 0;
+
+  if (!book.unlocked || !isBookPanelOpen(state, 'defense')) {
+    defense.running = false;
+    return;
+  }
+
+  defense.running = true;
+  defense.tower.cooldown = Math.max(0, defense.tower.cooldown - deltaSeconds);
+  tickDefenseShot(state, deltaSeconds);
+  spawnDefenseEnemies(state, deltaSeconds);
+  moveDefenseEnemies(state, deltaSeconds);
+  fireDefenseTower(state);
+  completeDefenseWaveIfReady(state);
+}
+
+function spawnDefenseEnemies(state: GameState, deltaSeconds: number): void {
+  const defense = state.defense;
+  const enemyCount = defenseWaveEnemyCount(state);
+  if (defense.spawnedThisWave >= enemyCount) {
+    return;
+  }
+
+  defense.spawnTimer += deltaSeconds;
+  const spawnEvery = Math.max(0.42, 0.9 - defense.wave * 0.025);
+  if (defense.spawnTimer < spawnEvery) {
+    return;
+  }
+
+  defense.spawnTimer = 0;
+  defense.spawnedThisWave += 1;
+  const lane = (defense.nextEnemyId * 137.5) % 360;
+  const maxHealth = 2 + Math.floor(defense.wave * 0.45);
+  defense.enemies.push({
+    id: defense.nextEnemyId,
+    lane,
+    distance: 1,
+    health: maxHealth,
+    maxHealth,
+  });
+  defense.nextEnemyId += 1;
+}
+
+function moveDefenseEnemies(state: GameState, deltaSeconds: number): void {
+  const defense = state.defense;
+  const speed = 0.105 + Math.min(0.06, defense.wave * 0.006);
+  const survivors: DefenseEnemy[] = [];
+
+  for (const enemy of defense.enemies) {
+    const nextDistance = enemy.distance - speed * deltaSeconds;
+    if (nextDistance <= 0.11) {
+      defense.towerHealth = Math.max(0, defense.towerHealth - 1);
+      defense.score = 0;
+      continue;
+    }
+    survivors.push({ ...enemy, distance: nextDistance });
+  }
+
+  defense.enemies = survivors;
+  if (defense.towerHealth <= 0) {
+    resetDefenseRun(state);
+  }
+}
+
+function fireDefenseTower(state: GameState): void {
+  const defense = state.defense;
+  if (defense.tower.cooldown > 0 || defense.enemies.length === 0) {
+    return;
+  }
+
+  const target = defense.enemies
+    .filter((enemy) => defenseEnemyInTowerRange(enemy, defense.tower.range))
+    .sort((first, second) => first.distance - second.distance)[0];
+  if (!target) {
+    return;
+  }
+
+  target.health -= defenseTowerDamage(state);
+  defense.tower.cooldown = defenseTowerAttackInterval(state);
+  defense.shotPulse += 1;
+  defense.shot = {
+    id: defense.shotPulse,
+    lane: target.lane,
+    distance: target.distance,
+    timer: 0.18,
+  };
+
+  if (target.health > 0) {
+    return;
+  }
+
+  const reward = 1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(defense.wave / 4);
+  defense.enemies = defense.enemies.filter((enemy) => enemy.id !== target.id);
+  defense.score += reward;
+  defense.best = Math.max(defense.best, defense.score);
+  defense.lastReward = reward;
+  state.resources.sigils += reward;
+  state.mana += 0.5 + state.books.defense.level * 0.2;
+}
+
+function completeDefenseWaveIfReady(state: GameState): void {
+  const defense = state.defense;
+  if (defense.spawnedThisWave < defenseWaveEnemyCount(state) || defense.enemies.length > 0) {
+    return;
+  }
+
+  defense.wave += 1;
+  defense.spawnedThisWave = 0;
+  defense.spawnTimer = -1.1;
+  defense.towerHealth = Math.min(10, defense.towerHealth + 2);
+}
+
+function resetDefenseRun(state: GameState): void {
+  const defense = state.defense;
+  defense.running = false;
+  defense.wave = 1;
+  defense.towerHealth = 10;
+  defense.score = 0;
+  defense.spawnTimer = 0;
+  defense.spawnedThisWave = 0;
+  defense.nextEnemyId = 1;
+  defense.lastReward = 0;
+  defense.shotPulse = 0;
+  defense.tower.cooldown = 0;
+  defense.shot = null;
+  defense.enemies = [];
+}
+
+function tickDefenseShot(state: GameState, deltaSeconds: number): void {
+  const shot = state.defense.shot;
+  if (!shot) {
+    return;
+  }
+
+  shot.timer -= deltaSeconds;
+  if (shot.timer <= 0) {
+    state.defense.shot = null;
+  }
+}
+
+function dealBlackjack(state: GameState): void {
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack')) {
+    return;
+  }
+
+  const blackjack = state.blackjack;
+  blackjack.deck = shuffledBlackjackDeck();
+  blackjack.playerHand = [drawBlackjackCard(state, 'player'), drawBlackjackCard(state, 'player')];
+  blackjack.dealerHand = [drawBlackjackCard(state, 'dealer'), drawBlackjackCard(state, 'dealer')];
+  blackjack.phase = 'player';
+  blackjack.round += 1;
+  blackjack.playerRerollsUsed = 0;
+  blackjack.dealerRerollsUsed = 0;
+  blackjack.dealerCardRevealed = state.blackjackSkills.revealDealer > 0;
+  blackjack.lastReward = 0;
+  blackjack.lastOutcome = 'Main ouverte';
+
+  const playerValue = blackjackHandValue(blackjack.playerHand);
+  const dealerValue = blackjackHandValue(blackjack.dealerHand);
+  if (playerValue === 21 || dealerValue === 21) {
+    resolveBlackjackRound(state);
+  }
+}
+
+function hitBlackjack(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack')) {
+    return;
+  }
+  if (blackjack.phase === 'idle') {
+    dealBlackjack(state);
+    return;
+  }
+  if (blackjack.phase !== 'player') {
+    return;
+  }
+
+  blackjack.playerHand.push(drawBlackjackCard(state, 'player'));
+  blackjack.lastReward = 0;
+  const playerValue = blackjackHandValue(blackjack.playerHand);
+  if (playerValue > 21) {
+    blackjack.phase = 'lost';
+    blackjack.lastOutcome = 'Buste';
+  }
+}
+
+function standBlackjack(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || blackjack.phase !== 'player') {
+    return;
+  }
+
+  while (blackjackHandValue(blackjack.dealerHand) < 17) {
+    blackjack.dealerHand.push(drawBlackjackCard(state, 'dealer'));
+  }
+  blackjack.dealerCardRevealed = true;
+  resolveBlackjackRound(state);
+}
+
+function rerollPlayerBlackjackCard(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (
+    !state.books.blackjack.unlocked ||
+    !isBookPanelOpen(state, 'blackjack') ||
+    blackjack.phase !== 'player' ||
+    blackjack.playerHand.length === 0 ||
+    state.blackjackSkills.rerollPlayer <= blackjack.playerRerollsUsed
+  ) {
+    return;
+  }
+
+  const rerollIndex = blackjack.playerHand.length - 1;
+  blackjack.playerHand[rerollIndex] = drawBlackjackCard(state, 'player');
+  blackjack.playerRerollsUsed += 1;
+  blackjack.lastReward = 0;
+  blackjack.lastOutcome = 'Carte relancee';
+
+  if (blackjackHandValue(blackjack.playerHand) > 21) {
+    blackjack.phase = 'lost';
+    blackjack.lastOutcome = 'Buste';
+  }
+}
+
+function rerollDealerBlackjackCard(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (
+    !state.books.blackjack.unlocked ||
+    !isBookPanelOpen(state, 'blackjack') ||
+    blackjack.phase !== 'player' ||
+    blackjack.dealerHand.length === 0 ||
+    state.blackjackSkills.rerollDealer <= blackjack.dealerRerollsUsed
+  ) {
+    return;
+  }
+
+  const rerollIndex =
+    (blackjack.dealerCardRevealed || state.blackjackSkills.revealDealer > 0) && blackjack.dealerHand.length > 1 ? 1 : 0;
+  blackjack.dealerHand[rerollIndex] = drawBlackjackCard(state, 'dealer');
+  blackjack.dealerRerollsUsed += 1;
+  blackjack.lastReward = 0;
+  blackjack.lastOutcome = 'Carte croupier relancee';
+
+  if (blackjackHandValue(blackjack.dealerHand) === 21) {
+    blackjack.dealerCardRevealed = true;
+    resolveBlackjackRound(state);
+  }
+}
+
+function revealBlackjackDealerCard(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (
+    !state.books.blackjack.unlocked ||
+    !isBookPanelOpen(state, 'blackjack') ||
+    blackjack.phase !== 'player' ||
+    state.blackjackSkills.revealDealer <= 0
+  ) {
+    return;
+  }
+
+  blackjack.dealerCardRevealed = true;
+  blackjack.lastReward = 0;
+  blackjack.lastOutcome = 'Carte revelee';
+}
+
+function resolveBlackjackRound(state: GameState): void {
+  const blackjack = state.blackjack;
+  blackjack.dealerCardRevealed = true;
+  const playerValue = blackjackHandValue(blackjack.playerHand);
+  const dealerValue = blackjackHandValue(blackjack.dealerHand);
+  const natural = blackjack.playerHand.length === 2 && playerValue === 21;
+
+  if (playerValue > 21) {
+    blackjack.phase = 'lost';
+    blackjack.lastOutcome = 'Buste';
+    blackjack.lastReward = 0;
+    return;
+  }
+  if (dealerValue > 21 || playerValue > dealerValue) {
+    const reward = blackjackReward(state, natural);
+    blackjack.phase = natural ? 'blackjack' : 'won';
+    blackjack.lastOutcome = natural ? 'Blackjack' : 'Victoire';
+    blackjack.lastReward = reward;
+    state.resources.chips += reward;
+    state.mana += reward * (0.8 + state.books.blackjack.level * 0.15);
+    return;
+  }
+  if (playerValue === dealerValue) {
+    blackjack.phase = 'push';
+    blackjack.lastOutcome = 'Egalite';
+    blackjack.lastReward = 0;
+    return;
+  }
+
+  blackjack.phase = 'lost';
+  blackjack.lastOutcome = 'Perdu';
+  blackjack.lastReward = 0;
+}
+
+function blackjackReward(state: GameState, natural: boolean): number {
+  const base = 2 + Math.floor(state.books.blackjack.level * 0.65);
+  return natural ? base + 2 : base;
+}
+
+function drawBlackjackCard(state: GameState, hand: 'player' | 'dealer'): BlackjackCard {
+  if (state.blackjack.deck.length === 0) {
+    state.blackjack.deck = shuffledBlackjackDeck();
+  }
+
+  if (hand === 'player' && Math.random() < blackjackAceBiasChance(state)) {
+    const aceIndex = state.blackjack.deck.findIndex((card) => card.rank === 'A');
+    if (aceIndex >= 0) {
+      const [ace] = state.blackjack.deck.splice(aceIndex, 1);
+      return ace;
+    }
+  }
+
+  return state.blackjack.deck.pop() ?? { rank: 'A', suit: 'spades' };
+}
+
+function shuffledBlackjackDeck(): BlackjackCard[] {
+  const suits: BlackjackSuit[] = ['hearts', 'diamonds', 'clubs', 'spades'];
+  const ranks: BlackjackRank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const deck = suits.flatMap((suit) => ranks.map((rank) => ({ rank, suit })));
+  for (let index = deck.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [deck[index], deck[swapIndex]] = [deck[swapIndex], deck[index]];
+  }
+  return deck;
+}
+
+function blackjackSuitSymbol(suit: BlackjackSuit): string {
+  switch (suit) {
+    case 'hearts':
+      return '♥';
+    case 'diamonds':
+      return '♦';
+    case 'clubs':
+      return '♣';
+    case 'spades':
+      return '♠';
+  }
+}
+
+function chooseHundredOption(state: GameState, optionId: HundredOptionId): void {
+  const book = state.books.hundred;
+  if (!book.unlocked || !isBookPanelOpen(state, 'hundred')) {
+    return;
+  }
+
+  const hundred = state.hundred;
+  const roll = rollHundredOption(optionId, book.level);
+  const nextTotal = hundred.total + roll;
+  const targetMax = hundredTargetMax(book.level);
+  hundred.total = nextTotal;
+  hundred.lastRoll = roll;
+  hundred.lastOption = optionId;
+  hundred.lastReward = 0;
+
+  if (nextTotal >= 100 && nextTotal <= targetMax) {
+    const reward = hundredReward(book.level, nextTotal);
+    hundred.attempts += 1;
+    hundred.wins += 1;
+    hundred.bestTotal = Math.max(hundred.bestTotal, nextTotal);
+    hundred.lastReward = reward;
+    hundred.lastOutcome = 'won';
+    state.resources.fragments += reward;
+    state.mana += reward * (0.55 + book.level * 0.15);
+    hundred.total = 0;
+    return;
+  }
+
+  if (nextTotal > targetMax) {
+    hundred.attempts += 1;
+    hundred.bestTotal = Math.max(hundred.bestTotal, Math.min(nextTotal, targetMax));
+    hundred.lastOutcome = 'bust';
+    hundred.total = 0;
+    return;
+  }
+
+  hundred.bestTotal = Math.max(hundred.bestTotal, nextTotal);
+  hundred.lastOutcome = 'rolled';
+}
+
+function tickTargets(state: GameState, deltaSeconds: number): void {
+  const book = state.books.targets;
+  const targetState = state.targets;
+  targetState.lastReward = 0;
+
+  if (!book.unlocked || !isBookPanelOpen(state, 'targets')) {
+    targetState.running = false;
+    return;
+  }
+
+  targetState.running = true;
+  spawnTargets(state, deltaSeconds);
+  automateTargetAttack(state, deltaSeconds);
+}
+
+function spawnTargets(state: GameState, deltaSeconds: number): void {
+  const targetState = state.targets;
+  if (targetState.targets.length >= targetMaxActiveTargets(state.targetSkills.targetCount)) {
+    return;
+  }
+
+  targetState.spawnTimer += deltaSeconds;
+  if (targetState.spawnTimer < targetSpawnInterval(state.targetSkills.spawnSpeed)) {
+    return;
+  }
+
+  targetState.spawnTimer = 0;
+  targetState.targets.push(createTargetInstance(state));
+}
+
+function createTargetInstance(state: GameState): TargetInstance {
+  const id = state.targets.nextTargetId;
+  state.targets.nextTargetId += 1;
+  const maxHealth = 1 + Math.floor(Math.max(1, state.books.targets.level) * 0.35);
+  return {
+    id,
+    x: 14 + ((id * 37) % 72),
+    y: 18 + ((id * 53) % 62),
+    health: maxHealth,
+    maxHealth,
+  };
+}
+
+function automateTargetAttack(state: GameState, deltaSeconds: number): void {
+  const interval = targetAutomationInterval(state.targetSkills.automation);
+  if (interval <= 0 || state.targets.targets.length === 0) {
+    state.targets.automationTimer = 0;
+    return;
+  }
+
+  state.targets.automationTimer += deltaSeconds;
+  if (state.targets.automationTimer < interval) {
+    return;
+  }
+
+  const shots = Math.max(1, Math.floor(state.targets.automationTimer / interval));
+  state.targets.automationTimer %= interval;
+  for (let shot = 0; shot < shots; shot += 1) {
+    const target = state.targets.targets[0];
+    if (!target) {
+      return;
+    }
+    damageTarget(state, target);
+  }
+}
+
+function attackTarget(state: GameState, targetId: number): void {
+  if (!state.books.targets.unlocked || !isBookPanelOpen(state, 'targets')) {
+    return;
+  }
+
+  const target = state.targets.targets.find((candidate) => candidate.id === targetId);
+  if (!target) {
+    return;
+  }
+
+  damageTarget(state, target);
+}
+
+function damageTarget(state: GameState, target: TargetInstance): void {
+  target.health -= targetAttackDamage(state.targetSkills.damage);
+  state.targets.shotPulse += 1;
+  if (target.health > 0) {
+    return;
+  }
+
+  const reward = targetReward(state.books.targets.level, target.maxHealth);
+  state.targets.targets = state.targets.targets.filter((candidate) => candidate.id !== target.id);
+  state.targets.score += reward;
+  state.targets.best = Math.max(state.targets.best, state.targets.score);
+  state.targets.lastReward = reward;
+  state.resources.marks += reward;
+  state.mana += reward * (0.35 + state.books.targets.level * 0.12);
+}
+
+function tickMining(state: GameState, deltaSeconds: number): void {
+  const skills = state.miningSkills;
+  state.mining.lastReward = 0;
+
+  if (!state.books.mine.unlocked) {
+    skills.automationTimer = 0;
+    return;
+  }
+
+  const interval = miningAutomationInterval(skills.automation);
+  if (interval <= 0) {
+    skills.automationTimer = 0;
+    return;
+  }
+
+  skills.automationTimer += deltaSeconds;
+  if (skills.automationTimer < interval) {
+    return;
+  }
+
+  const digs = Math.max(1, Math.floor(skills.automationTimer / interval));
+  skills.automationTimer %= interval;
+  for (let dig = 0; dig < digs; dig += 1) {
+    const target = weakestMiningBlock(state);
+    if (!target) {
+      return;
+    }
+    applyMiningHit(state, target, miningPickaxeDamage(state), true);
+  }
+  skills.autoDigCount += digs;
+}
+
+function digMiningBlock(state: GameState, blockId: number): void {
+  if (!state.books.mine.unlocked || !isBookPanelOpen(state, 'mine')) {
+    return;
+  }
+
+  const block = state.mining.blocks.find((candidate) => candidate.id === blockId);
+  if (!block) {
+    return;
+  }
+
+  state.mining.lastReward = 0;
+  applyMiningHit(state, block, miningPickaxeDamage(state), false);
+
+  const splash = miningSplashDamage(state);
+  if (splash <= 0) {
+    return;
+  }
+
+  for (const neighbor of miningNeighbors(state, blockId)) {
+    applyMiningHit(state, neighbor, splash, false);
+  }
+}
+
+function weakestMiningBlock(state: GameState): MiningBlock | null {
+  return (
+    [...state.mining.blocks].sort((first, second) => {
+      const firstRatio = first.health / first.maxHealth;
+      const secondRatio = second.health / second.maxHealth;
+      return firstRatio - secondRatio || second.depth - first.depth || first.id - second.id;
+    })[0] ?? null
+  );
+}
+
+function miningNeighbors(state: GameState, blockId: number): MiningBlock[] {
+  const x = blockId % MINING_GRID_COLUMNS;
+  const y = Math.floor(blockId / MINING_GRID_COLUMNS);
+  const neighborIds = [
+    { x: x - 1, y },
+    { x: x + 1, y },
+    { x, y: y - 1 },
+    { x, y: y + 1 },
+  ]
+    .filter((cell) => cell.x >= 0 && cell.x < MINING_GRID_COLUMNS && cell.y >= 0)
+    .map((cell) => cell.y * MINING_GRID_COLUMNS + cell.x);
+
+  return state.mining.blocks.filter((block) => neighborIds.includes(block.id));
+}
+
+function applyMiningHit(state: GameState, block: MiningBlock, damage: number, isAutomated: boolean): void {
+  state.mining.hitPulse += 1;
+  block.lastHit = state.mining.hitPulse;
+  block.health -= damage;
+  if (block.health > 0) {
+    return;
+  }
+
+  breakMiningBlock(state, block, isAutomated);
+}
+
+function breakMiningBlock(state: GameState, block: MiningBlock, isAutomated: boolean): void {
+  const brokenDepth = block.depth;
+  const reward = miningBlockReward(state, block);
+  state.resources.minerals += reward;
+  state.mana += reward * (isAutomated ? 0.28 : 0.42) + state.books.mine.level * 0.12;
+  state.mining.totalMined += 1;
+  state.mining.lastReward += reward;
+  state.mining.lastBrokenDepth = brokenDepth;
+
+  const nextDepth = brokenDepth + 1;
+  const nextMaxHealth = miningBlockMaxHealth(nextDepth);
+  block.depth = nextDepth;
+  block.maxHealth = nextMaxHealth;
+  block.health = nextMaxHealth;
+  state.mining.deepestLayer = Math.max(state.mining.deepestLayer, nextDepth);
+}
+
+function miningBlockReward(state: GameState, block: MiningBlock): number {
+  return 1 + Math.floor(block.depth * 0.45) + Math.floor(state.books.mine.level * 0.3);
+}
+
+function trainSlime(state: GameState, commandId: SlimeTrainerCommandId): void {
+  const book = state.books.slimeTrainer;
+  const trainer = state.slimeTrainer;
+  trainer.lastCommand = commandId;
+  trainer.lastDamage = 0;
+  trainer.lastEnemyDamage = 0;
+  trainer.lastXp = 0;
+  trainer.lastReward = 0;
+
+  if (!book.unlocked || !isBookPanelOpen(state, 'slimeTrainer')) {
+    return;
+  }
+  if (trainer.turn !== 'player') {
+    trainer.lastOutcome = 'waitingEnemy';
+    return;
+  }
+  if (!slimeTrainerCommandUnlocked(commandId, trainer.level)) {
+    trainer.lastOutcome = 'locked';
+    return;
+  }
+
+  const damage = slimeTrainerCommandDamage(commandId, trainer.level);
+  trainer.hitPulse += 1;
+  trainer.enemy.health = Math.max(0, trainer.enemy.health - damage);
+  trainer.lastDamage = damage;
+
+  if (trainer.enemy.health > 0) {
+    trainer.lastOutcome = 'hit';
+    trainer.turn = 'enemy';
+    trainer.enemyTurnTimer = 0;
+    return;
+  }
+
+  const xp = slimeTrainerXpReward(trainer.enemy, trainer.level);
+  const reward = slimeTrainerResourceReward(trainer.enemy, trainer.level);
+  trainer.victories += 1;
+  trainer.xp += xp;
+  trainer.lastXp = xp;
+  trainer.lastReward = reward;
+  state.resources.gels += reward;
+  state.mana += reward * (0.45 + book.level * 0.14);
+
+  let didLevelUp = false;
+  while (trainer.xp >= slimeTrainerXpToNextLevel(trainer.level)) {
+    trainer.xp -= slimeTrainerXpToNextLevel(trainer.level);
+    trainer.level += 1;
+    didLevelUp = true;
+  }
+
+  trainer.lastOutcome = didLevelUp ? 'levelUp' : 'victory';
+  trainer.enemy = slimeTrainerEnemyForVictoryCount(trainer.victories, trainer.level);
+  trainer.slimeMaxHealth = slimeTrainerMaxHealth(trainer.level);
+  trainer.slimeHealth = Math.min(trainer.slimeMaxHealth, trainer.slimeHealth + 2 + (didLevelUp ? 2 : 0));
+  trainer.turn = 'player';
+  trainer.enemyTurnTimer = 0;
+}
+
+function enemyAttackSlime(state: GameState): void {
+  const book = state.books.slimeTrainer;
+  const trainer = state.slimeTrainer;
+  trainer.lastDamage = 0;
+  trainer.lastEnemyDamage = 0;
+  trainer.lastXp = 0;
+  trainer.lastReward = 0;
+
+  if (!book.unlocked || !isBookPanelOpen(state, 'slimeTrainer') || trainer.turn !== 'enemy') {
+    return;
+  }
+
+  trainer.enemyTurnTimer = 0;
+  const damage = slimeTrainerEnemyAttackDamage(trainer.enemy, trainer.level);
+  trainer.hitPulse += 1;
+  trainer.lastEnemyDamage = damage;
+  trainer.slimeHealth = Math.max(0, trainer.slimeHealth - damage);
+
+  if (trainer.slimeHealth <= 0) {
+    trainer.lastOutcome = 'slimeDown';
+    trainer.turn = 'player';
+    trainer.slimeHealth = Math.max(1, Math.ceil(trainer.slimeMaxHealth * 0.55));
+    return;
+  }
+
+  trainer.lastOutcome = 'enemyHit';
+  trainer.turn = 'player';
+}
+
+function tickSlimeTrainer(state: GameState, deltaSeconds: number): void {
+  const trainer = state.slimeTrainer;
+  if (!state.books.slimeTrainer.unlocked || !isBookPanelOpen(state, 'slimeTrainer') || trainer.turn !== 'enemy') {
+    trainer.enemyTurnTimer = 0;
+    return;
+  }
+
+  trainer.enemyTurnTimer += Math.min(deltaSeconds, 0.25);
+  if (trainer.enemyTurnTimer >= 0.5) {
+    enemyAttackSlime(state);
+  }
+}
+
+function slimeTrainerMaxHealth(level: number): number {
+  return 10 + Math.max(0, level - 1) * 2;
+}
+
 function grantDebugResources(state: GameState): void {
   state.mana += 999;
   state.resources.scales += 999;
   state.resources.runes += 999;
   state.resources.spores += 999;
+  state.resources.sigils += 999;
+  state.resources.chips += 999;
+  state.resources.fragments += 999;
+  state.resources.marks += 999;
+  state.resources.minerals += 999;
+  state.resources.gels += 999;
 }

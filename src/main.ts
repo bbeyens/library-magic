@@ -9,8 +9,8 @@ const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.CANVAS,
   parent: 'game-root',
   backgroundColor: '#19131b',
-  width: 960,
-  height: 540,
+  width: 1280,
+  height: 720,
   pixelArt: false,
   roundPixels: true,
   scale: {
@@ -26,6 +26,7 @@ mountHud(document.querySelector<HTMLDivElement>('#hud-root'));
 installBurstClickHotkey();
 installDebugResourceHotkey();
 installDebugManaSkillHotkeys();
+installFrameCounter();
 
 window.addEventListener('beforeunload', () => {
   game.destroy(true);
@@ -131,6 +132,8 @@ function installDebugManaSkillHotkeys(): void {
     if (key === 'i') {
       event.preventDefault();
       gameStore.dispatch({ type: 'maxManaSkills' });
+      gameStore.dispatch({ type: 'maxSnakeSkills' });
+      gameStore.dispatch({ type: 'maxMiningSkills' });
       return;
     }
     if (key === 'u') {
@@ -138,6 +141,45 @@ function installDebugManaSkillHotkeys(): void {
       gameStore.dispatch({ type: 'resetManaSkills' });
     }
   });
+}
+
+function installFrameCounter(): void {
+  const counter = document.querySelector<HTMLElement>('#frame-counter');
+  if (!counter) {
+    return;
+  }
+
+  let animationFrame = 0;
+  let totalFrames = 0;
+  let sampleFrames = 0;
+  let sampleStart = performance.now();
+  let lastFrameTime = sampleStart;
+  let worstFrameMs = 0;
+
+  const tick = (now: number): void => {
+    totalFrames += 1;
+    sampleFrames += 1;
+
+    const frameMs = now - lastFrameTime;
+    lastFrameTime = now;
+    worstFrameMs = Math.max(worstFrameMs, frameMs);
+
+    const sampleMs = now - sampleStart;
+    if (sampleMs >= 500) {
+      const fps = Math.round((sampleFrames * 1000) / sampleMs);
+      const averageMs = sampleMs / sampleFrames;
+      counter.textContent = `${fps} FPS · ${averageMs.toFixed(1)} ms · max ${worstFrameMs.toFixed(1)} · F${totalFrames}`;
+      counter.dataset.status = fps < 45 ? 'low' : fps < 55 ? 'warn' : 'ok';
+      sampleFrames = 0;
+      sampleStart = now;
+      worstFrameMs = 0;
+    }
+
+    animationFrame = window.requestAnimationFrame(tick);
+  };
+
+  animationFrame = window.requestAnimationFrame(tick);
+  window.addEventListener('beforeunload', () => window.cancelAnimationFrame(animationFrame), { once: true });
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

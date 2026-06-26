@@ -1,6 +1,16 @@
-export type BookId = 'mana' | 'serpent' | 'typing' | 'herbarium';
+export type BookId =
+  | 'mana'
+  | 'serpent'
+  | 'typing'
+  | 'herbarium'
+  | 'defense'
+  | 'blackjack'
+  | 'hundred'
+  | 'mine'
+  | 'targets'
+  | 'slimeTrainer';
 
-export type ResourceId = 'scales' | 'runes' | 'spores';
+export type ResourceId = 'scales' | 'runes' | 'spores' | 'sigils' | 'chips' | 'fragments' | 'minerals' | 'marks' | 'gels';
 
 export interface BookDefinition {
   id: BookId;
@@ -8,7 +18,7 @@ export interface BookDefinition {
   subtitle: string;
   resourceId?: ResourceId;
   resourceName?: string;
-  icon: 'drop' | 'coil' | 'spark' | 'leaf';
+  icon: 'drop' | 'coil' | 'spark' | 'leaf' | 'tower' | 'card' | 'number' | 'target' | 'pickaxe' | 'slime';
   color: number;
   accent: string;
   shelf: number;
@@ -72,6 +82,90 @@ export const books: BookDefinition[] = [
     slot: 0,
     unlockMana: 280,
     unlockResource: { id: 'runes', amount: 12 },
+  },
+  {
+    id: 'defense',
+    name: 'Bastion Arcanique',
+    subtitle: 'Une tour unique grave des sceaux en repoussant les vagues.',
+    resourceId: 'sigils',
+    resourceName: 'Sceaux',
+    icon: 'tower',
+    color: 0xf2b35f,
+    accent: '#ffc36e',
+    shelf: 1,
+    slot: 1,
+    unlockMana: 420,
+    unlockResource: { id: 'spores', amount: 14 },
+  },
+  {
+    id: 'blackjack',
+    name: 'Table du Blackjack',
+    subtitle: 'Tire, reste, et grave des jetons arcanes.',
+    resourceId: 'chips',
+    resourceName: 'Jetons',
+    icon: 'card',
+    color: 0x4e8f66,
+    accent: '#74d88f',
+    shelf: 1,
+    slot: 2,
+    unlockMana: 620,
+    unlockResource: { id: 'sigils', amount: 16 },
+  },
+  {
+    id: 'hundred',
+    name: 'Calcul du Cent',
+    subtitle: 'Atteins 100 avec des tirages de plus en plus maitrises.',
+    resourceId: 'fragments',
+    resourceName: 'Fragments',
+    icon: 'number',
+    color: 0x4f79d8,
+    accent: '#7ea4ff',
+    shelf: 2,
+    slot: 0,
+    unlockMana: 860,
+    unlockResource: { id: 'chips', amount: 18 },
+  },
+  {
+    id: 'mine',
+    name: 'Mine des Profondeurs',
+    subtitle: 'Creuse des blocs de terre toujours plus coriaces.',
+    resourceId: 'minerals',
+    resourceName: 'Minerais',
+    icon: 'pickaxe',
+    color: 0x9d6b41,
+    accent: '#d69a58',
+    shelf: 2,
+    slot: 1,
+    unlockMana: 1120,
+    unlockResource: { id: 'fragments', amount: 20 },
+  },
+  {
+    id: 'targets',
+    name: 'Galerie des Cibles',
+    subtitle: 'Clique les cibles, monte les degats, puis automatise le tir.',
+    resourceId: 'marks',
+    resourceName: 'Marques',
+    icon: 'target',
+    color: 0xd8505a,
+    accent: '#ff7a80',
+    shelf: 2,
+    slot: 2,
+    unlockMana: 1380,
+    unlockResource: { id: 'minerals', amount: 22 },
+  },
+  {
+    id: 'slimeTrainer',
+    name: 'Slime Trainer',
+    subtitle: 'Entraine un slime dans des duels de monstres.',
+    resourceId: 'gels',
+    resourceName: 'Gels',
+    icon: 'slime',
+    color: 0x66d88a,
+    accent: '#7df0a3',
+    shelf: 2,
+    slot: 3,
+    unlockMana: 1680,
+    unlockResource: { id: 'marks', amount: 24 },
   },
 ];
 

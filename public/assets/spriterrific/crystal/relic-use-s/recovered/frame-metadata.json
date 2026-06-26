@@ -1,0 +1,145 @@
+{
+  "sheet": "public/assets/spriterrific/crystal/relic-use-s/generated/sheet.png",
+  "rows": 3,
+  "cols": 4,
+  "count": 8,
+  "keying": {
+    "chromaRgb": [
+      0,
+      255,
+      0
+    ],
+    "threshold": 90.0,
+    "minComponentArea": 500,
+    "removedPixels": 2546999,
+    "keptPixelsBeforeDespeckle": 598729,
+    "bbox": [
+      146,
+      15,
+      1950,
+      1156
+    ]
+  },
+  "frames": [
+    {
+      "frame": "01",
+      "bbox": [
+        146,
+        19,
+        369,
+        570
+      ],
+      "area": 71355,
+      "center": [
+        257.5,
+        294.5
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-01.png"
+    },
+    {
+      "frame": "02",
+      "bbox": [
+        654,
+        19,
+        877,
+        570
+      ],
+      "area": 71323,
+      "center": [
+        765.5,
+        294.5
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-02.png"
+    },
+    {
+      "frame": "03",
+      "bbox": [
+        1163,
+        20,
+        1386,
+        571
+      ],
+      "area": 71503,
+      "center": [
+        1274.5,
+        295.5
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-03.png"
+    },
+    {
+      "frame": "04",
+      "bbox": [
+        1666,
+        15,
+        1890,
+        571
+      ],
+      "area": 73394,
+      "center": [
+        1778.0,
+        293.0
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-04.png"
+    },
+    {
+      "frame": "05",
+      "bbox": [
+        146,
+        607,
+        369,
+        1156
+      ],
+      "area": 71133,
+      "center": [
+        257.5,
+        881.5
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-05.png"
+    },
+    {
+      "frame": "06",
+      "bbox": [
+        654,
+        607,
+        877,
+        1156
+      ],
+      "area": 71088,
+      "center": [
+        765.5,
+        881.5
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-06.png"
+    },
+    {
+      "frame": "07",
+      "bbox": [
+        1163,
+        606,
+        1386,
+        1156
+      ],
+      "area": 71100,
+      "center": [
+        1274.5,
+        881.0
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-07.png"
+    },
+    {
+      "frame": "08",
+      "bbox": [
+        1667,
+        610,
+        1890,
+        1156
+      ],
+      "area": 70762,
+      "center": [
+        1778.5,
+        883.0
+      ],
+      "path": "public/assets/spriterrific/crystal/relic-use-s/recovered/frame-08.png"
+    }
+  ]
+}

@@ -1,0 +1,147 @@
+{
+  "version": 1,
+  "mode": "padded-native-review",
+  "description": "Recovered components placed on a shared padded canvas without scaling.",
+  "canvasSize": [
+    512,
+    560
+  ],
+  "minCanvasSize": [
+    512,
+    512
+  ],
+  "placement": {
+    "centerX": 256,
+    "bottomY": 552
+  },
+  "frames": [
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-01.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-01.png",
+      "sourceSize": [
+        212,
+        521
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        150,
+        31
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-02.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-02.png",
+      "sourceSize": [
+        213,
+        529
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        150,
+        23
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-03.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-03.png",
+      "sourceSize": [
+        214,
+        535
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        149,
+        17
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-04.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-04.png",
+      "sourceSize": [
+        214,
+        526
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        149,
+        26
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-05.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-05.png",
+      "sourceSize": [
+        211,
+        519
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        151,
+        33
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-06.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-06.png",
+      "sourceSize": [
+        212,
+        525
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        150,
+        27
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-07.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-07.png",
+      "sourceSize": [
+        213,
+        523
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        150,
+        29
+      ]
+    },
+    {
+      "source": "public/assets/spriterrific/crystal/relic-idle-s/recovered/frame-08.png",
+      "output": "public/assets/spriterrific/crystal/relic-idle-s/recovered-native/frames/frame-08.png",
+      "sourceSize": [
+        214,
+        530
+      ],
+      "canvasSize": [
+        512,
+        560
+      ],
+      "offset": [
+        149,
+        22
+      ]
+    }
+  ]
+}

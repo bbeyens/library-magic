@@ -1,0 +1,44 @@
+Intended use: create a high-fidelity game sprite anchor where AI-generated mixels and richer pixel-art texture are acceptable.
+
+Input image role: identity and style reference. Preserve the broad character identity, silhouette, outfit color blocks, proportions, readable personality, and the user's intended game-art fidelity.
+
+This preset is for non-pixel-snap-bound game assets. Do not force the strict low-bit native sprite constraints. The result should still be clean game production art, but it may keep richer shading, larger forms, and higher-detail pixel texture when that benefits the game.
+
+Create one full-body front-facing character identity anchor on a 1024x1024 square canvas.
+
+
+Style target:
+- high-fidelity 2D pixel-art-inspired game sprite
+- clear silhouette and readable outfit at gameplay scale
+- richer color ramps and texture are acceptable
+- mixed pixels are acceptable if they improve the final high-resolution asset
+- keep character identity stronger than strict retro simplification
+- avoid photographic realism, 3D model rendering, painterly concept-art brushwork, and cinematic lighting
+- designed to be usable as an animation reference, not as a marketing illustration
+
+Composition:
+- exactly one full-body character or object
+- facing the viewer / screen-front
+- centered
+- full body visible
+- generous margin on all sides
+
+
+- neutral upright pose unless the asset role implies a planted object
+
+Background:
+- opaque exact flat chroma green #00FF00 background
+- no gradients
+- no texture
+- no shadows
+- no checkerboard
+- no faux transparency
+- no matte-color spill
+
+Avoid:
+- text, labels, frame numbers
+- props beyond the character concept
+- scenery
+- extra characters
+- cropped limbs
+- transparent background

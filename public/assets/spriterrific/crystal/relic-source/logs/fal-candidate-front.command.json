@@ -1,0 +1,39 @@
+{
+  "stage": "fal-candidate-front",
+  "args": [
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/bin/python",
+    "/Users/zbeyens/.local/share/uv/tools/spriterrific/lib/python3.13/site-packages/spriterrific/runtime_tools/fal_ai_image/scripts/fal_queue_image_run.py",
+    "--model-alias",
+    "gpt-image-2-edit",
+    "--prompt-file",
+    "public/assets/spriterrific/crystal/relic-source/candidate/front/candidate-prompt.txt",
+    "--out-dir",
+    "public/assets/spriterrific/crystal/relic-source/candidate-fal",
+    "--filename-prefix",
+    "candidate-front",
+    "--task-slug",
+    "relic-source-candidate-front",
+    "--image-size",
+    "square_hd",
+    "--output-format",
+    "png",
+    "--quality",
+    "high",
+    "--image-file",
+    "public/assets/spriterrific/crystal/relic-source/input/source-model-input.png",
+    "--seed",
+    "260626"
+  ],
+  "cwd": null,
+  "status": "completed",
+  "startedAt": "2026-06-26T08:55:36.824794Z",
+  "completedAt": "2026-06-26T08:58:30.965022Z",
+  "exitCode": 0,
+  "stdout": "public/assets/spriterrific/crystal/relic-source/logs/fal-candidate-front.stdout.txt",
+  "stderr": "public/assets/spriterrific/crystal/relic-source/logs/fal-candidate-front.stderr.txt",
+  "envPresent": {
+    "FAL_KEY": true,
+    "FAL_API_KEY": false,
+    "REMOVE_BG_API_KEY": false
+  }
+}
