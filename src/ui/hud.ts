@@ -9,10 +9,28 @@ import { defenseEnemyPosition } from '../game/simulation/defenseRules';
 import { gameStore } from '../game/store';
 import {
   blackjackCardLabel,
-  blackjackAceBiasChance,
+  blackjackAutoDealUnlocked,
+  blackjackCanDecreaseBaseBet,
+  blackjackCanBuyUpgradeCell,
+  blackjackCanBuyAutoDeal,
+  blackjackCanDeal,
+  blackjackCanDouble,
+  blackjackCanIncreaseBaseBet,
+  blackjackCanSplit,
+  blackjackCurrentActionMaxLevel,
+  blackjackCurrentActionUpgradeCost,
+  blackjackCurrentBonusMaxLevel,
+  blackjackCurrentBonusUnlockCost,
+  blackjackCurrentBonusUpgradeCost,
+  blackjackCurrentUpgradeCellCost,
+  blackjackCurrentUpgradeCellEffectLabel,
+  blackjackCurrentUpgradeCellMaxLevel,
+  blackjackCurrentUpgradeCellTier,
+  blackjackCurrentMainBet,
+  blackjackCurrentWinPayoutMultiplier,
   blackjackHandValue,
-  blackjackSkillCost,
-  blackjackSkillMaxLevel,
+  blackjackResultSummary,
+  blackjackUpgradeCellLevel,
   blackjackVisibleDealerValue,
   manaAutomationInterval,
   manaCriticalMultiplier,
@@ -48,10 +66,13 @@ import {
   targetSkillCost,
   targetSkillMaxLevel,
   type ManaSkillId,
-  type BlackjackSkillId,
+  type BlackjackUpgradeCellId,
+  type BlackjackUpgradeCost,
+  type BlackjackSideBonusId,
   type MiningSkillId,
   type SnakeSkillId,
 } from '../game/simulation/actions';
+import { blackjackMainBet } from '../game/simulation/blackjackRules';
 import type { HundredOptionId } from '../game/simulation/hundredRules';
 import {
   targetAttackDamage,
@@ -66,7 +87,6 @@ import type { BlackjackCard, BookPanelSlot, GameState, SnakeCell, SnakeDirection
 let rootElement: HTMLDivElement | null = null;
 let openUpgradePanel: BookId | null = null;
 let upgradePanelMode: 'detail' | 'compact' = 'detail';
-let bookMenuOpen = false;
 let lastRenderSignature = '';
 let lastOpenPanelsSignature = '';
 let lastOpenUpgradePanel: BookId | null = null;
@@ -80,9 +100,15 @@ let lastTargetRewardMarker = '';
 let lastMiningRewardMarker = '';
 let lastSlimeTrainerRewardMarker = '';
 let lastBlackjackRenderedRound = -1;
-let lastBlackjackRenderedHands: Record<'dealer' | 'player', string[]> = { dealer: [], player: [] };
+let lastBlackjackRenderedHands: Record<'dealer' | 'player' | 'split', string[]> = { dealer: [], player: [], split: [] };
+let lastBlackjackMotionSignature = '';
+let blackjackMotionSettlesAt = 0;
+let blackjackScoreRevealTimeout: number | null = null;
+let lastBlackjackSettledDisplay: BlackjackDisplayState | null = null;
 let blackjackAutoDealTimeout: number | null = null;
 let blackjackAutoDealMarker = '';
+let blackjackDealerStepTimeout: number | null = null;
+let blackjackDealerStepMarker = '';
 let lastManaAutoCastCount = 0;
 let lastHundredDisplayedProgress = 0;
 let lastHundredProgressAnimationMarker = '';
@@ -94,12 +120,13 @@ let typingControlsInstalled = false;
 let blackjackControlsInstalled = false;
 let escapeControlsInstalled = false;
 let suppressClickListenerInstalled = false;
-let bookMenuOutsideCloseInstalled = false;
-let pendingBookMenuOutsideClose = false;
 let suppressNextPanelClickUntil = 0;
 let activePanelInteractionCount = 0;
 const FLOATING_GAIN_MAX_VISIBLE = 18;
 const FLOATING_GAIN_FLUSH_MS = 80;
+const BLACKJACK_CARD_RECEIVE_MS = 760;
+const BLACKJACK_CARD_STAGGER_MS = 150;
+const BLACKJACK_SCORE_REVEAL_BUFFER_MS = 180;
 const pendingFloatingGains = new Map<string, { amount: number }>();
 let floatingGainFlushHandle: number | null = null;
 const BOOK_PANEL_ASPECT_RATIO = 210 / 297;
@@ -111,6 +138,18 @@ const BOOK_PANEL_SIZE_PRESETS = [
 ] as const;
 type BookPanelSizePreset = (typeof BOOK_PANEL_SIZE_PRESETS)[number];
 type BookPanelSizePresetId = BookPanelSizePreset['id'];
+interface BlackjackDisplayState {
+  chips: number;
+  stake: number;
+  debt: number;
+  scoresVisible: boolean;
+  dealerScore: string;
+  playerScore: string;
+  splitScore: string;
+}
+const BLACKJACK_CHIP_DENOMINATIONS = [100, 10, 5, 1] as const;
+type BlackjackChipDenomination = (typeof BLACKJACK_CHIP_DENOMINATIONS)[number];
+const BLACKJACK_WAGER_TRAY_DENOMINATIONS: BlackjackChipDenomination[] = [1, 5, 10, 100];
 const bookPanelPositions = new Map<BookId, { left: number; top: number }>();
 const bookPanelSizes = new Map<BookId, { width: number; height: number }>();
 const bookPanelSizePresetIds = new Map<BookId, BookPanelSizePresetId>();
@@ -127,7 +166,6 @@ export function mountHud(root: HTMLDivElement | null): void {
   installTypingControls();
   installBlackjackControls();
   installEscapeControls();
-  installBookMenuOutsideClose();
   gameStore.subscribe(renderHud);
   void loadDefenseTiledMap().then(() => {
     lastRenderSignature = '';
@@ -195,27 +233,7 @@ function renderHud(state: GameState): void {
 
   rootElement.innerHTML = `
     <div class="screen-vignette"></div>
-    <button class="book-menu-toggle" data-action="toggleBookMenu" aria-label="Ouvrir la liste des mini-jeux" aria-expanded="${bookMenuOpen ? 'true' : 'false'}">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
-    ${bookMenuOpen ? `
-      <section class="book-menu-drawer" aria-label="Mini-jeux">
-        ${books.map((book) => bookMenuEntry(book.id, state)).join('')}
-      </section>
-    ` : ''}
-    <aside class="resource-panel" aria-label="Resources">
-      ${resourceRow('scales', '☉', 'Ecailles', state.resources.scales, '#a78cff')}
-      ${resourceRow('runes', '✦', 'Runes', state.resources.runes, '#ed9fff')}
-      ${resourceRow('spores', '♣', 'Spores', state.resources.spores, '#91d980')}
-      ${resourceRow('sigils', '◆', 'Sceaux', state.resources.sigils, '#ffc36e')}
-      ${resourceRow('chips', '♠', 'Jetons', state.resources.chips, '#74d88f')}
-      ${resourceRow('fragments', '#', 'Fragments', state.resources.fragments, '#7ea4ff')}
-      ${resourceRow('marks', '◎', 'Marques', state.resources.marks, '#ff7a80')}
-      ${resourceRow('minerals', '▰', 'Minerais', state.resources.minerals, '#d69a58')}
-      ${resourceRow('gels', '●', 'Gels', state.resources.gels, '#7df0a3')}
-    </aside>
+    <button class="unlock-all-grimoires-button" data-action="unlockAllBooks" title="Debloquer tous les grimoires" aria-label="Debloquer tous les grimoires">-</button>
     ${state.openBookPanels
       .map((panel) => bookOverlay(panel.bookId, panel.slot, state, !previousOpenBookIds.has(panel.bookId), shouldAnimateUpgradePanel))
       .join('')}
@@ -278,10 +296,98 @@ function renderHud(state: GameState): void {
           gameStore.dispatch({ type: 'buyMiningSkill', skillId });
         }
       }
-      if (action === 'buyBlackjackSkill') {
-        const skillId = button.dataset.skillId as BlackjackSkillId | undefined;
-        if (skillId) {
-          gameStore.dispatch({ type: 'buyBlackjackSkill', skillId });
+      if (action === 'unlockBlackjackBonus') {
+        const bonusId = button.dataset.bonusId as BlackjackSideBonusId | undefined;
+        if (bonusId && button.getAttribute('aria-disabled') !== 'true') {
+          gameStore.dispatch({ type: 'unlockBlackjackBonus', bonusId });
+        }
+      }
+      if (action === 'buyBlackjackBonusUpgrade') {
+        const bonusId = button.dataset.bonusId as BlackjackSideBonusId | undefined;
+        if (bonusId && button.getAttribute('aria-disabled') !== 'true') {
+          const targetLevel = Number(button.dataset.targetLevel || 0);
+          if (targetLevel > 0) {
+            if (!gameStore.snapshot.blackjack[bonusId].unlocked) {
+              gameStore.dispatch({ type: 'unlockBlackjackBonus', bonusId });
+            }
+            while (
+              gameStore.snapshot.blackjack[bonusId].unlocked &&
+              gameStore.snapshot.blackjack[bonusId].level < targetLevel
+            ) {
+              const beforeLevel = gameStore.snapshot.blackjack[bonusId].level;
+              gameStore.dispatch({ type: 'buyBlackjackBonusUpgrade', bonusId });
+              if (gameStore.snapshot.blackjack[bonusId].level === beforeLevel) {
+                break;
+              }
+            }
+          } else {
+            gameStore.dispatch({ type: 'buyBlackjackBonusUpgrade', bonusId });
+          }
+        }
+      }
+      if (action === 'buyBlackjackActionUpgrade' && button.getAttribute('aria-disabled') !== 'true') {
+        const targetLevel = Number(button.dataset.targetLevel || 0);
+        if (targetLevel > 0) {
+          while (gameStore.snapshot.blackjack.actions.level < targetLevel) {
+            const beforeLevel = gameStore.snapshot.blackjack.actions.level;
+            gameStore.dispatch({ type: 'buyBlackjackActionUpgrade' });
+            if (gameStore.snapshot.blackjack.actions.level === beforeLevel) {
+              break;
+            }
+          }
+        } else {
+          gameStore.dispatch({ type: 'buyBlackjackActionUpgrade' });
+        }
+      }
+      if (action === 'buyBlackjackUpgradeCell' && button.getAttribute('aria-disabled') !== 'true') {
+        const cellId = button.dataset.cellId as BlackjackUpgradeCellId | undefined;
+        if (cellId) {
+          gameStore.dispatch({ type: 'buyBlackjackUpgradeCell', cellId });
+        }
+      }
+      if (action === 'toggleBlackjackBonusAuto') {
+        const bonusId = button.dataset.bonusId as BlackjackSideBonusId | undefined;
+        if (bonusId) {
+          gameStore.dispatch({ type: 'toggleBlackjackBonusAuto', bonusId });
+        }
+      }
+      if (action === 'activateBlackjackBonus') {
+        const bonusId = button.dataset.bonusId as BlackjackSideBonusId | undefined;
+        if (bonusId) {
+          gameStore.dispatch({ type: 'activateBlackjackBonus', bonusId });
+        }
+      }
+      if (action === 'prepareBlackjackWager') {
+        const amount = Number(button.dataset.wagerAmount || 0);
+        if (amount > 0) {
+          showBlackjackWagerChipFlight(button, amount);
+          gameStore.dispatch({ type: 'prepareBlackjackWager', amount });
+        }
+      }
+      if (action === 'resetBlackjackWager') {
+        gameStore.dispatch({ type: 'resetBlackjackWager' });
+      }
+      if (action === 'increaseBlackjackBaseBet') {
+        gameStore.dispatch({ type: 'increaseBlackjackBaseBet' });
+      }
+      if (action === 'decreaseBlackjackBaseBet') {
+        gameStore.dispatch({ type: 'decreaseBlackjackBaseBet' });
+      }
+      if (action === 'buyBlackjackAutoDeal') {
+        gameStore.dispatch({ type: 'buyBlackjackAutoDeal' });
+      }
+      if (action === 'buyBlackjackWagerUpgrade') {
+        const targetLevel = Number(button.dataset.targetLevel || 0);
+        if (targetLevel > 0) {
+          while (gameStore.snapshot.books.blackjack.level < targetLevel) {
+            const beforeLevel = gameStore.snapshot.books.blackjack.level;
+            gameStore.dispatch({ type: 'buyUpgrade', bookId: 'blackjack' });
+            if (gameStore.snapshot.books.blackjack.level === beforeLevel) {
+              break;
+            }
+          }
+        } else {
+          gameStore.dispatch({ type: 'buyUpgrade', bookId: 'blackjack' });
         }
       }
       if (action === 'toggleSnakeAutomation') {
@@ -296,14 +402,11 @@ function renderHud(state: GameState): void {
       if (action === 'standBlackjack') {
         gameStore.dispatch({ type: 'standBlackjack' });
       }
-      if (action === 'rerollPlayerBlackjackCard') {
-        gameStore.dispatch({ type: 'rerollPlayerBlackjackCard' });
+      if (action === 'doubleBlackjack') {
+        gameStore.dispatch({ type: 'doubleBlackjack' });
       }
-      if (action === 'rerollDealerBlackjackCard') {
-        gameStore.dispatch({ type: 'rerollDealerBlackjackCard' });
-      }
-      if (action === 'revealBlackjackDealerCard') {
-        gameStore.dispatch({ type: 'revealBlackjackDealerCard' });
+      if (action === 'splitBlackjack') {
+        gameStore.dispatch({ type: 'splitBlackjack' });
       }
       if (action === 'chooseHundredOption') {
         const optionId = button.dataset.optionId as HundredOptionId | undefined;
@@ -344,11 +447,6 @@ function renderHud(state: GameState): void {
         upgradePanelMode = 'compact';
         renderHud(gameStore.snapshot);
       }
-      if (action === 'toggleBookMenu') {
-        blurElement(button);
-        bookMenuOpen = !bookMenuOpen;
-        renderHud(gameStore.snapshot);
-      }
       if (action === 'buyUpgrade' && bookId) {
         gameStore.dispatch({ type: 'buyUpgrade', bookId });
       }
@@ -362,10 +460,13 @@ function renderHud(state: GameState): void {
         upgradePanelMode = 'detail';
         gameStore.dispatch({ type: 'unlockBook', bookId });
       }
+      if (action === 'unlockAllBooks') {
+        gameStore.dispatch({ type: 'unlockAllBooks' });
+      }
     });
   });
 
-  rootElement.querySelectorAll<HTMLElement>('.book-overlay, .mini-skill-popover, .upgrade-panel, .book-menu-toggle, .book-menu-drawer').forEach((panel) => {
+  rootElement.querySelectorAll<HTMLElement>('.book-overlay, .mini-skill-popover, .upgrade-panel').forEach((panel) => {
     panel.addEventListener('pointerdown', stopHudPointerEvent);
     panel.addEventListener('pointerup', stopHudPointerEvent);
     panel.addEventListener('click', stopHudPointerEvent);
@@ -376,6 +477,7 @@ function renderHud(state: GameState): void {
   updateDynamicHudValues(state);
   runHudTransientEffects(state);
   scheduleBlackjackAutoDeal(state);
+  scheduleBlackjackDealerStep(state);
 }
 
 function runHudTransientEffects(state: GameState): void {
@@ -408,7 +510,7 @@ function runHudTransientEffects(state: GameState): void {
     }
   }
 
-  if (isBookPanelOpen(state, 'blackjack') && state.blackjack.lastReward > 0) {
+  if (isBookPanelOpen(state, 'blackjack') && state.blackjack.lastReward > 0 && !blackjackMotionIsSettling()) {
     const marker = `${state.blackjack.round}:${Math.floor(state.resources.chips)}:${state.blackjack.phase}`;
     if (marker !== lastBlackjackRewardMarker) {
       lastBlackjackRewardMarker = marker;
@@ -452,6 +554,7 @@ function runHudTransientEffects(state: GameState): void {
 function scheduleBlackjackAutoDeal(state: GameState): void {
   const shouldAutoDeal =
     isBookPanelOpen(state, 'blackjack') &&
+    blackjackAutoDealUnlocked(state) &&
     ['won', 'lost', 'push', 'blackjack'].includes(state.blackjack.phase);
   const marker = `${state.blackjack.round}:${state.blackjack.phase}`;
 
@@ -472,6 +575,7 @@ function scheduleBlackjackAutoDeal(state: GameState): void {
     const current = gameStore.snapshot;
     if (
       isBookPanelOpen(current, 'blackjack') &&
+      blackjackAutoDealUnlocked(current) &&
       ['won', 'lost', 'push', 'blackjack'].includes(current.blackjack.phase) &&
       `${current.blackjack.round}:${current.blackjack.phase}` === marker
     ) {
@@ -490,13 +594,62 @@ function clearBlackjackAutoDeal(): void {
   blackjackAutoDealMarker = '';
 }
 
+function scheduleBlackjackDealerStep(state: GameState): void {
+  const shouldStep = isBookPanelOpen(state, 'blackjack') && state.blackjack.phase === 'dealer';
+  const marker = [
+    state.blackjack.round,
+    state.blackjack.dealerCardRevealed ? 1 : 0,
+    state.blackjack.dealerHand.map(blackjackCardLabel).join(','),
+  ].join(':');
+
+  if (!shouldStep) {
+    clearBlackjackDealerStep();
+    return;
+  }
+
+  if (blackjackDealerStepTimeout !== null && blackjackDealerStepMarker === marker) {
+    return;
+  }
+
+  clearBlackjackDealerStep();
+  blackjackDealerStepMarker = marker;
+  const delay = Math.max(0, blackjackMotionSettlesAt - Date.now() + 140);
+  blackjackDealerStepTimeout = window.setTimeout(() => {
+    blackjackDealerStepTimeout = null;
+    blackjackDealerStepMarker = '';
+    const current = gameStore.snapshot;
+    const currentMarker = [
+      current.blackjack.round,
+      current.blackjack.dealerCardRevealed ? 1 : 0,
+      current.blackjack.dealerHand.map(blackjackCardLabel).join(','),
+    ].join(':');
+    if (isBookPanelOpen(current, 'blackjack') && current.blackjack.phase === 'dealer' && currentMarker === marker) {
+      gameStore.dispatch({ type: 'advanceBlackjackDealer' });
+    }
+  }, delay);
+}
+
+function clearBlackjackDealerStep(): void {
+  if (blackjackDealerStepTimeout === null) {
+    blackjackDealerStepMarker = '';
+    return;
+  }
+  window.clearTimeout(blackjackDealerStepTimeout);
+  blackjackDealerStepTimeout = null;
+  blackjackDealerStepMarker = '';
+}
+
 function updateDynamicHudValues(state: GameState): void {
   setDynamicText('mana', Math.floor(state.mana));
   setDynamicText('scales', Math.floor(state.resources.scales));
   setDynamicText('runes', Math.floor(state.resources.runes));
   setDynamicText('spores', Math.floor(state.resources.spores));
   setDynamicText('sigils', Math.floor(state.resources.sigils));
-  setDynamicText('chips', Math.floor(state.resources.chips));
+  const displayedChips =
+    isBookPanelOpen(state, 'blackjack') && blackjackMotionIsSettling() && lastBlackjackSettledDisplay
+      ? lastBlackjackSettledDisplay.chips
+      : Math.floor(state.resources.chips);
+  setDynamicText('chips', displayedChips);
   setDynamicText('fragments', Math.floor(state.resources.fragments));
   setDynamicText('marks', Math.floor(state.resources.marks));
   setDynamicText('minerals', Math.floor(state.resources.minerals));
@@ -687,51 +840,6 @@ function setDynamicText(id: string, value: number): void {
 
 function stopHudPointerEvent(event: Event): void {
   event.stopPropagation();
-}
-
-function blurElement(element: Element | null): void {
-  if (element instanceof HTMLElement) {
-    element.blur();
-  }
-}
-
-function openBookMenuFromShortcut(event: KeyboardEvent): void {
-  if (event.key.toLowerCase() !== 'w' || event.repeat || event.altKey || event.ctrlKey || event.metaKey || isTypingTarget(event.target)) {
-    return;
-  }
-  event.preventDefault();
-  event.stopPropagation();
-  blurElement(document.activeElement);
-  bookMenuOpen = !bookMenuOpen;
-  renderHud(gameStore.snapshot);
-}
-
-function installBookMenuOutsideClose(): void {
-  if (bookMenuOutsideCloseInstalled) {
-    return;
-  }
-  bookMenuOutsideCloseInstalled = true;
-  window.addEventListener('pointerdown', closeBookMenuFromOutside, true);
-  window.addEventListener('keydown', openBookMenuFromShortcut, true);
-}
-
-function closeBookMenuFromOutside(event: PointerEvent): void {
-  if (!bookMenuOpen || pendingBookMenuOutsideClose) {
-    return;
-  }
-  const target = event.target;
-  if (target instanceof HTMLElement && target.closest('.book-menu-toggle, .book-menu-drawer')) {
-    return;
-  }
-  pendingBookMenuOutsideClose = true;
-  window.setTimeout(() => {
-    pendingBookMenuOutsideClose = false;
-    if (!bookMenuOpen) {
-      return;
-    }
-    bookMenuOpen = false;
-    renderHud(gameStore.snapshot);
-  }, 0);
 }
 
 function installBookPanelFocus(): void {
@@ -959,7 +1067,7 @@ function cycleBookPanelSize(bookId: BookId, panel: HTMLElement): void {
 }
 
 function getBookPanelPreset(bookId: BookId): BookPanelSizePreset {
-  const presetId = bookPanelSizePresetIds.get(bookId) ?? (isSquareBookPanel(bookId) ? 'large' : 'medium');
+  const presetId = bookPanelSizePresetIds.get(bookId) ?? 'large';
   return BOOK_PANEL_SIZE_PRESETS.find((preset) => preset.id === presetId) ?? BOOK_PANEL_SIZE_PRESETS[0];
 }
 
@@ -1109,7 +1217,6 @@ function createHudSignature(state: GameState): string {
   const snakeSkills = state.snakeSkills;
   const typing = state.runeTyping;
   const blackjack = state.blackjack;
-  const blackjackSkills = state.blackjackSkills;
   const hundred = state.hundred;
   const targetState = state.targets;
   const targetSkills = state.targetSkills;
@@ -1119,7 +1226,6 @@ function createHudSignature(state: GameState): string {
 
   return [
     state.selectedBook,
-    bookMenuOpen ? 'book-menu-open' : 'book-menu-closed',
     state.openBookPanels.map((panel) => `${panel.bookId}:${panel.slot}`).join('|'),
     openUpgradePanel ?? 'none',
     upgradePanelMode,
@@ -1144,17 +1250,37 @@ function createHudSignature(state: GameState): string {
     state.defense.speedMultiplier,
     blackjack.phase,
     blackjack.round,
-    blackjack.playerRerollsUsed,
-    blackjack.dealerRerollsUsed,
     blackjack.dealerCardRevealed ? 1 : 0,
     blackjack.lastReward,
+    blackjack.lastDebtPayment,
+    blackjack.debt,
     blackjack.lastOutcome,
+    blackjack.activeHand,
+    blackjack.playerBet,
+    blackjack.splitBet,
+    blackjack.playerHandDone ? 1 : 0,
+    blackjack.splitHandDone ? 1 : 0,
+    blackjack.playerHandDoubled ? 1 : 0,
+    blackjack.splitHandDoubled ? 1 : 0,
     blackjack.playerHand.map(blackjackCardLabel).join(','),
+    blackjack.splitHand?.map(blackjackCardLabel).join(',') ?? 'none',
     blackjack.dealerHand.map(blackjackCardLabel).join(','),
-    blackjackSkills.rerollPlayer,
-    blackjackSkills.rerollDealer,
-    blackjackSkills.revealDealer,
-    blackjackSkills.aceBias,
+    blackjack.pair.unlocked ? 1 : 0,
+    blackjack.pair.level,
+    blackjack.pair.xp,
+    blackjack.pair.autoEnabled ? 1 : 0,
+    blackjack.pair.activatedThisHand ? 1 : 0,
+    blackjack.pair.lastOutcome,
+    blackjack.pair.lastPayout,
+    blackjack.pair.lastXp,
+    blackjack.twentyOneThree.unlocked ? 1 : 0,
+    blackjack.twentyOneThree.level,
+    blackjack.twentyOneThree.xp,
+    blackjack.twentyOneThree.autoEnabled ? 1 : 0,
+    blackjack.twentyOneThree.activatedThisHand ? 1 : 0,
+    blackjack.twentyOneThree.lastOutcome,
+    blackjack.twentyOneThree.lastPayout,
+    blackjack.twentyOneThree.lastXp,
     hundred.total,
     hundred.attempts,
     hundred.wins,
@@ -1342,10 +1468,11 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
     return `
       <div class="mini-skill-popover ${shouldAnimate ? 'is-entering' : ''}" aria-label="Mini competences blackjack">
         <div class="mini-skill-scroll is-mana">
-          ${blackjackSkillCompactButton(state, 'rerollPlayer', 'R', 'Reroll joueur')}
-          ${blackjackSkillCompactButton(state, 'rerollDealer', 'D', 'Reroll croupier')}
-          ${blackjackSkillCompactButton(state, 'revealDealer', '?', 'Carte revelee')}
-          ${blackjackSkillCompactButton(state, 'aceBias', 'A', 'Plus d As')}
+          ${blackjackBonusCompactButton(state, 'pair', 'Pair')}
+          ${blackjackBonusCompactButton(state, 'twentyOneThree', '21+3')}
+          <button class="compact-upgrade-entry" data-action="buyUpgrade" data-book-id="blackjack" title="Mise">
+            <span>${blackjackUpgradeIcon('wager', 'Mise')}</span><strong>${blackjackCurrentMainBet(state)}</strong>
+          </button>
         </div>
       </div>
     `;
@@ -1578,13 +1705,88 @@ function miningAutomationLabel(state: GameState): string {
   return `${miningAutomationInterval(state.miningSkills.automation).toFixed(1)}s`;
 }
 
-function blackjackPlayerRerollsRemaining(state: GameState): number {
-  return Math.max(0, state.blackjackSkills.rerollPlayer - state.blackjack.playerRerollsUsed);
+function blackjackUpgradeIcon(asset: string, label: string, className = ''): string {
+  return `<img class="blackjack-upgrade-icon ${className}" src="/assets/blackjack/upgrades/${asset}.svg" alt="${label}" loading="lazy" decoding="async">`;
 }
 
-function blackjackDealerRerollsRemaining(state: GameState): number {
-  return Math.max(0, state.blackjackSkills.rerollDealer - state.blackjack.dealerRerollsUsed);
+function blackjackResourceCost(resource: 'mana' | 'chips' | 'xp', amount: string): string {
+  const asset = resource === 'mana' ? 'mana' : resource === 'chips' ? 'wager' : 'xp';
+  const label = resource === 'mana' ? 'Mana' : resource === 'chips' ? 'Jetons' : 'XP';
+  return `<span class="blackjack-cost-resource">${blackjackUpgradeIcon(asset, label, 'is-cost-icon')}<b>${amount}</b></span>`;
 }
+
+interface BlackjackUpgradeCellConfig {
+  id: BlackjackUpgradeCellId;
+  iconAsset: string;
+  title: string;
+}
+
+interface BlackjackUpgradeRowConfig {
+  title: string;
+  subtitle: (state: GameState) => string;
+  iconAsset: string;
+  cells: BlackjackUpgradeCellConfig[];
+}
+
+const BLACKJACK_UPGRADE_ROWS: BlackjackUpgradeRowConfig[] = [
+  {
+    title: 'Mise principale',
+    subtitle: (state) => `Mise ${blackjackCurrentMainBet(state)} · gain x${blackjackCurrentWinPayoutMultiplier(state).toFixed(1)}`,
+    iconAsset: 'wager',
+    cells: [
+      { id: 'wagerBase', iconAsset: 'wager', title: 'Mise max' },
+      { id: 'wagerWin', iconAsset: 'win', title: 'Gain victoire' },
+      { id: 'wagerNatural', iconAsset: 'blackjack', title: 'Blackjack naturel' },
+      { id: 'wagerStreak', iconAsset: 'streak', title: 'Serie gagnante' },
+      { id: 'wagerDebt', iconAsset: 'debt', title: 'Dette reduite' },
+    ],
+  },
+  {
+    title: 'Actions',
+    subtitle: (state) => state.blackjack.actions.unlocked ? `Lv ${state.blackjack.actions.level}` : 'Verrouille',
+    iconAsset: 'actions',
+    cells: [
+      { id: 'actionStand', iconAsset: 'stand', title: 'Rester lucide' },
+      { id: 'actionDouble', iconAsset: 'double', title: 'Double amorti' },
+      { id: 'actionSplit', iconAsset: 'split', title: 'Split moins cher' },
+      { id: 'actionFaceSplit', iconAsset: 'pair', title: 'Figures jumelles' },
+      { id: 'actionMastery', iconAsset: 'actions', title: 'Maitrise de table' },
+    ],
+  },
+  {
+    title: 'Auto relance',
+    subtitle: (state) => blackjackAutoDealUnlocked(state) ? 'Active' : 'Verrouillee',
+    iconAsset: 'auto',
+    cells: [
+      { id: 'autoDeal', iconAsset: 'auto', title: 'Auto relance' },
+      { id: 'autoSpeed', iconAsset: 'auto', title: 'Relance rapide' },
+    ],
+  },
+  {
+    title: 'Pair',
+    subtitle: (state) => state.blackjack.pair.unlocked ? `${Math.floor(state.blackjack.pair.xp)} XP` : 'Verrouille',
+    iconAsset: 'pair',
+    cells: [
+      { id: 'pairUnlock', iconAsset: 'pair', title: 'Debloquer Pair' },
+      { id: 'pairPayout', iconAsset: 'win', title: 'Paiement Pair' },
+      { id: 'pairXp', iconAsset: 'xp', title: 'XP Pair' },
+      { id: 'pairRefund', iconAsset: 'debt', title: 'Ratage amorti' },
+      { id: 'pairAuto', iconAsset: 'auto', title: 'Auto Pair' },
+    ],
+  },
+  {
+    title: '21+3',
+    subtitle: (state) => state.blackjack.twentyOneThree.unlocked ? `${Math.floor(state.blackjack.twentyOneThree.xp)} XP` : 'Verrouille',
+    iconAsset: 'twenty-one-three',
+    cells: [
+      { id: 'twentyOneThreeUnlock', iconAsset: 'twenty-one-three', title: 'Debloquer 21+3' },
+      { id: 'twentyOneThreePayout', iconAsset: 'win', title: 'Paiement 21+3' },
+      { id: 'twentyOneThreeXp', iconAsset: 'xp', title: 'XP 21+3' },
+      { id: 'twentyOneThreeJackpot', iconAsset: 'jackpot', title: 'Jackpot 21+3' },
+      { id: 'twentyOneThreeAuto', iconAsset: 'auto', title: 'Auto 21+3' },
+    ],
+  },
+];
 
 function blackjackUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
   if (mode === 'compact') {
@@ -1592,58 +1794,152 @@ function blackjackUpgradePanel(state: GameState, shouldAnimate: boolean, mode: '
       <section class="upgrade-panel is-compact ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences blackjack">
         <button class="upgrade-panel-close" data-action="toggleCompactUpgradePanel" data-book-id="blackjack" title="Fermer">×</button>
         <div class="compact-upgrade-grid is-blackjack">
-          ${blackjackSkillCompactButton(state, 'rerollPlayer', 'R', 'Reroll joueur')}
-          ${blackjackSkillCompactButton(state, 'rerollDealer', 'D', 'Reroll croupier')}
-          ${blackjackSkillCompactButton(state, 'revealDealer', '?', 'Carte revelee')}
-          ${blackjackSkillCompactButton(state, 'aceBias', 'A', 'Plus d As')}
+          <button class="compact-upgrade-entry" data-action="buyUpgrade" data-book-id="blackjack" title="Mise">
+            <span>${blackjackUpgradeIcon('wager', 'Mise')}</span><strong>${blackjackCurrentMainBet(state)}</strong>
+          </button>
+          ${blackjackActionCompactButton(state)}
+          <button
+            class="compact-upgrade-entry ${blackjackAutoDealUnlocked(state) ? '' : 'is-locked'}"
+            ${blackjackCanBuyAutoDeal(state) ? 'data-action="buyBlackjackAutoDeal"' : 'disabled'}
+            title="${blackjackAutoDealUnlocked(state) ? 'Auto relance active' : 'Debloquer auto relance'}"
+          >
+            <span>${blackjackUpgradeIcon('auto', 'Auto relance')}</span><strong>${blackjackAutoDealUnlocked(state) ? 'On' : 'Auto'}</strong>
+          </button>
+          ${blackjackBonusCompactButton(state, 'pair', 'Pair')}
+          ${blackjackBonusCompactButton(state, 'twentyOneThree', '21+3')}
         </div>
       </section>
     `;
   }
 
   return `
-    <section class="upgrade-panel is-mana-skills ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences blackjack">
+    <section class="upgrade-panel is-mana-skills is-blackjack-upgrades ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences blackjack">
       <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="blackjack" title="Fermer">×</button>
-      <div class="mana-skill-grid is-blackjack">
-        ${blackjackSkillButton(state, 'rerollPlayer', 'Reroll joueur', `${blackjackPlayerRerollsRemaining(state)} relance`, 'Relance la derniere carte joueur.')}
-        ${blackjackSkillButton(state, 'rerollDealer', 'Reroll croupier', `${blackjackDealerRerollsRemaining(state)} relance`, 'Relance une carte du croupier.')}
-        ${blackjackSkillButton(state, 'revealDealer', 'Carte revelee', state.blackjackSkills.revealDealer > 0 ? 'Passif' : 'Cachee', 'Revele automatiquement la carte cachee du croupier.')}
-        ${blackjackSkillButton(state, 'aceBias', 'Plus d As', `+${Math.round(blackjackAceBiasChance(state) * 100)}%`, 'Augmente nos chances de piocher des As.')}
+      <div class="blackjack-upgrade-panel-header">
+        <div>
+          <strong>Table des upgrades</strong>
+          <span>Blackjack</span>
+        </div>
+        <button class="blackjack-upgrade-hide" data-action="toggleCompactUpgradePanel" data-book-id="blackjack" title="Masquer le panneau complet">
+          Compact
+        </button>
+      </div>
+      <div class="blackjack-upgrade-board" aria-label="Upgrades blackjack">
+        ${BLACKJACK_UPGRADE_ROWS.map((row) => blackjackUpgradeCellRow(state, row)).join('')}
       </div>
     </section>
   `;
 }
 
-function blackjackSkillButton(
-  state: GameState,
-  skillId: BlackjackSkillId,
-  label: string,
-  value: string,
-  detail: string,
-): string {
-  const level = state.blackjackSkills[skillId];
-  const maxLevel = blackjackSkillMaxLevel(skillId);
-  const isMaxed = level >= maxLevel;
-  const cost = blackjackSkillCost(state, skillId);
+function blackjackUpgradeCellRow(state: GameState, row: BlackjackUpgradeRowConfig): string {
   return `
-    <button class="mana-skill-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyBlackjackSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <strong>${label}</strong>
-      <span>Lv ${level}/${maxLevel}</span>
-      <em>${value}</em>
-      <small>${isMaxed ? 'MAX' : `${cost} Jetons`} · ${detail}</small>
+    <article class="blackjack-upgrade-track">
+      <div class="blackjack-upgrade-track-main">
+        <div class="blackjack-upgrade-title">
+          ${blackjackUpgradeIcon(row.iconAsset, row.title)}
+          <header>
+            <strong>${row.title}</strong>
+            <span>${row.subtitle(state)}</span>
+          </header>
+        </div>
+      </div>
+      <div class="blackjack-upgrade-lane">
+        <div class="blackjack-upgrade-nodes">
+          ${row.cells.map((cell) => blackjackUpgradeCellButton(state, cell)).join('')}
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function blackjackUpgradeCellButton(state: GameState, cell: BlackjackUpgradeCellConfig): string {
+  const level = blackjackUpgradeCellLevel(state, cell.id);
+  const maxLevel = blackjackCurrentUpgradeCellMaxLevel(cell.id);
+  const tier = blackjackCurrentUpgradeCellTier(state, cell.id);
+  const canBuy = blackjackCanBuyUpgradeCell(state, cell.id);
+  const cost = blackjackCurrentUpgradeCellCost(state, cell.id);
+  const effect = blackjackCurrentUpgradeCellEffectLabel(state, cell.id);
+  const stateClass = level >= maxLevel ? 'owned is-maxed' : canBuy ? 'next' : 'locked';
+  const attrs = canBuy
+    ? `data-action="buyBlackjackUpgradeCell" data-cell-id="${cell.id}"`
+    : 'aria-disabled="true"';
+  return `
+    <button
+      class="blackjack-upgrade-node is-${stateClass} is-tier-${tier}"
+      type="button"
+      ${attrs}
+      aria-label="${cell.title}: niveau ${level}/${maxLevel}. ${effect} Cout: ${blackjackUpgradeCostText(cost)}."
+    >
+      ${blackjackUpgradeIcon(cell.iconAsset, cell.title, 'is-node-icon')}
+      <span>${level >= maxLevel ? 'MAX' : `Lv ${level}`}</span>
+      <i class="blackjack-upgrade-tooltip" role="tooltip">
+        <strong>${cell.title}</strong>
+        <small>Niveau ${level}/${maxLevel}</small>
+        <small>${effect}</small>
+        <em class="blackjack-tooltip-cost">
+          <span>Cout</span>
+          <b>${blackjackUpgradeCostHtml(cost)}</b>
+        </em>
+      </i>
     </button>
   `;
 }
 
-function blackjackSkillCompactButton(state: GameState, skillId: BlackjackSkillId, icon: string, label: string): string {
-  const level = state.blackjackSkills[skillId];
-  const maxLevel = blackjackSkillMaxLevel(skillId);
-  const isMaxed = level >= maxLevel;
+function blackjackUpgradeCostHtml(cost: BlackjackUpgradeCost): string {
+  switch (cost.kind) {
+    case 'resources':
+      return `${blackjackResourceCost('mana', String(cost.mana))}${blackjackResourceCost('chips', String(cost.chips))}`;
+    case 'chips':
+      return blackjackResourceCost('chips', String(cost.chips));
+    case 'pairXp':
+    case 'twentyOneThreeXp':
+      return blackjackResourceCost('xp', String(cost.xp));
+    case 'blocked':
+      return cost.reason;
+    case 'max':
+      return 'MAX';
+  }
+}
+
+function blackjackUpgradeCostText(cost: BlackjackUpgradeCost): string {
+  switch (cost.kind) {
+    case 'resources':
+      return `${cost.mana} Mana + ${cost.chips} Jetons`;
+    case 'chips':
+      return `${cost.chips} Jetons`;
+    case 'pairXp':
+    case 'twentyOneThreeXp':
+      return `${cost.xp} XP`;
+    case 'blocked':
+      return cost.reason;
+    case 'max':
+      return 'MAX';
+  }
+}
+
+function blackjackBonusCompactButton(state: GameState, bonusId: BlackjackSideBonusId, label: string): string {
+  const bonus = blackjackBonusState(state, bonusId);
+  const action = bonus.unlocked ? 'buyBlackjackBonusUpgrade' : 'unlockBlackjackBonus';
+  const iconAsset = bonusId === 'pair' ? 'pair' : 'twenty-one-three';
   return `
-    <button class="compact-upgrade-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyBlackjackSkill" data-skill-id="${skillId}" title="${label}" ${isMaxed ? 'disabled' : ''}>
-      <span>${icon}</span><strong>${level}</strong>
+    <button class="compact-upgrade-entry ${bonus.unlocked ? '' : 'is-locked'}" data-action="${action}" data-bonus-id="${bonusId}" title="${label}">
+      <span>${blackjackUpgradeIcon(iconAsset, label)}</span><strong>${bonus.unlocked ? bonus.level : 0}</strong>
     </button>
   `;
+}
+
+function blackjackActionCompactButton(state: GameState): string {
+  const level = state.blackjack.actions.level;
+  const canBuy = level < blackjackCurrentActionMaxLevel() && state.resources.chips >= blackjackCurrentActionUpgradeCost(state);
+  return `
+    <button class="compact-upgrade-entry ${level > 0 ? '' : 'is-locked'}" ${canBuy ? 'data-action="buyBlackjackActionUpgrade"' : 'disabled'} title="Actions blackjack">
+      <span>${blackjackUpgradeIcon('actions', 'Actions')}</span><strong>${level}</strong>
+    </button>
+  `;
+}
+
+function blackjackBonusState(state: GameState, bonusId: BlackjackSideBonusId) {
+  return bonusId === 'pair' ? state.blackjack.pair : state.blackjack.twentyOneThree;
 }
 
 function manaUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
@@ -1720,16 +2016,6 @@ function automationDetail(state: GameState): string {
     return 'Debloque 1 baguette toutes les 5s';
   }
   return '-0.1s par niveau';
-}
-
-function resourceRow(resourceId: string, icon: string, label: string, value: number, color: string): string {
-  return `
-    <div class="resource-row" data-resource="${resourceId}">
-      <span style="color:${color}">${icon}</span>
-      <strong data-dynamic-value="${resourceId}">${Math.floor(value)}</strong>
-      <small>${label}</small>
-    </div>
-  `;
 }
 
 function manaPanel(state: GameState): string {
@@ -2191,94 +2477,534 @@ function slimeEnemySpritePath(enemyId: GameState['slimeTrainer']['enemy']['id'])
 function blackjackPanel(state: GameState): string {
   const blackjack = state.blackjack;
   const isPlayerTurn = blackjack.phase === 'player';
-  const hasHand = blackjack.playerHand.length > 0;
-  const playerValue = blackjackHandValue(blackjack.playerHand);
+  const hasVisibleHands = blackjack.dealerHand.length > 0 || blackjack.playerHand.length > 0;
   const dealerValue = blackjackVisibleDealerValue(state);
-  const revealDealer = blackjack.phase !== 'player' || blackjack.dealerCardRevealed || state.blackjackSkills.revealDealer > 0;
-  const outcomeClass = `is-${blackjack.phase}`;
-  const outcomeText = blackjackOutcomeText(state);
-  const twentyOneBannerText = blackjackTwentyOneBannerText(state);
-  const dealerHandClass = blackjackHandOutcomeClass(state, 'dealer');
-  const playerHandClass = blackjackHandOutcomeClass(state, 'player');
-  const playerRerolls = blackjackPlayerRerollsRemaining(state);
-  const dealerRerolls = blackjackDealerRerollsRemaining(state);
-  const canRerollPlayer = isPlayerTurn && playerRerolls > 0 && blackjack.playerHand.length > 0;
-  const canRerollDealer = isPlayerTurn && dealerRerolls > 0 && blackjack.dealerHand.length > 0;
+  const revealDealer = blackjack.phase !== 'player' || blackjack.dealerCardRevealed;
   const previousHands =
-    blackjack.round === lastBlackjackRenderedRound ? lastBlackjackRenderedHands : { dealer: [], player: [] };
+    blackjack.round === lastBlackjackRenderedRound ? lastBlackjackRenderedHands : { dealer: [], player: [], split: [] };
   const currentHands = {
     dealer: blackjack.dealerHand.map((card) => blackjackCardKey(card, 'dealer')),
     player: blackjack.playerHand.map((card) => blackjackCardKey(card, 'player')),
+    split: blackjack.splitHand?.map((card) => blackjackCardKey(card, 'split')) ?? [],
   };
   const handGrew = {
     dealer: currentHands.dealer.length > previousHands.dealer.length,
     player: currentHands.player.length > previousHands.player.length,
+    split: currentHands.split.length > previousHands.split.length,
   };
+  updateBlackjackMotionGate(state, currentHands);
+  const isSettling = blackjackMotionIsSettling();
+  const liveDisplay = blackjackLiveDisplayState(state, dealerValue);
+  const display =
+    isSettling && lastBlackjackSettledDisplay
+      ? blackjackSettlingDisplay(state, lastBlackjackSettledDisplay, liveDisplay)
+      : liveDisplay;
+  const isPreparing = blackjack.phase === 'idle';
+  const canStartHand = blackjackCanDeal(state) && !isSettling;
+  const showHandScores = isSettling ? Boolean(lastBlackjackSettledDisplay?.scoresVisible) : liveDisplay.scoresVisible;
+  const outcomeClass = `is-${blackjack.phase}${isSettling ? ' is-settling' : ''}`;
+  const outcomeText = isSettling ? '' : blackjackOutcomeText(state);
+  const twentyOneBannerText = isSettling ? '' : blackjackTwentyOneBannerText(state);
+  const dealerHandClass = isSettling ? '' : blackjackHandOutcomeClass(state, 'dealer');
+  const playerHandClass = isSettling ? '' : blackjackHandOutcomeClass(state, 'player');
+  if (!isSettling) {
+    lastBlackjackSettledDisplay = liveDisplay;
+  }
   lastBlackjackRenderedRound = blackjack.round;
   lastBlackjackRenderedHands = currentHands;
 
   return `
     <div class="blackjack-panel">
       <div class="blackjack-table ${outcomeClass}" aria-label="Mini jeu Table du Blackjack">
-        <div class="blackjack-scoreboard" aria-label="Etat blackjack">
-          <span>♠ <strong data-dynamic-value="chips">${Math.floor(state.resources.chips)}</strong></span>
-          <span>J <strong>${playerValue || '-'}</strong></span>
-          <span>D <strong>${dealerValue || '-'}</strong></span>
+        ${blackjackControlRail(state)}
+        <div class="blackjack-outcome-slot">
+          ${outcomeText ? `<div class="blackjack-outcome" aria-live="polite">${outcomeText}</div>` : ''}
         </div>
-        <div class="blackjack-outcome ${outcomeText ? '' : 'is-visual-result'}" aria-live="polite">${outcomeText}</div>
+        ${blackjackBonusStrip(state)}
+        ${blackjackChipZone(state, display, blackjackStakeLabel(state))}
+        ${isPreparing ? blackjackWagerTray(display.chips) : ''}
         ${twentyOneBannerText ? `<div class="blackjack-twenty-one-banner" aria-live="polite">${twentyOneBannerText}</div>` : ''}
         ${
-          hasHand
-            ? ''
-            : `<button class="blackjack-start-button" data-action="dealBlackjack" title="Lancer" aria-label="Lancer le blackjack">Lancer</button>`
+          canStartHand
+            ? `<button class="blackjack-start-button" data-action="dealBlackjack" title="Jouer" aria-label="Jouer au blackjack">Jouer</button>`
+            : ''
         }
-        <div class="blackjack-hand is-dealer ${dealerHandClass}" style="--hand-size: ${Math.max(1, blackjack.dealerHand.length)}" aria-label="Main du croupier">
-          ${blackjack.dealerHand
-            .map((card, index) => {
-              const cardKey = blackjackCardKey(card, 'dealer');
-              const isNewCard = !previousHands.dealer.includes(cardKey);
-              return blackjackCard(
-                card,
-                !revealDealer && index === 1,
-                'dealer',
-                index,
-                blackjack.dealerHand.length,
-                isNewCard,
-                handGrew.dealer && !isNewCard,
-              );
-            })
-            .join('')}
-        </div>
-        <div class="blackjack-hand is-player ${playerHandClass}" style="--hand-size: ${Math.max(1, blackjack.playerHand.length)}" aria-label="Main du joueur">
-          ${blackjack.playerHand
-            .map((card, index) => {
-              const cardKey = blackjackCardKey(card, 'player');
-              const isNewCard = !previousHands.player.includes(cardKey);
-              return blackjackCard(
-                card,
-                false,
-                'player',
-                index,
-                blackjack.playerHand.length,
-                isNewCard,
-                handGrew.player && !isNewCard,
-              );
-            })
-            .join('')}
-        </div>
+        ${
+          hasVisibleHands
+            ? `
+              <div class="blackjack-hand-row is-dealer-row">
+                <div class="blackjack-hand is-dealer ${dealerHandClass}" style="--hand-size: ${Math.max(1, blackjack.dealerHand.length)}" aria-label="Main du croupier">
+                  ${blackjack.dealerHand
+                    .map((card, index) => {
+                      const cardKey = blackjackCardKey(card, 'dealer');
+                      const isNewCard = !previousHands.dealer.includes(cardKey);
+                      return blackjackCard(
+                        card,
+                        !revealDealer && index === 1,
+                        'dealer',
+                        index,
+                        blackjack.dealerHand.length,
+                        isNewCard,
+                        handGrew.dealer && !isNewCard,
+                      );
+                    })
+                    .join('')}
+                </div>
+                ${showHandScores ? blackjackHandValueBadge('Croupier', display.dealerScore, 'dealer') : ''}
+              </div>
+              <div class="blackjack-player-hands ${blackjack.splitHand ? 'is-split' : ''}">
+                ${blackjackPlayerHandRow(
+                  blackjack.playerHand,
+                  blackjack.splitHand ? 'Joueur 1' : 'Joueur',
+                  blackjack.playerBet,
+                  'player',
+                  blackjack.activeHand === 'primary',
+                  playerHandClass,
+                  previousHands.player,
+                  handGrew.player,
+                  showHandScores ? display.playerScore : null,
+                )}
+                ${
+                  blackjack.splitHand
+                    ? blackjackPlayerHandRow(
+                        blackjack.splitHand,
+                        'Joueur 2',
+                        blackjack.splitBet,
+                        'split',
+                        blackjack.activeHand === 'split',
+                        playerHandClass,
+                        previousHands.split,
+                        handGrew.split,
+                        showHandScores ? display.splitScore : null,
+                      )
+                    : ''
+                }
+              </div>
+            `
+            : ''
+        }
         ${
           isPlayerTurn
             ? `<div class="blackjack-actions">
-                <button class="blackjack-action is-skill" data-action="rerollPlayerBlackjackCard" title="Reroll joueur (${playerRerolls})" aria-label="Reroll joueur" ${canRerollPlayer ? '' : 'disabled'}>R</button>
-                <button class="blackjack-action is-skill" data-action="rerollDealerBlackjackCard" title="Reroll croupier (${dealerRerolls})" aria-label="Reroll croupier" ${canRerollDealer ? '' : 'disabled'}>D</button>
-                <button class="blackjack-action" data-action="hitBlackjack" title="Tirer" aria-label="Tirer" ${isPlayerTurn ? '' : 'disabled'}>+</button>
-                <button class="blackjack-action" data-action="standBlackjack" title="Rester" aria-label="Rester" ${isPlayerTurn ? '' : 'disabled'}>✓</button>
+                <button class="blackjack-action is-hit" data-action="hitBlackjack" title="Tirer une carte" aria-label="Tirer une carte" ${isPlayerTurn ? '' : 'disabled'}>
+                  <span class="blackjack-action-icon" aria-hidden="true"></span>
+                </button>
+                <button class="blackjack-action is-stand" data-action="standBlackjack" title="Rester" aria-label="Rester" ${isPlayerTurn ? '' : 'disabled'}>
+                  <span class="blackjack-action-icon" aria-hidden="true"></span>
+                </button>
+                <button class="blackjack-action is-double" data-action="doubleBlackjack" title="Doubler la mise et tirer une carte" aria-label="Doubler" ${blackjackCanDouble(state) ? '' : 'disabled'}>
+                  <span class="blackjack-action-icon" aria-hidden="true"></span>
+                </button>
+                <button class="blackjack-action is-split-action" data-action="splitBlackjack" title="Diviser une paire" aria-label="Diviser" ${blackjackCanSplit(state) ? '' : 'disabled'}>
+                  <span class="blackjack-action-icon" aria-hidden="true"></span>
+                </button>
               </div>`
             : ''
         }
       </div>
     </div>
   `;
+}
+
+function blackjackLiveDisplayState(state: GameState, dealerValue: number): BlackjackDisplayState {
+  const blackjack = state.blackjack;
+  return {
+    chips: Math.floor(state.resources.chips),
+    stake: blackjackActiveStake(state),
+    debt: Math.ceil(blackjack.debt),
+    scoresVisible: !blackjackCanDeal(state),
+    dealerScore: dealerValue ? dealerValue.toString() : '-',
+    playerScore: blackjack.playerHand.length > 0 ? blackjackHandValue(blackjack.playerHand).toString() : '-',
+    splitScore: blackjack.splitHand && blackjack.splitHand.length > 0 ? blackjackHandValue(blackjack.splitHand).toString() : '-',
+  };
+}
+
+function blackjackSettlingDisplay(
+  state: GameState,
+  settledDisplay: BlackjackDisplayState,
+  liveDisplay: BlackjackDisplayState,
+): BlackjackDisplayState {
+  return {
+    ...settledDisplay,
+    scoresVisible: settledDisplay.scoresVisible || liveDisplay.scoresVisible,
+    dealerScore: state.blackjack.phase === 'dealer' ? liveDisplay.dealerScore : settledDisplay.dealerScore,
+  };
+}
+
+function updateBlackjackMotionGate(
+  state: GameState,
+  currentHands: Record<'dealer' | 'player' | 'split', string[]>,
+): void {
+  const blackjack = state.blackjack;
+  const signature = [
+    blackjack.round,
+    blackjack.phase,
+    blackjack.dealerCardRevealed ? 1 : 0,
+    currentHands.dealer.join(','),
+    currentHands.player.join(','),
+    currentHands.split.join(','),
+  ].join('|');
+  if (signature === lastBlackjackMotionSignature) {
+    return;
+  }
+
+  lastBlackjackMotionSignature = signature;
+  if (blackjack.phase === 'idle' || (currentHands.dealer.length === 0 && currentHands.player.length === 0)) {
+    blackjackMotionSettlesAt = 0;
+    clearBlackjackScoreRevealTimeout();
+    return;
+  }
+
+  const longestDealOrder = Math.max(
+    ...currentHands.dealer.map((_, index) => index * 2 + 1),
+    ...currentHands.player.map((_, index) => index * 2),
+    ...currentHands.split.map((_, index) => index * 2),
+    0,
+  );
+  blackjackMotionSettlesAt =
+    Date.now() + BLACKJACK_CARD_RECEIVE_MS + longestDealOrder * BLACKJACK_CARD_STAGGER_MS + BLACKJACK_SCORE_REVEAL_BUFFER_MS;
+  scheduleBlackjackScoreReveal();
+}
+
+function scheduleBlackjackScoreReveal(): void {
+  clearBlackjackScoreRevealTimeout();
+  const delay = Math.max(0, blackjackMotionSettlesAt - Date.now());
+  blackjackScoreRevealTimeout = window.setTimeout(() => {
+    blackjackScoreRevealTimeout = null;
+    lastRenderSignature = '';
+    renderHud(gameStore.snapshot);
+  }, delay);
+}
+
+function clearBlackjackScoreRevealTimeout(): void {
+  if (blackjackScoreRevealTimeout === null) {
+    return;
+  }
+  window.clearTimeout(blackjackScoreRevealTimeout);
+  blackjackScoreRevealTimeout = null;
+}
+
+function blackjackMotionIsSettling(): boolean {
+  return Date.now() < blackjackMotionSettlesAt;
+}
+
+function blackjackStakeLabel(state: GameState): string {
+  return state.blackjack.phase === 'idle' || state.blackjack.playerBet <= 0 ? 'Mise base' : 'Mise en jeu';
+}
+
+function blackjackActiveStake(state: GameState): number {
+  const blackjack = state.blackjack;
+  if (blackjack.phase === 'idle') {
+    return blackjack.playerBet;
+  }
+  if (blackjack.playerBet <= 0) {
+    return blackjackCurrentMainBet(state);
+  }
+  return blackjack.playerBet + blackjack.splitBet;
+}
+
+function blackjackChipZone(state: GameState, display: BlackjackDisplayState, stakeLabel: string): string {
+  const isPreparing = state.blackjack.phase === 'idle';
+  return `
+    <div class="blackjack-chip-zone" aria-label="Jetons blackjack">
+      ${blackjackChipStack('Reserve', display.chips, 'bankroll')}
+      ${blackjackChipStack(stakeLabel, display.stake, 'stake', false, isPreparing && display.stake > 0)}
+    </div>
+  `;
+}
+
+function blackjackChipStack(
+  label: string,
+  amount: number,
+  variant: 'bankroll' | 'stake',
+  canPrepareWager = false,
+  canResetWager = false,
+): string {
+  const chips = blackjackChipDenominations(amount);
+  const tag = canResetWager ? 'button' : 'div';
+  const resetAttributes = canResetWager
+    ? 'type="button" data-action="resetBlackjackWager" title="Remettre la mise a 0"'
+    : '';
+  const resetClass = canResetWager ? ' is-clickable' : '';
+  return `
+    <${tag} class="blackjack-chip-stack is-${variant}${resetClass}" ${resetAttributes} aria-label="${label}: ${Math.floor(amount)} jetons">
+      <div class="blackjack-chip-stack-art" style="--chip-count: ${chips.length}">
+        ${chips
+          .map((denomination, index) => blackjackChipToken(denomination, index, canPrepareWager && amount >= denomination))
+          .join('')}
+      </div>
+      <span>
+        <small>${label}</small>
+        <strong>${Math.floor(amount)}</strong>
+      </span>
+    </${tag}>
+  `;
+}
+
+function blackjackChipToken(denomination: BlackjackChipDenomination, index: number, isClickable: boolean): string {
+  const style = `--chip-offset: ${index * 3}px; --chip-tilt: ${(index - 3) * 3}deg`;
+  if (!isClickable) {
+    return `<i class="blackjack-chip-token is-${denomination}" style="${style}" aria-hidden="true"></i>`;
+  }
+
+  return `
+    <button
+      class="blackjack-chip-token is-${denomination} is-clickable"
+      type="button"
+      style="${style}"
+      data-action="prepareBlackjackWager"
+      data-wager-amount="${denomination}"
+      title="Miser ${denomination} jetons"
+      aria-label="Miser ${denomination} jetons"
+    ></button>
+  `;
+}
+
+function blackjackWagerTray(availableChips: number): string {
+  return `
+    <div class="blackjack-wager-tray" aria-label="Choisir une mise">
+      ${BLACKJACK_WAGER_TRAY_DENOMINATIONS.map((denomination) => blackjackWagerTrayChip(denomination, availableChips >= denomination)).join('')}
+    </div>
+  `;
+}
+
+function blackjackWagerTrayChip(denomination: BlackjackChipDenomination, canUse: boolean): string {
+  return `
+    <button
+      class="blackjack-wager-chip is-${denomination}"
+      type="button"
+      data-action="prepareBlackjackWager"
+      data-wager-amount="${denomination}"
+      title="Miser ${denomination} jetons"
+      aria-label="Miser ${denomination} jetons"
+      ${canUse ? '' : 'disabled'}
+    >
+      <span>${denomination}</span>
+    </button>
+  `;
+}
+
+function showBlackjackWagerChipFlight(source: HTMLElement, amount: number): void {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return;
+  }
+
+  const denomination = BLACKJACK_WAGER_TRAY_DENOMINATIONS.includes(amount as BlackjackChipDenomination)
+    ? amount as BlackjackChipDenomination
+    : 1;
+  const table = source.closest<HTMLElement>('.blackjack-table');
+  const target = table?.querySelector<HTMLElement>('.blackjack-chip-stack.is-stake .blackjack-chip-stack-art');
+  if (!target) {
+    return;
+  }
+
+  const sourceRect = source.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+  const size = Math.min(Math.max(sourceRect.width || 52, 42), 72);
+  const startX = sourceRect.left + sourceRect.width / 2 - size / 2;
+  const startY = sourceRect.top + sourceRect.height / 2 - size / 2;
+  const endX = targetRect.left + targetRect.width / 2 - size / 2;
+  const endY = targetRect.top + targetRect.height / 2 - size / 2;
+  const chip = document.createElement('i');
+  chip.className = `blackjack-wager-chip-flight is-${denomination}`;
+  chip.style.left = `${startX}px`;
+  chip.style.top = `${startY}px`;
+  chip.style.width = `${size}px`;
+  document.body.appendChild(chip);
+  const animation = chip.animate(
+    [
+      { opacity: 0.95, transform: 'translate3d(0, 0, 0) scale(1)' },
+      { offset: 0.68, opacity: 1, transform: `translate3d(${(endX - startX) * 0.52}px, ${endY - startY - 82}px, 0) scale(1.1)` },
+      { opacity: 0.96, transform: `translate3d(${endX - startX}px, ${endY - startY}px, 0) scale(0.72)` },
+    ],
+    {
+      duration: 1450,
+      easing: 'cubic-bezier(0.12, 0.62, 0.18, 1)',
+    },
+  );
+  animation.addEventListener('finish', () => chip.remove(), { once: true });
+  animation.addEventListener('cancel', () => chip.remove(), { once: true });
+}
+
+function blackjackChipDenominations(amount: number): BlackjackChipDenomination[] {
+  let remaining = Math.max(0, Math.floor(amount));
+  const chips: BlackjackChipDenomination[] = [];
+  for (const denomination of BLACKJACK_CHIP_DENOMINATIONS) {
+    const count = Math.min(Math.floor(remaining / denomination), Math.max(0, 8 - chips.length));
+    for (let index = 0; index < count; index += 1) {
+      chips.push(denomination);
+    }
+    remaining -= denomination * count;
+    if (chips.length >= 8) {
+      break;
+    }
+  }
+  return chips.length > 0 ? chips.reverse() : [1];
+}
+
+function blackjackControlRail(state: GameState): string {
+  return `
+    <div class="blackjack-control-rail" aria-label="Reglages de mise et bonus">
+      ${blackjackMainBetControl(state)}
+      ${blackjackBonusControl(state, 'pair', 'Pair')}
+      ${blackjackBonusControl(state, 'twentyOneThree', '21+3')}
+    </div>
+  `;
+}
+
+function blackjackMainBetControl(state: GameState): string {
+  const currentBet = blackjackCurrentMainBet(state);
+  const selectedBetLevel = Math.max(1, Math.min(state.books.blackjack.level, state.blackjack.baseBetLevel ?? state.books.blackjack.level));
+  const nextBetLevel = selectedBetLevel < state.books.blackjack.level ? selectedBetLevel + 1 : state.books.blackjack.level + 1;
+  const nextBet = blackjackMainBet(nextBetLevel);
+  const canDecrease = blackjackCanDecreaseBaseBet(state);
+  const canIncrease = blackjackCanIncreaseBaseBet(state);
+  const increaseTitle = selectedBetLevel < state.books.blackjack.level
+    ? `Augmenter la mise de base a ${nextBet}`
+    : 'Mise max deja selectionnee';
+  return `
+    <div class="blackjack-bet-stepper" aria-label="Mise de base blackjack">
+      <button
+        class="blackjack-bet-arrow ${canDecrease ? '' : 'is-disabled'}"
+        data-action="decreaseBlackjackBaseBet"
+        title="Diminuer la mise de base"
+        aria-label="Diminuer la mise de base"
+        ${canDecrease ? '' : 'disabled'}
+      >‹</button>
+      <span class="blackjack-bet-value">
+        <small>Mise de base</small>
+        <strong>${currentBet}</strong>
+      </span>
+      <button
+        class="blackjack-bet-arrow ${canIncrease ? '' : 'is-disabled'}"
+        data-action="increaseBlackjackBaseBet"
+        title="${increaseTitle}"
+        aria-label="${increaseTitle}"
+        ${canIncrease ? '' : 'disabled'}
+      >›</button>
+    </div>
+  `;
+}
+
+function blackjackBonusControl(state: GameState, bonusId: BlackjackSideBonusId, label: string): string {
+  const bonus = blackjackBonusState(state, bonusId);
+  const maxLevel = blackjackCurrentBonusMaxLevel();
+  const icon = bonusId === 'pair' ? 'P' : '21';
+  if (!bonus.unlocked) {
+    const cost = blackjackCurrentBonusUnlockCost(bonusId);
+    const prerequisiteMet = bonusId === 'pair' || state.blackjack.pair.unlocked;
+    const canUnlock = prerequisiteMet && state.resources.chips >= cost;
+    const title = prerequisiteMet ? `Debloquer ${label}: ${cost} Jetons` : 'Debloque Pair avant 21+3';
+    return `
+      <button
+        class="blackjack-bonus-toggle is-locked ${canUnlock ? '' : 'is-disabled'}"
+        data-action="unlockBlackjackBonus"
+        data-bonus-id="${bonusId}"
+        data-tooltip="${title}"
+        aria-label="${title}"
+        aria-pressed="false"
+        aria-disabled="${canUnlock ? 'false' : 'true'}"
+      >
+        <span aria-hidden="true">${icon}</span>
+      </button>
+    `;
+  }
+
+  const cost = blackjackCurrentBonusUpgradeCost(state, bonusId);
+  const isMaxed = bonus.level >= maxLevel;
+  const canUpgrade = !isMaxed && bonus.xp >= cost;
+  const title = isMaxed
+    ? `${label} au maximum`
+    : canUpgrade
+      ? `Ameliorer ${label}`
+      : `${label} bloque: ${Math.floor(bonus.xp)}/${cost} XP`;
+  return `
+    <button
+      class="blackjack-bonus-toggle is-unlocked ${isMaxed ? 'is-maxed' : ''} ${canUpgrade ? '' : 'is-disabled'}"
+      data-action="buyBlackjackBonusUpgrade"
+      data-bonus-id="${bonusId}"
+      data-tooltip="${title}"
+      aria-label="${title}"
+      aria-pressed="true"
+      aria-disabled="${canUpgrade ? 'false' : 'true'}"
+    >
+      <span aria-hidden="true">${icon}</span>
+    </button>
+  `;
+}
+
+function blackjackHandValueBadge(label: string, value: string, hand: 'dealer' | 'player'): string {
+  return `
+    <aside class="blackjack-hand-value is-${hand}" aria-label="${label} ${value}">
+      <small>${label}</small>
+      <strong>${value}</strong>
+    </aside>
+  `;
+}
+
+function blackjackPlayerHandRow(
+  hand: BlackjackCard[],
+  label: string,
+  bet: number,
+  keyHand: 'player' | 'split',
+  isActive: boolean,
+  outcomeClass: string,
+  previousHand: string[],
+  handGrew: boolean,
+  scoreText: string | null,
+): string {
+  return `
+    <div class="blackjack-hand-row is-player-row ${isActive ? 'is-active-hand' : ''}">
+      <div class="blackjack-hand is-player ${outcomeClass}" style="--hand-size: ${Math.max(1, hand.length)}" aria-label="Main ${label}">
+        ${hand
+          .map((card, index) => {
+            const cardKey = blackjackCardKey(card, keyHand);
+            const isNewCard = !previousHand.includes(cardKey);
+            return blackjackCard(
+              card,
+              false,
+              'player',
+              index,
+              hand.length,
+              isNewCard,
+              handGrew && !isNewCard,
+            );
+          })
+          .join('')}
+      </div>
+      ${scoreText ? blackjackHandValueBadge(label, scoreText, 'player') : ''}
+      ${bet > 0 ? `<span class="blackjack-hand-bet">Mise ${bet}</span>` : ''}
+    </div>
+  `;
+}
+
+function blackjackBonusStrip(state: GameState): string {
+  const bonusIds: BlackjackSideBonusId[] = ['pair', 'twentyOneThree'];
+  const visibleBonuses = bonusIds.filter(
+    (bonusId) => blackjackBonusState(state, bonusId).unlocked,
+  );
+  if (visibleBonuses.length === 0 && state.blackjack.debt <= 0) {
+    return '';
+  }
+
+  return `
+    <div class="blackjack-bonus-strip" aria-label="Bonus blackjack">
+      ${visibleBonuses.map((bonusId) => blackjackBonusStatusPill(state, bonusId)).join('')}
+      ${
+        state.blackjack.lastDebtPayment > 0
+          ? `<span class="blackjack-bonus-pill is-debt">Dette -${Math.floor(state.blackjack.lastDebtPayment)}</span>`
+          : ''
+      }
+    </div>
+  `;
+}
+
+function blackjackBonusStatusPill(state: GameState, bonusId: BlackjackSideBonusId): string {
+  const bonus = blackjackBonusState(state, bonusId);
+  const label = bonusId === 'pair' ? 'Pair' : '21+3';
+  const reward = bonus.lastPayout > 0 ? ` +${Math.floor(bonus.lastPayout)}` : '';
+  const xp = bonus.lastXp > 0 ? ` XP +${bonus.lastXp}` : '';
+  return `<span class="blackjack-bonus-pill">${label} Lv ${bonus.level}: ${bonus.lastOutcome}${reward}${xp}</span>`;
 }
 
 function blackjackCard(
@@ -2317,7 +3043,7 @@ function blackjackCard(
   `;
 }
 
-function blackjackCardKey(card: BlackjackCard, hand: 'dealer' | 'player'): string {
+function blackjackCardKey(card: BlackjackCard, hand: 'dealer' | 'player' | 'split'): string {
   return `${hand}:${card.rank}:${card.suit}`;
 }
 
@@ -2327,14 +3053,15 @@ function blackjackTwentyOneBannerText(state: GameState): string {
     return '';
   }
 
-  const playerValue = blackjackHandValue(blackjack.playerHand);
+  const playerHand = blackjack.activeHand === 'split' && blackjack.splitHand ? blackjack.splitHand : blackjack.playerHand;
+  const playerValue = blackjackHandValue(playerHand);
   const dealerValue = blackjackHandValue(blackjack.dealerHand);
   if (playerValue !== 21 && dealerValue !== 21) {
     return '';
   }
 
   const dealerNatural = blackjackIsNaturalTwentyOne(blackjack.dealerHand);
-  const playerNatural = blackjackIsNaturalTwentyOne(blackjack.playerHand);
+  const playerNatural = blackjack.splitHand === null && blackjackIsNaturalTwentyOne(playerHand);
   if (playerValue === 21 && dealerValue === 21) {
     return dealerNatural && playerNatural ? 'Double blackjack' : 'Double 21';
   }
@@ -2351,17 +3078,7 @@ function blackjackIsNaturalTwentyOne(hand: BlackjackCard[]): boolean {
 }
 
 function blackjackOutcomeText(state: GameState): string {
-  switch (state.blackjack.phase) {
-    case 'won':
-    case 'lost':
-    case 'blackjack':
-      return '';
-    case 'push':
-      return 'Egalite';
-    case 'idle':
-    case 'player':
-      return state.blackjack.lastOutcome;
-  }
+  return blackjackResultSummary(state);
 }
 
 function blackjackHandOutcomeClass(state: GameState, hand: 'dealer' | 'player'): string {
@@ -2374,6 +3091,7 @@ function blackjackHandOutcomeClass(state: GameState, hand: 'dealer' | 'player'):
     case 'push':
     case 'idle':
     case 'player':
+    case 'dealer':
       return '';
   }
 }
@@ -2764,22 +3482,6 @@ function isBookPanelOpen(state: GameState, bookId: BookId): boolean {
   return state.openBookPanels.some((panel) => panel.bookId === bookId);
 }
 
-function bookMenuEntry(bookId: BookId, state: GameState): string {
-  const definition = getBook(bookId);
-  const book = state.books[bookId];
-  const isVisible = isBookPanelOpen(state, bookId);
-  const cost = definition.unlockResource
-    ? `${definition.unlockMana} Mana + ${definition.unlockResource.amount} ${getResourceName(definition.unlockResource.id)}`
-    : `${definition.unlockMana} Mana`;
-  return `
-    <button class="book-menu-entry ${book.unlocked ? 'is-unlocked' : 'is-locked'} ${isVisible ? 'is-visible' : ''} ${state.selectedBook === bookId ? 'is-active' : ''}" style="--book-accent:${definition.accent}" data-action="${book.unlocked ? 'selectBook' : 'unlockBook'}" data-book-id="${bookId}">
-      <span>${book.unlocked ? '✓' : '×'}</span>
-      <strong>${definition.name}</strong>
-      ${book.unlocked ? '' : `<small>${cost}</small>`}
-    </button>
-  `;
-}
-
 function upgradeManaCost(bookId: BookId, state: GameState): number {
   const level = state.books[bookId].level;
   return Math.round(20 * Math.pow(1.55, level - 1));
@@ -2788,29 +3490,4 @@ function upgradeManaCost(bookId: BookId, state: GameState): number {
 function upgradeResourceCost(bookId: BookId, state: GameState): number {
   const level = state.books[bookId].level;
   return Math.round(3 * Math.pow(1.35, level - 1));
-}
-
-function getResourceName(resourceId: string): string {
-  switch (resourceId) {
-    case 'scales':
-      return 'Ecailles';
-    case 'runes':
-      return 'Runes';
-    case 'spores':
-      return 'Spores';
-    case 'sigils':
-      return 'Sceaux';
-    case 'chips':
-      return 'Jetons';
-    case 'fragments':
-      return 'Fragments';
-    case 'marks':
-      return 'Marques';
-    case 'minerals':
-      return 'Minerais';
-    case 'gels':
-      return 'Gels';
-    default:
-      return resourceId;
-  }
 }

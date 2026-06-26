@@ -1,4 +1,9 @@
 import { books, getBook, type BookId } from '../content/books';
+import {
+  getForbiddenGrimoireSealForBook,
+  type ForbiddenGrimoireRequirement,
+  type ForbiddenOfferingResourceId,
+} from '../content/forbiddenGrimoire';
 import { runeWords } from '../content/runeWords';
 import {
   hundredOptionRange,
@@ -43,6 +48,7 @@ import {
   type BlackjackCard,
   type BlackjackRank,
   type BlackjackSuit,
+  type BlackjackUpgradeCellId,
   type BookPanelSlot,
   type DefenseEnemy,
   type GameState,
@@ -54,12 +60,52 @@ import {
 } from './state';
 import { defenseEnemyInTowerHitbox, defenseEnemyInTowerRange, nextDefenseSpeedMultiplier } from './defenseRules';
 import { canQueueSnakeDirection, committedSnakeDirection, snakeMoveIntervalForSpeedLevel } from './snakeRules';
+import {
+  BLACKJACK_UPGRADE_CELL_IDS,
+  blackjackActionMaxLevel,
+  blackjackActionCurrentEffectLabel,
+  blackjackActionNextEffectLabel,
+  blackjackActionResultBonus,
+  blackjackSplitCostRatio,
+  blackjackActionUpgradeCost,
+  blackjackActionUpgradeSteps,
+  blackjackBonusActivationCost,
+  blackjackBonusAutoUnlocked,
+  blackjackBonusCurrentEffectLabel,
+  blackjackBonusMaxLevel,
+  blackjackBonusUpgradeSteps,
+  blackjackBonusUpgradeXpCost,
+  blackjackUpgradeCellCost,
+  blackjackUpgradeCellMaxLevel,
+  blackjackUpgradeTier,
+  blackjackLoanAmount,
+  blackjackLoanDebtForLevel,
+  blackjackMainBet,
+  blackjackMissRefund,
+  blackjackMoneyGainSplit,
+  blackjackNaturalPayoutMultiplier,
+  blackjackPayoutMultiplier,
+  blackjackSideBonusXp,
+  blackjackWinPayoutMultiplier,
+  blackjackWinStreakBonus,
+  evaluatePairBonus,
+  evaluateTwentyOneThree,
+  type BlackjackBonusUpgradeStep,
+  type BlackjackActionResultBonus,
+  type BlackjackUpgradeCost,
+  type BlackjackUpgradeTier,
+  type BlackjackSideBonusId,
+} from './blackjackRules';
 
 export type ManaSkillId = 'power' | 'automation' | 'criticalHit' | 'criticalEffect' | 'extraWands';
 export type SnakeSkillId = 'speed' | 'gridSize' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
 export type MiningSkillId = 'pickaxeForce' | 'splashDamage' | 'automation';
-export type BlackjackSkillId = 'rerollPlayer' | 'rerollDealer' | 'revealDealer' | 'aceBias';
 export type { TargetSkillId };
+export type { BlackjackSideBonusId };
+export type { BlackjackBonusUpgradeStep };
+export type { BlackjackUpgradeCellId };
+export type { BlackjackUpgradeCost };
+export type { BlackjackUpgradeTier };
 
 const DEBUG_MANA_SKILL_MAX_LEVELS: Record<ManaSkillId, number> = {
   power: 50,
@@ -104,7 +150,17 @@ export type GameAction =
   | { type: 'buySnakeSkill'; skillId: SnakeSkillId }
   | { type: 'buyTargetSkill'; skillId: TargetSkillId }
   | { type: 'buyMiningSkill'; skillId: MiningSkillId }
-  | { type: 'buyBlackjackSkill'; skillId: BlackjackSkillId }
+  | { type: 'unlockBlackjackBonus'; bonusId: BlackjackSideBonusId }
+  | { type: 'buyBlackjackBonusUpgrade'; bonusId: BlackjackSideBonusId }
+  | { type: 'buyBlackjackActionUpgrade' }
+  | { type: 'buyBlackjackUpgradeCell'; cellId: BlackjackUpgradeCellId }
+  | { type: 'toggleBlackjackBonusAuto'; bonusId: BlackjackSideBonusId }
+  | { type: 'activateBlackjackBonus'; bonusId: BlackjackSideBonusId }
+  | { type: 'prepareBlackjackWager'; amount: number }
+  | { type: 'resetBlackjackWager' }
+  | { type: 'increaseBlackjackBaseBet' }
+  | { type: 'decreaseBlackjackBaseBet' }
+  | { type: 'buyBlackjackAutoDeal' }
   | { type: 'maxManaSkills' }
   | { type: 'maxSnakeSkills' }
   | { type: 'maxMiningSkills' }
@@ -112,15 +168,19 @@ export type GameAction =
   | { type: 'buyUpgrade'; bookId: BookId }
   | { type: 'togglePin'; bookId: BookId }
   | { type: 'unlockBook'; bookId: BookId }
+  | { type: 'unlockAllBooks' }
+  | { type: 'selectForbiddenSealBook'; bookId: BookId }
+  | { type: 'offerForbiddenGrimoire' }
+  | { type: 'breakForbiddenSeal' }
   | { type: 'snakeTurn'; direction: SnakeDirection }
   | { type: 'toggleSnakeAutomation' }
   | { type: 'typeRuneKey'; key: string }
   | { type: 'dealBlackjack' }
   | { type: 'hitBlackjack' }
   | { type: 'standBlackjack' }
-  | { type: 'rerollPlayerBlackjackCard' }
-  | { type: 'rerollDealerBlackjackCard' }
-  | { type: 'revealBlackjackDealerCard' }
+  | { type: 'advanceBlackjackDealer' }
+  | { type: 'doubleBlackjack' }
+  | { type: 'splitBlackjack' }
   | { type: 'chooseHundredOption'; optionId: HundredOptionId }
   | { type: 'attackTarget'; targetId: number }
   | { type: 'digMiningBlock'; blockId: number }
@@ -158,8 +218,38 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'buyMiningSkill':
       buyMiningSkill(state, action.skillId);
       return;
-    case 'buyBlackjackSkill':
-      buyBlackjackSkill(state, action.skillId);
+    case 'unlockBlackjackBonus':
+      unlockBlackjackBonus(state, action.bonusId);
+      return;
+    case 'buyBlackjackBonusUpgrade':
+      buyBlackjackBonusUpgrade(state, action.bonusId);
+      return;
+    case 'buyBlackjackActionUpgrade':
+      buyBlackjackActionUpgrade(state);
+      return;
+    case 'buyBlackjackUpgradeCell':
+      buyBlackjackUpgradeCell(state, action.cellId);
+      return;
+    case 'toggleBlackjackBonusAuto':
+      toggleBlackjackBonusAuto(state, action.bonusId);
+      return;
+    case 'activateBlackjackBonus':
+      activateBlackjackBonus(state, action.bonusId);
+      return;
+    case 'prepareBlackjackWager':
+      prepareBlackjackWager(state, action.amount);
+      return;
+    case 'resetBlackjackWager':
+      resetBlackjackWager(state);
+      return;
+    case 'increaseBlackjackBaseBet':
+      increaseBlackjackBaseBet(state);
+      return;
+    case 'decreaseBlackjackBaseBet':
+      decreaseBlackjackBaseBet(state);
+      return;
+    case 'buyBlackjackAutoDeal':
+      buyBlackjackAutoDeal(state);
       return;
     case 'maxManaSkills':
       maxManaSkills(state);
@@ -182,6 +272,18 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'unlockBook':
       unlockBook(state, action.bookId);
       return;
+    case 'unlockAllBooks':
+      unlockAllBooks(state);
+      return;
+    case 'selectForbiddenSealBook':
+      selectForbiddenSealBook(state, action.bookId);
+      return;
+    case 'offerForbiddenGrimoire':
+      offerForbiddenGrimoire(state);
+      return;
+    case 'breakForbiddenSeal':
+      breakForbiddenSeal(state);
+      return;
     case 'snakeTurn':
       snakeTurn(state, action.direction);
       return;
@@ -200,14 +302,14 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'standBlackjack':
       standBlackjack(state);
       return;
-    case 'rerollPlayerBlackjackCard':
-      rerollPlayerBlackjackCard(state);
+    case 'advanceBlackjackDealer':
+      advanceBlackjackDealer(state);
       return;
-    case 'rerollDealerBlackjackCard':
-      rerollDealerBlackjackCard(state);
+    case 'doubleBlackjack':
+      doubleBlackjack(state);
       return;
-    case 'revealBlackjackDealerCard':
-      revealBlackjackDealerCard(state);
+    case 'splitBlackjack':
+      splitBlackjack(state);
       return;
     case 'chooseHundredOption':
       chooseHundredOption(state, action.optionId);
@@ -262,7 +364,12 @@ export function tickState(state: GameState, now: number): void {
 function chargeMana(state: GameState): void {
   const book = state.books.mana;
   const gain = rollManaClickGain(state);
-  book.charge = Math.min(book.charge + 12 + book.level * 2, 100);
+  book.charge += 12 + book.level * 2;
+  while (book.charge >= 100) {
+    book.charge -= 100;
+    state.forbiddenGrimoire.keys += 1;
+    state.forbiddenGrimoire.pulse += 1;
+  }
   state.mana += gain;
 }
 
@@ -600,23 +707,206 @@ function buyMiningSkill(state: GameState, skillId: MiningSkillId): void {
   state.miningSkills[skillId] += 1;
 }
 
-function buyBlackjackSkill(state: GameState, skillId: BlackjackSkillId): void {
+function unlockBlackjackBonus(state: GameState, bonusId: BlackjackSideBonusId): void {
   if (!state.books.blackjack.unlocked) {
     return;
   }
 
-  const maxLevel = blackjackSkillMaxLevel(skillId);
-  if (state.blackjackSkills[skillId] >= maxLevel) {
+  const bonus = blackjackBonusTrack(state, bonusId);
+  if (bonus.unlocked) {
     return;
   }
 
-  const cost = blackjackSkillCost(state, skillId);
+  if (bonusId === 'twentyOneThree' && !state.blackjack.pair.unlocked) {
+    return;
+  }
+
+  const cost = blackjackBonusUnlockCost(bonusId);
   if (state.resources.chips < cost) {
     return;
   }
 
   state.resources.chips -= cost;
-  state.blackjackSkills[skillId] += 1;
+  bonus.unlocked = true;
+  bonus.level = 1;
+  bonus.lastOutcome = 'Pret';
+}
+
+function buyBlackjackBonusUpgrade(state: GameState, bonusId: BlackjackSideBonusId): void {
+  const bonus = blackjackBonusTrack(state, bonusId);
+  if (!bonus.unlocked || bonus.level >= blackjackBonusMaxLevel()) {
+    return;
+  }
+
+  const cost = blackjackBonusUpgradeXpCost(bonus.level);
+  if (bonus.xp < cost) {
+    return;
+  }
+
+  bonus.xp -= cost;
+  bonus.level += 1;
+  if (blackjackBonusAutoUnlocked(bonus.level)) {
+    bonus.autoEnabled = true;
+  }
+  bonus.lastOutcome = `Niveau ${bonus.level}`;
+}
+
+function buyBlackjackActionUpgrade(state: GameState): void {
+  if (!state.books.blackjack.unlocked) {
+    return;
+  }
+
+  const actions = state.blackjack.actions;
+  if (actions.level >= blackjackActionMaxLevel()) {
+    return;
+  }
+
+  const cost = blackjackActionUpgradeCost(actions.level);
+  if (state.resources.chips < cost) {
+    return;
+  }
+
+  state.resources.chips -= cost;
+  actions.unlocked = true;
+  actions.level += 1;
+  actions.lastOutcome = `Niveau ${actions.level}`;
+}
+
+function buyBlackjackUpgradeCell(state: GameState, cellId: BlackjackUpgradeCellId): void {
+  if (!state.books.blackjack.unlocked || !blackjackCanBuyUpgradeCell(state, cellId)) {
+    return;
+  }
+
+  const cost = blackjackCurrentUpgradeCellCost(state, cellId);
+  if (!payBlackjackUpgradeCellCost(state, cost)) {
+    return;
+  }
+
+  ensureBlackjackUpgradeCells(state);
+  state.blackjack.upgradeCells[cellId] = Math.min(
+    blackjackUpgradeCellMaxLevel(cellId),
+    blackjackUpgradeCellLevel(state, cellId) + 1,
+  );
+  applyBlackjackUpgradeCellSideEffects(state, cellId);
+}
+
+function ensureBlackjackUpgradeCells(state: GameState): void {
+  if (!state.blackjack.upgradeCells) {
+    state.blackjack.upgradeCells = {} as GameState['blackjack']['upgradeCells'];
+  }
+  for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
+    if (!Number.isFinite(state.blackjack.upgradeCells[cellId])) {
+      state.blackjack.upgradeCells[cellId] = 1;
+    }
+  }
+}
+
+function payBlackjackUpgradeCellCost(state: GameState, cost: BlackjackUpgradeCost): boolean {
+  switch (cost.kind) {
+    case 'resources':
+      if (state.mana < cost.mana || state.resources.chips < cost.chips) {
+        return false;
+      }
+      state.mana -= cost.mana;
+      state.resources.chips -= cost.chips;
+      return true;
+    case 'chips':
+      if (state.resources.chips < cost.chips) {
+        return false;
+      }
+      state.resources.chips -= cost.chips;
+      return true;
+    case 'pairXp': {
+      const bonus = state.blackjack.pair;
+      if (bonus.xp < cost.xp) {
+        return false;
+      }
+      bonus.xp -= cost.xp;
+      return true;
+    }
+    case 'twentyOneThreeXp': {
+      const bonus = state.blackjack.twentyOneThree;
+      if (bonus.xp < cost.xp) {
+        return false;
+      }
+      bonus.xp -= cost.xp;
+      return true;
+    }
+    case 'blocked':
+    case 'max':
+      return false;
+  }
+}
+
+function applyBlackjackUpgradeCellSideEffects(state: GameState, cellId: BlackjackUpgradeCellId): void {
+  const level = blackjackUpgradeCellLevel(state, cellId);
+  switch (cellId) {
+    case 'wagerBase':
+      state.books.blackjack.level = Math.max(state.books.blackjack.level, level);
+      state.blackjack.baseBetLevel = Math.max(1, Math.min(level, state.blackjack.baseBetLevel || level));
+      return;
+    case 'actionStand':
+    case 'actionDouble':
+    case 'actionSplit':
+    case 'actionFaceSplit':
+    case 'actionMastery':
+      state.blackjack.actions.unlocked = true;
+      state.blackjack.actions.level = blackjackEffectiveActionSummaryLevel(state);
+      state.blackjack.actions.lastOutcome = `Niveau ${state.blackjack.actions.level}`;
+      return;
+    case 'autoDeal':
+      if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+        state.books.blackjack.automation = Math.max(state.books.blackjack.automation, 0.35);
+      }
+      return;
+    case 'autoSpeed':
+      if (state.books.blackjack.automation > 0) {
+        state.books.blackjack.automation = Math.max(0.18, 0.35 - (level - 1) * 0.07);
+      }
+      return;
+    case 'pairUnlock':
+      if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+        state.blackjack.pair.unlocked = true;
+        state.blackjack.pair.level = Math.max(1, state.blackjack.pair.level);
+        state.blackjack.pair.lastOutcome = 'Pret';
+      }
+      return;
+    case 'pairAuto':
+      if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+        state.blackjack.pair.autoEnabled = true;
+      }
+      return;
+    case 'twentyOneThreeUnlock':
+      if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+        state.blackjack.twentyOneThree.unlocked = true;
+        state.blackjack.twentyOneThree.level = Math.max(1, state.blackjack.twentyOneThree.level);
+        state.blackjack.twentyOneThree.lastOutcome = 'Pret';
+      }
+      return;
+    case 'twentyOneThreeAuto':
+      if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+        state.blackjack.twentyOneThree.autoEnabled = true;
+      }
+      return;
+    default:
+      return;
+  }
+}
+
+function toggleBlackjackBonusAuto(state: GameState, bonusId: BlackjackSideBonusId): void {
+  const bonus = blackjackBonusTrack(state, bonusId);
+  if (!bonus.unlocked || !blackjackBonusAutoUnlocked(bonus.level)) {
+    return;
+  }
+  bonus.autoEnabled = !bonus.autoEnabled;
+}
+
+function blackjackBonusUnlockCost(bonusId: BlackjackSideBonusId): number {
+  return bonusId === 'pair' ? 80 : 160;
+}
+
+function blackjackBonusTrack(state: GameState, bonusId: BlackjackSideBonusId) {
+  return bonusId === 'pair' ? state.blackjack.pair : state.blackjack.twentyOneThree;
 }
 
 function toggleSnakeAutomation(state: GameState): void {
@@ -693,27 +983,44 @@ function buyUpgrade(state: GameState, bookId: BookId): void {
     return;
   }
 
-  const definition = getBook(bookId);
-  const cost = Math.round(20 * Math.pow(1.55, book.level - 1));
-  const resourceCost = Math.round(3 * Math.pow(1.35, book.level - 1));
-  if (state.mana < cost) {
-    return;
-  }
-  if (definition.resourceId && state.resources[definition.resourceId] < resourceCost) {
+  if (!canBuyUpgrade(state, bookId)) {
     return;
   }
 
+  const definition = getBook(bookId);
+  const cost = Math.round(20 * Math.pow(1.55, book.level - 1));
+  const resourceCost = Math.round(3 * Math.pow(1.35, book.level - 1));
   state.mana -= cost;
   if (definition.resourceId) {
     state.resources[definition.resourceId] -= resourceCost;
   }
   book.level += 1;
-  if (book.level >= 2) {
+  if (bookId === 'blackjack') {
+    state.blackjack.baseBetLevel = book.level;
+  }
+  if (bookId !== 'blackjack' && book.level >= 2) {
     book.automation = Math.max(book.automation, 0.35);
   }
-  if (book.level >= 4) {
+  if (bookId !== 'blackjack' && book.level >= 4) {
     book.automation += 0.15;
   }
+}
+
+function canBuyUpgrade(state: GameState, bookId: BookId): boolean {
+  const book = state.books[bookId];
+  if (!book.unlocked) {
+    return false;
+  }
+
+  const definition = getBook(bookId);
+  const cost = Math.round(20 * Math.pow(1.55, book.level - 1));
+  const resourceCost = Math.round(3 * Math.pow(1.35, book.level - 1));
+  return state.mana >= cost && (!definition.resourceId || state.resources[definition.resourceId] >= resourceCost);
+}
+
+function blackjackCurrentBaseBetLevel(state: GameState): number {
+  const savedLevel = state.blackjack.baseBetLevel ?? state.books.blackjack.level;
+  return Math.max(1, Math.min(state.books.blackjack.level, savedLevel));
 }
 
 function togglePin(state: GameState, bookId: BookId): void {
@@ -733,6 +1040,9 @@ function unlockBook(state: GameState, bookId: BookId): void {
   if (book.unlocked) {
     return;
   }
+  if (state.forbiddenGrimoire.keys <= 0) {
+    return;
+  }
 
   const definition = getBook(bookId);
   if (state.mana < definition.unlockMana) {
@@ -746,9 +1056,154 @@ function unlockBook(state: GameState, bookId: BookId): void {
   if (definition.unlockResource) {
     state.resources[definition.unlockResource.id] -= definition.unlockResource.amount;
   }
+  state.forbiddenGrimoire.keys -= 1;
   book.unlocked = true;
   state.selectedBook = bookId;
   openBookPanel(state, bookId);
+  if (state.forbiddenGrimoire.selectedBookId === bookId) {
+    state.forbiddenGrimoire.selectedBookId = null;
+    state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
+    state.forbiddenGrimoire.lastOffered = {};
+  }
+  state.forbiddenGrimoire.lastUnlockedBookId = bookId;
+  state.forbiddenGrimoire.pulse += 1;
+}
+
+function unlockAllBooks(state: GameState): void {
+  for (const book of books) {
+    state.books[book.id].unlocked = true;
+  }
+}
+
+export function forbiddenGrimoireCurrentSeal(state: GameState) {
+  if (state.forbiddenGrimoire.selectedBookId) {
+    return getForbiddenGrimoireSealForBook(state.forbiddenGrimoire.selectedBookId);
+  }
+  return null;
+}
+
+export function forbiddenGrimoireSealReady(state: GameState): boolean {
+  const seal = forbiddenGrimoireCurrentSeal(state);
+  if (!seal) {
+    return false;
+  }
+  return seal.requirements.every((requirement) => forbiddenOfferingAmount(state, requirement.id) >= requirement.amount);
+}
+
+export function forbiddenGrimoireCanOffer(state: GameState): boolean {
+  const seal = forbiddenGrimoireCurrentSeal(state);
+  if (!seal || forbiddenGrimoireSealReady(state)) {
+    return false;
+  }
+  return seal.requirements.some((requirement) => {
+    const remaining = requirement.amount - forbiddenOfferingAmount(state, requirement.id);
+    return remaining > 0 && availableOfferingResource(state, requirement.id) > 0;
+  });
+}
+
+export function forbiddenGrimoireRequirementProgress(state: GameState, requirement: ForbiddenGrimoireRequirement): number {
+  return Math.min(requirement.amount, forbiddenOfferingAmount(state, requirement.id));
+}
+
+function selectForbiddenSealBook(state: GameState, bookId: BookId): void {
+  if (bookId === 'mana' || state.books[bookId].unlocked || !getForbiddenGrimoireSealForBook(bookId)) {
+    state.forbiddenGrimoire.selectedBookId = null;
+    state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
+    state.forbiddenGrimoire.lastOffered = {};
+    return;
+  }
+
+  if (state.forbiddenGrimoire.selectedBookId === bookId) {
+    return;
+  }
+
+  state.forbiddenGrimoire.selectedBookId = bookId;
+  state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
+  state.forbiddenGrimoire.lastOffered = {};
+}
+
+function offerForbiddenGrimoire(state: GameState): void {
+  const seal = forbiddenGrimoireCurrentSeal(state);
+  if (!seal || forbiddenGrimoireSealReady(state)) {
+    state.forbiddenGrimoire.lastOffered = {};
+    return;
+  }
+
+  const lastOffered: Partial<Record<ForbiddenOfferingResourceId, number>> = {};
+  for (const requirement of seal.requirements) {
+    const current = forbiddenOfferingAmount(state, requirement.id);
+    const remaining = requirement.amount - current;
+    if (remaining <= 0) {
+      continue;
+    }
+
+    const available = availableOfferingResource(state, requirement.id);
+    const offered = Math.min(available, remaining);
+    if (offered <= 0) {
+      continue;
+    }
+
+    spendOfferingResource(state, requirement.id, offered);
+    state.forbiddenGrimoire.offerings[requirement.id] += offered;
+    lastOffered[requirement.id] = offered;
+  }
+
+  state.forbiddenGrimoire.lastOffered = lastOffered;
+  if (Object.keys(lastOffered).length > 0) {
+    state.forbiddenGrimoire.pulse += 1;
+  }
+}
+
+function breakForbiddenSeal(state: GameState): void {
+  const seal = forbiddenGrimoireCurrentSeal(state);
+  if (!seal || !forbiddenGrimoireSealReady(state) || state.forbiddenGrimoire.keys <= 0) {
+    return;
+  }
+
+  const unlockedBook = state.books[seal.unlocksBookId];
+  unlockedBook.unlocked = true;
+  state.selectedBook = seal.unlocksBookId;
+  openBookPanel(state, seal.unlocksBookId);
+  state.forbiddenGrimoire.keys -= 1;
+  state.forbiddenGrimoire.selectedBookId = null;
+  state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
+  state.forbiddenGrimoire.lastOffered = {};
+  state.forbiddenGrimoire.lastUnlockedBookId = seal.unlocksBookId;
+  state.forbiddenGrimoire.pulse += 1;
+}
+
+function forbiddenOfferingAmount(state: GameState, id: ForbiddenOfferingResourceId): number {
+  return state.forbiddenGrimoire.offerings[id];
+}
+
+function availableOfferingResource(state: GameState, id: ForbiddenOfferingResourceId): number {
+  if (id === 'mana') {
+    return state.mana;
+  }
+  return state.resources[id];
+}
+
+function spendOfferingResource(state: GameState, id: ForbiddenOfferingResourceId, amount: number): void {
+  if (id === 'mana') {
+    state.mana -= amount;
+    return;
+  }
+  state.resources[id] -= amount;
+}
+
+function emptyForbiddenOfferings(): Record<ForbiddenOfferingResourceId, number> {
+  return {
+    mana: 0,
+    scales: 0,
+    runes: 0,
+    spores: 0,
+    sigils: 0,
+    chips: 0,
+    fragments: 0,
+    minerals: 0,
+    marks: 0,
+    gels: 0,
+  };
 }
 
 function openBookPanel(state: GameState, bookId: BookId): void {
@@ -1035,43 +1490,354 @@ export function blackjackHandValue(hand: BlackjackCard[]): number {
   return total;
 }
 
-export function blackjackSkillMaxLevel(skillId: BlackjackSkillId): number {
-  switch (skillId) {
-    case 'rerollPlayer':
-      return 3;
-    case 'rerollDealer':
-      return 3;
-    case 'revealDealer':
-      return 1;
-    case 'aceBias':
-      return 5;
+export function blackjackCurrentMainBet(state: GameState): number {
+  return blackjackMainBet(blackjackCurrentBaseBetLevel(state));
+}
+
+export function blackjackUpgradeCellLevel(state: GameState, cellId: BlackjackUpgradeCellId): number {
+  const maxLevel = blackjackUpgradeCellMaxLevel(cellId);
+  const savedLevel = state.blackjack.upgradeCells?.[cellId];
+  if (Number.isFinite(savedLevel)) {
+    return Math.max(1, Math.min(maxLevel, savedLevel));
+  }
+
+  switch (cellId) {
+    case 'wagerBase':
+    case 'wagerWin':
+    case 'wagerNatural':
+    case 'wagerStreak':
+    case 'wagerDebt':
+      return Math.max(1, Math.min(maxLevel, state.books.blackjack.level));
+    case 'actionStand':
+    case 'actionDouble':
+    case 'actionSplit':
+    case 'actionFaceSplit':
+    case 'actionMastery':
+      return Math.max(1, Math.min(maxLevel, state.blackjack.actions.level + 1));
+    case 'pairUnlock':
+      return state.blackjack.pair.unlocked ? maxLevel : 1;
+    case 'pairPayout':
+    case 'pairXp':
+    case 'pairRefund':
+    case 'pairAuto':
+      return Math.max(1, Math.min(maxLevel, state.blackjack.pair.level));
+    case 'twentyOneThreeUnlock':
+      return state.blackjack.twentyOneThree.unlocked ? maxLevel : 1;
+    case 'twentyOneThreePayout':
+    case 'twentyOneThreeXp':
+    case 'twentyOneThreeJackpot':
+    case 'twentyOneThreeAuto':
+      return Math.max(1, Math.min(maxLevel, state.blackjack.twentyOneThree.level));
+    case 'autoDeal':
+      return blackjackAutoDealUnlocked(state) ? maxLevel : 1;
+    case 'autoSpeed':
+      return blackjackAutoDealUnlocked(state) ? Math.max(1, Math.min(maxLevel, Math.round((0.35 - state.books.blackjack.automation) / 0.07) + 1)) : 1;
   }
 }
 
-export function blackjackSkillCost(state: GameState, skillId: BlackjackSkillId): number {
-  const level = state.blackjackSkills[skillId];
-  switch (skillId) {
-    case 'rerollPlayer':
-      return 4 + level * 5;
-    case 'rerollDealer':
-      return 5 + level * 6;
-    case 'revealDealer':
-      return 8;
-    case 'aceBias':
-      return 6 + level * 7;
+export function blackjackCurrentUpgradeCellMaxLevel(cellId: BlackjackUpgradeCellId): number {
+  return blackjackUpgradeCellMaxLevel(cellId);
+}
+
+export function blackjackCurrentUpgradeCellTier(state: GameState, cellId: BlackjackUpgradeCellId): BlackjackUpgradeTier {
+  return blackjackUpgradeTier(blackjackUpgradeCellLevel(state, cellId), blackjackUpgradeCellMaxLevel(cellId));
+}
+
+export function blackjackCurrentUpgradeCellCost(state: GameState, cellId: BlackjackUpgradeCellId): BlackjackUpgradeCost {
+  const level = blackjackUpgradeCellLevel(state, cellId);
+  if (level >= blackjackUpgradeCellMaxLevel(cellId)) {
+    return { kind: 'max' };
+  }
+
+  if (cellId === 'twentyOneThreeUnlock' && !state.blackjack.pair.unlocked) {
+    return { kind: 'blocked', reason: 'Pair requis' };
+  }
+  if (cellId.startsWith('pair') && cellId !== 'pairUnlock' && !state.blackjack.pair.unlocked) {
+    return { kind: 'blocked', reason: 'Pair requis' };
+  }
+  if (cellId.startsWith('twentyOneThree') && cellId !== 'twentyOneThreeUnlock' && !state.blackjack.twentyOneThree.unlocked) {
+    return { kind: 'blocked', reason: '21+3 requis' };
+  }
+  if (cellId === 'autoSpeed' && !blackjackAutoDealUnlocked(state)) {
+    return { kind: 'blocked', reason: 'Auto requis' };
+  }
+
+  return blackjackUpgradeCellCost(cellId, level);
+}
+
+export function blackjackCanBuyUpgradeCell(state: GameState, cellId: BlackjackUpgradeCellId): boolean {
+  const cost = blackjackCurrentUpgradeCellCost(state, cellId);
+  switch (cost.kind) {
+    case 'resources':
+      return state.books.blackjack.unlocked && state.mana >= cost.mana && state.resources.chips >= cost.chips;
+    case 'chips':
+      return state.books.blackjack.unlocked && state.resources.chips >= cost.chips;
+    case 'pairXp':
+      return state.books.blackjack.unlocked && state.blackjack.pair.xp >= cost.xp;
+    case 'twentyOneThreeXp':
+      return state.books.blackjack.unlocked && state.blackjack.twentyOneThree.xp >= cost.xp;
+    case 'blocked':
+    case 'max':
+      return false;
   }
 }
 
-export function blackjackAceBiasChance(state: GameState): number {
-  return Math.min(0.25, state.blackjackSkills.aceBias * 0.05);
+export function blackjackCurrentUpgradeCellEffectLabel(state: GameState, cellId: BlackjackUpgradeCellId): string {
+  const level = blackjackUpgradeCellLevel(state, cellId);
+  const nextLevel = Math.min(blackjackUpgradeCellMaxLevel(cellId), level + 1);
+  switch (cellId) {
+    case 'wagerBase':
+      return `Mise max ${blackjackMainBet(level)} -> ${blackjackMainBet(nextLevel)}.`;
+    case 'wagerWin':
+      return `Victoire x${blackjackWinPayoutMultiplier(level).toFixed(1)} -> x${blackjackWinPayoutMultiplier(nextLevel).toFixed(1)}.`;
+    case 'wagerNatural':
+      return `Blackjack x${blackjackNaturalPayoutMultiplier(level).toFixed(1)} -> x${blackjackNaturalPayoutMultiplier(nextLevel).toFixed(1)}.`;
+    case 'wagerStreak':
+      return `Bonus serie ${level > 1 ? 'actif' : 'bloque'}, puis +${Math.round((0.1 + (nextLevel - 1) * 0.03) * 100)}%.`;
+    case 'wagerDebt':
+      return `Dette de pret ${blackjackLoanDebtRatioLabel(level)} -> ${blackjackLoanDebtRatioLabel(nextLevel)}.`;
+    case 'actionStand':
+      return `Rester sur 18-20: +${Math.round(blackjackActionCellBonusRatio(level) * 100)}% -> +${Math.round(blackjackActionCellBonusRatio(nextLevel) * 100)}%.`;
+    case 'actionDouble':
+      return `Double perdu rendu ${Math.round(blackjackDoubleCellRefundRatio(level) * 100)}% -> ${Math.round(blackjackDoubleCellRefundRatio(nextLevel) * 100)}%.`;
+    case 'actionSplit':
+      return `Diviser coute ${Math.round(blackjackSplitCellCostRatio(level) * 100)}% -> ${Math.round(blackjackSplitCellCostRatio(nextLevel) * 100)}%.`;
+    case 'actionFaceSplit':
+      return `Figures divisees: +${Math.round(blackjackFaceSplitCellBonusRatio(level) * 100)}% -> +${Math.round(blackjackFaceSplitCellBonusRatio(nextLevel) * 100)}%.`;
+    case 'actionMastery':
+      return `Bonus d'action global x${blackjackActionMasteryMultiplier(level).toFixed(2)} -> x${blackjackActionMasteryMultiplier(nextLevel).toFixed(2)}.`;
+    case 'autoDeal':
+      return blackjackAutoDealUnlocked(state) ? 'Auto relance active.' : 'Debloque la relance automatique.';
+    case 'autoSpeed':
+      return `Delai auto plus court au niveau ${nextLevel}.`;
+    case 'pairUnlock':
+      return state.blackjack.pair.unlocked ? 'Pair debloque.' : 'Debloque le pari Pair.';
+    case 'pairPayout':
+      return `Gains Pair x${blackjackPairPayoutBoost(level).toFixed(2)} -> x${blackjackPairPayoutBoost(nextLevel).toFixed(2)}.`;
+    case 'pairXp':
+      return `XP Pair x${blackjackPairXpBoost(level).toFixed(2)} -> x${blackjackPairXpBoost(nextLevel).toFixed(2)}.`;
+    case 'pairRefund':
+      return `Ratage Pair rendu ${Math.round(blackjackPairRefundRatio(level) * 100)}% -> ${Math.round(blackjackPairRefundRatio(nextLevel) * 100)}%.`;
+    case 'pairAuto':
+      return state.blackjack.pair.autoEnabled ? 'Auto Pair actif.' : 'Active Pair automatiquement.';
+    case 'twentyOneThreeUnlock':
+      return state.blackjack.twentyOneThree.unlocked ? '21+3 debloque.' : 'Debloque le pari 21+3.';
+    case 'twentyOneThreePayout':
+      return `Gains 21+3 x${blackjackTwentyOneThreePayoutBoost(level).toFixed(2)} -> x${blackjackTwentyOneThreePayoutBoost(nextLevel).toFixed(2)}.`;
+    case 'twentyOneThreeXp':
+      return `XP 21+3 x${blackjackTwentyOneThreeXpBoost(level).toFixed(2)} -> x${blackjackTwentyOneThreeXpBoost(nextLevel).toFixed(2)}.`;
+    case 'twentyOneThreeJackpot':
+      return `Jackpots +${Math.round(blackjackTwentyOneThreeJackpotBoost(level) * 100)}% -> +${Math.round(blackjackTwentyOneThreeJackpotBoost(nextLevel) * 100)}%.`;
+    case 'twentyOneThreeAuto':
+      return state.blackjack.twentyOneThree.autoEnabled ? 'Auto 21+3 actif.' : 'Active 21+3 automatiquement.';
+  }
+}
+
+export function blackjackAutoDealUnlocked(state: GameState): boolean {
+  return state.books.blackjack.automation > 0;
+}
+
+export function blackjackAutoDealManaCost(state: GameState): number {
+  return Math.round(20 * Math.pow(1.55, state.books.blackjack.level - 1));
+}
+
+export function blackjackAutoDealChipCost(state: GameState): number {
+  return Math.round(3 * Math.pow(1.35, state.books.blackjack.level - 1));
+}
+
+export function blackjackCanBuyAutoDeal(state: GameState): boolean {
+  return (
+    state.books.blackjack.unlocked &&
+    !blackjackAutoDealUnlocked(state) &&
+    state.mana >= blackjackAutoDealManaCost(state) &&
+    state.resources.chips >= blackjackAutoDealChipCost(state)
+  );
+}
+
+export function blackjackCanDeal(state: GameState): boolean {
+  return (
+    state.books.blackjack.unlocked &&
+    isBookPanelOpen(state, 'blackjack') &&
+    state.blackjack.phase !== 'player' &&
+    state.blackjack.phase !== 'dealer' &&
+    (state.blackjack.phase !== 'idle' || state.blackjack.playerBet > 0)
+  );
+}
+
+export function blackjackResultSummary(state: GameState): string {
+  const blackjack = state.blackjack;
+  const reward = blackjack.lastReward > 0 ? ` · +${Math.floor(blackjack.lastReward)} Jetons` : '';
+  switch (blackjack.phase) {
+    case 'won':
+      return `${blackjack.lastOutcome || 'Victoire'}${reward}`;
+    case 'blackjack':
+      return `${blackjack.lastOutcome || 'Blackjack'}${reward}`;
+    case 'lost': {
+      const detail = blackjack.lastOutcome.replace(/^Perdu(?: · )?/, '');
+      return `Defaite${detail ? ` · ${detail}` : ''}${reward}`;
+    }
+    case 'push':
+      return `${blackjack.lastOutcome || 'Egalite'}${reward}`;
+    case 'idle':
+    case 'player':
+    case 'dealer':
+      return '';
+  }
+}
+
+export function blackjackCanDecreaseBaseBet(state: GameState): boolean {
+  return blackjackCurrentBaseBetLevel(state) > 1;
+}
+
+export function blackjackCanIncreaseBaseBet(state: GameState): boolean {
+  return blackjackCurrentBaseBetLevel(state) < state.books.blackjack.level;
+}
+
+export function blackjackCurrentBonusCost(state: GameState, bonusId: BlackjackSideBonusId): number {
+  return blackjackBonusActivationCost(blackjackCurrentMainBet(state), bonusId);
+}
+
+export function blackjackCurrentBonusUpgradeCost(state: GameState, bonusId: BlackjackSideBonusId): number {
+  return blackjackBonusUpgradeXpCost(blackjackBonusTrack(state, bonusId).level);
+}
+
+export function blackjackCurrentBonusUnlockCost(bonusId: BlackjackSideBonusId): number {
+  return blackjackBonusUnlockCost(bonusId);
+}
+
+export function blackjackCurrentBonusMaxLevel(): number {
+  return blackjackBonusMaxLevel();
+}
+
+export function blackjackCurrentBonusAutoUnlocked(state: GameState, bonusId: BlackjackSideBonusId): boolean {
+  return blackjackBonusAutoUnlocked(blackjackBonusTrack(state, bonusId).level);
+}
+
+export function blackjackCurrentBonusUpgradeSteps(bonusId: BlackjackSideBonusId): BlackjackBonusUpgradeStep[] {
+  return blackjackBonusUpgradeSteps(bonusId);
+}
+
+export function blackjackCurrentBonusEffectLabel(state: GameState, bonusId: BlackjackSideBonusId): string {
+  return blackjackBonusCurrentEffectLabel(bonusId, blackjackBonusTrack(state, bonusId).level);
+}
+
+export function blackjackCurrentActionUpgradeCost(state: GameState): number {
+  return blackjackActionUpgradeCost(state.blackjack.actions.level);
+}
+
+export function blackjackCurrentActionMaxLevel(): number {
+  return blackjackActionMaxLevel();
+}
+
+export function blackjackCurrentActionUpgradeSteps(): BlackjackBonusUpgradeStep[] {
+  return blackjackActionUpgradeSteps();
+}
+
+export function blackjackCurrentActionEffectLabel(state: GameState): string {
+  return blackjackActionCurrentEffectLabel(state.blackjack.actions.level);
+}
+
+export function blackjackCurrentActionNextEffectLabel(state: GameState): string {
+  return blackjackActionNextEffectLabel(state.blackjack.actions.level);
+}
+
+export function blackjackCurrentWinPayoutMultiplier(state: GameState): number {
+  return blackjackWinPayoutMultiplier(blackjackEffectiveWagerLevel(state, 'wagerWin'));
+}
+
+function blackjackEffectiveWagerLevel(
+  state: GameState,
+  cellId: 'wagerBase' | 'wagerWin' | 'wagerNatural' | 'wagerStreak' | 'wagerDebt',
+): number {
+  return Math.max(state.books.blackjack.level, blackjackUpgradeCellLevel(state, cellId));
+}
+
+function blackjackEffectiveActionCellLevel(
+  state: GameState,
+  cellId: 'actionStand' | 'actionDouble' | 'actionSplit' | 'actionFaceSplit' | 'actionMastery',
+): number {
+  return Math.max(1, blackjackUpgradeCellLevel(state, cellId), state.blackjack.actions.level + 1);
+}
+
+function blackjackEffectiveActionSummaryLevel(state: GameState): number {
+  return Math.max(
+    state.blackjack.actions.level,
+    blackjackUpgradeCellLevel(state, 'actionStand') - 1,
+    blackjackUpgradeCellLevel(state, 'actionDouble') - 1,
+    blackjackUpgradeCellLevel(state, 'actionSplit') - 1,
+    blackjackUpgradeCellLevel(state, 'actionFaceSplit') - 1,
+    blackjackUpgradeCellLevel(state, 'actionMastery') - 1,
+  );
+}
+
+function blackjackActionCellBonusRatio(level: number): number {
+  return level <= 1 ? 0 : 0.1 + (level - 2) * 0.04;
+}
+
+function blackjackDoubleCellRefundRatio(level: number): number {
+  return level <= 1 ? 0 : Math.min(0.5, 0.2 + (level - 2) * 0.075);
+}
+
+function blackjackSplitCellCostRatio(level: number): number {
+  return level <= 1 ? 1 : Math.max(0.55, 0.9 - (level - 2) * 0.09);
+}
+
+function blackjackFaceSplitCellBonusRatio(level: number): number {
+  return level <= 1 ? 0 : Math.min(0.75, 0.25 + (level - 2) * 0.12);
+}
+
+function blackjackActionMasteryMultiplier(level: number): number {
+  return 1 + Math.max(0, level - 1) * 0.06;
+}
+
+function blackjackPairPayoutBoost(level: number): number {
+  return 1 + Math.max(0, level - 1) * 0.12;
+}
+
+function blackjackPairXpBoost(level: number): number {
+  return 1 + Math.max(0, level - 1) * 0.15;
+}
+
+function blackjackPairRefundRatio(level: number): number {
+  return level <= 1 ? 0 : Math.min(0.45, 0.15 + (level - 2) * 0.1);
+}
+
+function blackjackTwentyOneThreePayoutBoost(level: number): number {
+  return 1 + Math.max(0, level - 1) * 0.1;
+}
+
+function blackjackTwentyOneThreeXpBoost(level: number): number {
+  return 1 + Math.max(0, level - 1) * 0.14;
+}
+
+function blackjackTwentyOneThreeJackpotBoost(level: number): number {
+  return level <= 1 ? 0 : Math.min(0.55, 0.2 + (level - 2) * 0.12);
+}
+
+function blackjackLoanDebtRatioLabel(level: number): string {
+  return level >= blackjackUpgradeCellMaxLevel('wagerDebt') ? '120%' : '150%';
+}
+
+export function blackjackCanDouble(state: GameState): boolean {
+  const blackjack = state.blackjack;
+  if (blackjack.phase !== 'player') {
+    return false;
+  }
+  const hand = blackjackActivePlayerHand(state);
+  return hand.length === 2 && !blackjackActiveHandDoubled(state) && state.resources.chips >= blackjackActiveBet(state);
+}
+
+export function blackjackCanSplit(state: GameState): boolean {
+  const blackjack = state.blackjack;
+  if (blackjack.phase !== 'player' || blackjack.splitHand !== null || blackjack.activeHand !== 'primary') {
+    return false;
+  }
+  const [first, second] = blackjack.playerHand;
+  return Boolean(first && second && blackjack.playerHand.length === 2 && first.rank === second.rank && state.resources.chips >= blackjackSplitBetCost(state));
 }
 
 export function blackjackVisibleDealerValue(state: GameState): number {
-  if (
-    state.blackjack.phase === 'player' &&
-    !state.blackjack.dealerCardRevealed &&
-    state.blackjackSkills.revealDealer <= 0
-  ) {
+  if (state.blackjack.phase === 'player' && !state.blackjack.dealerCardRevealed) {
     return blackjackHandValue(state.blackjack.dealerHand.slice(0, 1));
   }
   return blackjackHandValue(state.blackjack.dealerHand);
@@ -1240,27 +2006,107 @@ function tickDefenseShot(state: GameState, deltaSeconds: number): void {
 }
 
 function dealBlackjack(state: GameState): void {
-  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack')) {
+  if (!blackjackCanDeal(state)) {
+    return;
+  }
+
+  const wagerWasPrepared = state.blackjack.phase === 'idle' && state.blackjack.playerBet > 0;
+  const mainBet = wagerWasPrepared ? state.blackjack.playerBet : blackjackCurrentMainBet(state);
+  if (!wagerWasPrepared) {
+    ensureBlackjackBankroll(state, mainBet);
+  }
+  if (!wagerWasPrepared && state.resources.chips < mainBet) {
     return;
   }
 
   const blackjack = state.blackjack;
   blackjack.deck = shuffledBlackjackDeck();
   blackjack.playerHand = [drawBlackjackCard(state, 'player'), drawBlackjackCard(state, 'player')];
+  blackjack.splitHand = null;
   blackjack.dealerHand = [drawBlackjackCard(state, 'dealer'), drawBlackjackCard(state, 'dealer')];
   blackjack.phase = 'player';
   blackjack.round += 1;
-  blackjack.playerRerollsUsed = 0;
-  blackjack.dealerRerollsUsed = 0;
-  blackjack.dealerCardRevealed = state.blackjackSkills.revealDealer > 0;
+  blackjack.activeHand = 'primary';
+  blackjack.playerBet = mainBet;
+  blackjack.splitBet = 0;
+  blackjack.playerHandDone = false;
+  blackjack.splitHandDone = false;
+  blackjack.playerHandDoubled = false;
+  blackjack.splitHandDoubled = false;
+  blackjack.dealerCardRevealed = false;
   blackjack.lastReward = 0;
+  blackjack.lastDebtPayment = 0;
   blackjack.lastOutcome = 'Main ouverte';
+  resetBlackjackBonusHand(state, 'pair');
+  resetBlackjackBonusHand(state, 'twentyOneThree');
+  if (!wagerWasPrepared) {
+    state.resources.chips -= mainBet;
+  }
+
+  activateEnabledBlackjackBonus(state, 'pair');
+  activateEnabledBlackjackBonus(state, 'twentyOneThree');
 
   const playerValue = blackjackHandValue(blackjack.playerHand);
   const dealerValue = blackjackHandValue(blackjack.dealerHand);
   if (playerValue === 21 || dealerValue === 21) {
     resolveBlackjackRound(state);
   }
+}
+
+function increaseBlackjackBaseBet(state: GameState): void {
+  if (!state.books.blackjack.unlocked) {
+    return;
+  }
+
+  const selectedLevel = blackjackCurrentBaseBetLevel(state);
+  state.blackjack.baseBetLevel = Math.min(state.books.blackjack.level, selectedLevel + 1);
+}
+
+function decreaseBlackjackBaseBet(state: GameState): void {
+  if (!state.books.blackjack.unlocked) {
+    return;
+  }
+  state.blackjack.baseBetLevel = Math.max(1, blackjackCurrentBaseBetLevel(state) - 1);
+}
+
+function prepareBlackjackWager(state: GameState, amount: number): void {
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || state.blackjack.phase !== 'idle') {
+    return;
+  }
+
+  const wager = Math.max(0, Math.floor(amount));
+  if (wager <= 0 || state.resources.chips < wager) {
+    return;
+  }
+
+  state.resources.chips -= wager;
+  state.blackjack.playerBet += wager;
+  state.blackjack.splitBet = 0;
+  state.blackjack.lastOutcome = state.blackjack.playerBet > 0 ? 'Mise preparee' : 'En attente';
+}
+
+function resetBlackjackWager(state: GameState): void {
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || state.blackjack.phase !== 'idle') {
+    return;
+  }
+
+  const reserved = Math.max(0, Math.floor(state.blackjack.playerBet + state.blackjack.splitBet));
+  if (reserved > 0) {
+    state.resources.chips += reserved;
+  }
+  state.blackjack.playerBet = 0;
+  state.blackjack.splitBet = 0;
+  state.blackjack.lastOutcome = 'Mise remise';
+}
+
+function buyBlackjackAutoDeal(state: GameState): void {
+  if (!blackjackCanBuyAutoDeal(state)) {
+    return;
+  }
+
+  state.mana -= blackjackAutoDealManaCost(state);
+  state.resources.chips -= blackjackAutoDealChipCost(state);
+  state.books.blackjack.automation = 0.35;
 }
 
 function hitBlackjack(state: GameState): void {
@@ -1276,12 +2122,14 @@ function hitBlackjack(state: GameState): void {
     return;
   }
 
-  blackjack.playerHand.push(drawBlackjackCard(state, 'player'));
+  const hand = blackjackActivePlayerHand(state);
+  hand.push(drawBlackjackCard(state, 'player'));
   blackjack.lastReward = 0;
-  const playerValue = blackjackHandValue(blackjack.playerHand);
+  const playerValue = blackjackHandValue(hand);
   if (playerValue > 21) {
-    blackjack.phase = 'lost';
-    blackjack.lastOutcome = 'Buste';
+    blackjack.lastOutcome = blackjack.splitHand ? `${blackjackActiveHandLabel(state)} buste` : 'Buste';
+    markBlackjackActiveHandDone(state);
+    advanceOrResolveBlackjack(state);
   }
 }
 
@@ -1291,131 +2139,441 @@ function standBlackjack(state: GameState): void {
     return;
   }
 
-  while (blackjackHandValue(blackjack.dealerHand) < 17) {
-    blackjack.dealerHand.push(drawBlackjackCard(state, 'dealer'));
-  }
-  blackjack.dealerCardRevealed = true;
-  resolveBlackjackRound(state);
+  markBlackjackActiveHandDone(state);
+  advanceOrResolveBlackjack(state);
 }
 
-function rerollPlayerBlackjackCard(state: GameState): void {
+function advanceBlackjackDealer(state: GameState): void {
   const blackjack = state.blackjack;
-  if (
-    !state.books.blackjack.unlocked ||
-    !isBookPanelOpen(state, 'blackjack') ||
-    blackjack.phase !== 'player' ||
-    blackjack.playerHand.length === 0 ||
-    state.blackjackSkills.rerollPlayer <= blackjack.playerRerollsUsed
-  ) {
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || blackjack.phase !== 'dealer') {
     return;
   }
 
-  const rerollIndex = blackjack.playerHand.length - 1;
-  blackjack.playerHand[rerollIndex] = drawBlackjackCard(state, 'player');
-  blackjack.playerRerollsUsed += 1;
-  blackjack.lastReward = 0;
-  blackjack.lastOutcome = 'Carte relancee';
-
-  if (blackjackHandValue(blackjack.playerHand) > 21) {
-    blackjack.phase = 'lost';
-    blackjack.lastOutcome = 'Buste';
-  }
-}
-
-function rerollDealerBlackjackCard(state: GameState): void {
-  const blackjack = state.blackjack;
-  if (
-    !state.books.blackjack.unlocked ||
-    !isBookPanelOpen(state, 'blackjack') ||
-    blackjack.phase !== 'player' ||
-    blackjack.dealerHand.length === 0 ||
-    state.blackjackSkills.rerollDealer <= blackjack.dealerRerollsUsed
-  ) {
-    return;
-  }
-
-  const rerollIndex =
-    (blackjack.dealerCardRevealed || state.blackjackSkills.revealDealer > 0) && blackjack.dealerHand.length > 1 ? 1 : 0;
-  blackjack.dealerHand[rerollIndex] = drawBlackjackCard(state, 'dealer');
-  blackjack.dealerRerollsUsed += 1;
-  blackjack.lastReward = 0;
-  blackjack.lastOutcome = 'Carte croupier relancee';
-
-  if (blackjackHandValue(blackjack.dealerHand) === 21) {
-    blackjack.dealerCardRevealed = true;
+  if (!blackjackHasLiveHand(state) || blackjackHandValue(blackjack.dealerHand) >= 17) {
     resolveBlackjackRound(state);
-  }
-}
-
-function revealBlackjackDealerCard(state: GameState): void {
-  const blackjack = state.blackjack;
-  if (
-    !state.books.blackjack.unlocked ||
-    !isBookPanelOpen(state, 'blackjack') ||
-    blackjack.phase !== 'player' ||
-    state.blackjackSkills.revealDealer <= 0
-  ) {
     return;
   }
 
-  blackjack.dealerCardRevealed = true;
+  drawBlackjackDealerStep(state);
+}
+
+function doubleBlackjack(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || !blackjackCanDouble(state)) {
+    return;
+  }
+
+  const extraBet = blackjackActiveBet(state);
+  state.resources.chips -= extraBet;
+  setBlackjackActiveBet(state, extraBet * 2);
+  setBlackjackActiveHandDoubled(state);
+  blackjackActivePlayerHand(state).push(drawBlackjackCard(state, 'player'));
   blackjack.lastReward = 0;
-  blackjack.lastOutcome = 'Carte revelee';
+  blackjack.lastOutcome = blackjack.splitHand ? `${blackjackActiveHandLabel(state)} doublee` : 'Main doublee';
+  markBlackjackActiveHandDone(state);
+  advanceOrResolveBlackjack(state);
+}
+
+function splitBlackjack(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (!state.books.blackjack.unlocked || !isBookPanelOpen(state, 'blackjack') || !blackjackCanSplit(state)) {
+    return;
+  }
+
+  const [firstCard, secondCard] = blackjack.playerHand;
+  const extraBet = blackjackSplitBetCost(state);
+  state.resources.chips -= extraBet;
+  blackjack.playerHand = [firstCard, drawBlackjackCard(state, 'player')];
+  blackjack.splitHand = [secondCard, drawBlackjackCard(state, 'player')];
+  blackjack.splitBet = extraBet;
+  blackjack.activeHand = 'primary';
+  blackjack.playerHandDone = false;
+  blackjack.splitHandDone = false;
+  blackjack.playerHandDoubled = false;
+  blackjack.splitHandDoubled = false;
+  blackjack.lastReward = 0;
+  blackjack.lastOutcome = 'Main divisee';
 }
 
 function resolveBlackjackRound(state: GameState): void {
   const blackjack = state.blackjack;
   blackjack.dealerCardRevealed = true;
-  const playerValue = blackjackHandValue(blackjack.playerHand);
   const dealerValue = blackjackHandValue(blackjack.dealerHand);
-  const natural = blackjack.playerHand.length === 2 && playerValue === 21;
+  const dealerBust = dealerValue > 21;
+  const allowNaturalBlackjack = blackjack.splitHand === null;
+  const splitFromFacePair = Boolean(
+    blackjack.splitHand &&
+      blackjack.playerHand[0] &&
+      blackjack.splitHand[0] &&
+      blackjackIsFaceRank(blackjack.playerHand[0].rank) &&
+      blackjackIsFaceRank(blackjack.splitHand[0].rank),
+  );
+  const primary = applyBlackjackActionResultBonus(
+    state,
+    resolveBlackjackHand(
+      blackjack.playerHand,
+      blackjack.playerBet,
+      dealerValue,
+      dealerBust,
+      allowNaturalBlackjack,
+      blackjackWinPayoutMultiplier(blackjackEffectiveWagerLevel(state, 'wagerWin')),
+      blackjackNaturalPayoutMultiplier(blackjackEffectiveWagerLevel(state, 'wagerNatural')),
+    ),
+    blackjack.playerHand,
+    blackjack.playerBet,
+    blackjack.playerHandDoubled,
+    splitFromFacePair,
+  );
+  const split = blackjack.splitHand
+    ? applyBlackjackActionResultBonus(
+        state,
+        resolveBlackjackHand(
+          blackjack.splitHand,
+          blackjack.splitBet,
+          dealerValue,
+          dealerBust,
+          false,
+          blackjackWinPayoutMultiplier(blackjackEffectiveWagerLevel(state, 'wagerWin')),
+          blackjackNaturalPayoutMultiplier(blackjackEffectiveWagerLevel(state, 'wagerNatural')),
+        ),
+        blackjack.splitHand,
+        blackjack.splitBet,
+        blackjack.splitHandDoubled,
+        splitFromFacePair,
+      )
+    : null;
+  const results = split ? [primary, split] : [primary];
+  const rawGain = results.reduce((sum, result) => sum + result.gain, 0);
+  const wonAnyHand = results.some((result) => result.outcome === 'won' || result.outcome === 'blackjack');
+  const lostEveryHand = results.every((result) => result.outcome === 'lost');
+  const nextWinStreak = wonAnyHand ? blackjack.winStreak + 1 : lostEveryHand ? 0 : blackjack.winStreak;
+  const streakBonus = blackjackWinStreakBonus(
+    blackjack.playerBet + blackjack.splitBet,
+    nextWinStreak,
+    blackjackEffectiveWagerLevel(state, 'wagerStreak'),
+  );
+  const totalGain = rawGain + streakBonus;
+  blackjack.winStreak = nextWinStreak;
 
-  if (playerValue > 21) {
-    blackjack.phase = 'lost';
-    blackjack.lastOutcome = 'Buste';
-    blackjack.lastReward = 0;
-    return;
-  }
-  if (dealerValue > 21 || playerValue > dealerValue) {
-    const reward = blackjackReward(state, natural);
-    blackjack.phase = natural ? 'blackjack' : 'won';
-    blackjack.lastOutcome = natural ? 'Blackjack' : 'Victoire';
-    blackjack.lastReward = reward;
-    state.resources.chips += reward;
-    state.mana += reward * (0.8 + state.books.blackjack.level * 0.15);
-    return;
-  }
-  if (playerValue === dealerValue) {
-    blackjack.phase = 'push';
-    blackjack.lastOutcome = 'Egalite';
-    blackjack.lastReward = 0;
-    return;
+  blackjack.lastReward = totalGain;
+  if (totalGain > 0) {
+    applyBlackjackMoneyGain(state, totalGain);
+    state.mana += totalGain * (0.8 + state.books.blackjack.level * 0.15);
   }
 
-  blackjack.phase = 'lost';
-  blackjack.lastOutcome = 'Perdu';
-  blackjack.lastReward = 0;
+  if (split) {
+    blackjack.phase = results.some((result) => result.outcome === 'won' || result.outcome === 'blackjack')
+      ? 'won'
+      : results.every((result) => result.outcome === 'push')
+        ? 'push'
+        : 'lost';
+    blackjack.lastOutcome = blackjackSplitOutcomeText(results);
+  } else {
+    blackjack.phase = primary.outcome === 'blackjack' ? 'blackjack' : primary.outcome;
+    blackjack.lastOutcome = primary.label;
+  }
+
+  if (streakBonus > 0) {
+    blackjack.lastOutcome = `${blackjack.lastOutcome} · Serie +${streakBonus}`;
+  }
+
+  if (totalGain === 0) {
+    ensureBlackjackBankroll(state, blackjackCurrentMainBet(state));
+  }
 }
 
-function blackjackReward(state: GameState, natural: boolean): number {
-  const base = 2 + Math.floor(state.books.blackjack.level * 0.65);
-  return natural ? base + 2 : base;
+function resolveBlackjackHand(
+  hand: BlackjackCard[],
+  bet: number,
+  dealerValue: number,
+  dealerBust: boolean,
+  allowNaturalBlackjack: boolean,
+  winMultiplier: number,
+  naturalMultiplier: number,
+): { outcome: 'won' | 'lost' | 'push' | 'blackjack'; gain: number; label: string } {
+  const value = blackjackHandValue(hand);
+  if (value > 21) {
+    return { outcome: 'lost', gain: 0, label: 'Buste' };
+  }
+
+  const natural = allowNaturalBlackjack && hand.length === 2 && value === 21;
+  if (dealerBust || value > dealerValue) {
+    return {
+      outcome: natural ? 'blackjack' : 'won',
+      gain: natural ? Math.floor(bet * naturalMultiplier) : Math.floor(bet * winMultiplier),
+      label: natural ? 'Blackjack' : 'Victoire',
+    };
+  }
+
+  if (value === dealerValue) {
+    return { outcome: 'push', gain: bet, label: 'Egalite' };
+  }
+
+  return { outcome: 'lost', gain: 0, label: 'Perdu' };
+}
+
+function applyBlackjackActionResultBonus(
+  state: GameState,
+  result: { outcome: 'won' | 'lost' | 'push' | 'blackjack'; gain: number; label: string },
+  hand: BlackjackCard[],
+  bet: number,
+  doubled: boolean,
+  splitFromFacePair: boolean,
+): { outcome: 'won' | 'lost' | 'push' | 'blackjack'; gain: number; label: string } {
+  const legacyBonus = blackjackActionResultBonus(
+    state.blackjack.actions.level,
+    blackjackHandValue(hand),
+    bet,
+    result.outcome,
+    doubled,
+    splitFromFacePair,
+  );
+  const mastery = blackjackActionMasteryMultiplier(blackjackEffectiveActionCellLevel(state, 'actionMastery'));
+  const handValue = blackjackHandValue(hand);
+  const cellBonuses: BlackjackActionResultBonus[] = [];
+
+  if (doubled && result.outcome === 'lost') {
+    const refundRatio = blackjackDoubleCellRefundRatio(blackjackEffectiveActionCellLevel(state, 'actionDouble'));
+    if (refundRatio > 0) {
+      cellBonuses.push({ gain: Math.floor((bet / 2) * refundRatio * mastery), label: 'Double amorti' });
+    }
+  }
+  if (splitFromFacePair && result.outcome === 'won') {
+    const faceRatio = blackjackFaceSplitCellBonusRatio(blackjackEffectiveActionCellLevel(state, 'actionFaceSplit'));
+    if (faceRatio > 0) {
+      cellBonuses.push({ gain: Math.floor(bet * faceRatio * mastery), label: 'Figures jumelles' });
+    }
+  }
+  if (result.outcome === 'won' && handValue >= 18 && handValue <= 20) {
+    const standRatio = blackjackActionCellBonusRatio(blackjackEffectiveActionCellLevel(state, 'actionStand'));
+    if (standRatio > 0) {
+      cellBonuses.push({ gain: Math.floor(bet * standRatio * mastery), label: 'Rester lucide' });
+    }
+  }
+
+  const bonus = [legacyBonus, ...cellBonuses]
+    .filter((entry): entry is BlackjackActionResultBonus => Boolean(entry && entry.gain > 0))
+    .sort((first, second) => second.gain - first.gain)[0];
+  if (!bonus) {
+    return result;
+  }
+  return {
+    ...result,
+    gain: result.gain + bonus.gain,
+    label: `${result.label} · ${bonus.label} +${bonus.gain}`,
+  };
+}
+
+function blackjackActivePlayerHand(state: GameState): BlackjackCard[] {
+  const blackjack = state.blackjack;
+  if (blackjack.activeHand === 'split' && blackjack.splitHand) {
+    return blackjack.splitHand;
+  }
+  return blackjack.playerHand;
+}
+
+function blackjackActiveBet(state: GameState): number {
+  return state.blackjack.activeHand === 'split' ? state.blackjack.splitBet : state.blackjack.playerBet;
+}
+
+function blackjackSplitBetCost(state: GameState): number {
+  const ratio = Math.min(
+    blackjackSplitCostRatio(state.blackjack.actions.level),
+    blackjackSplitCellCostRatio(blackjackEffectiveActionCellLevel(state, 'actionSplit')),
+  );
+  return Math.max(1, Math.ceil(state.blackjack.playerBet * ratio));
+}
+
+function setBlackjackActiveBet(state: GameState, bet: number): void {
+  if (state.blackjack.activeHand === 'split') {
+    state.blackjack.splitBet = bet;
+    return;
+  }
+  state.blackjack.playerBet = bet;
+}
+
+function blackjackActiveHandDoubled(state: GameState): boolean {
+  return state.blackjack.activeHand === 'split' ? state.blackjack.splitHandDoubled : state.blackjack.playerHandDoubled;
+}
+
+function setBlackjackActiveHandDoubled(state: GameState): void {
+  if (state.blackjack.activeHand === 'split') {
+    state.blackjack.splitHandDoubled = true;
+    return;
+  }
+  state.blackjack.playerHandDoubled = true;
+}
+
+function blackjackActiveHandLabel(state: GameState): string {
+  return state.blackjack.activeHand === 'split' ? 'Main 2' : 'Main 1';
+}
+
+function blackjackIsFaceRank(rank: BlackjackRank): boolean {
+  return rank === 'J' || rank === 'Q' || rank === 'K';
+}
+
+function markBlackjackActiveHandDone(state: GameState): void {
+  if (state.blackjack.activeHand === 'split') {
+    state.blackjack.splitHandDone = true;
+    return;
+  }
+  state.blackjack.playerHandDone = true;
+}
+
+function advanceOrResolveBlackjack(state: GameState): void {
+  const blackjack = state.blackjack;
+  if (blackjack.splitHand && blackjack.activeHand === 'primary' && !blackjack.splitHandDone) {
+    blackjack.activeHand = 'split';
+    blackjack.lastOutcome = 'Main 2';
+    return;
+  }
+
+  blackjack.dealerCardRevealed = true;
+  if (!blackjackHasLiveHand(state) || blackjackHandValue(blackjack.dealerHand) >= 17) {
+    resolveBlackjackRound(state);
+    return;
+  }
+
+  blackjack.phase = 'dealer';
+  drawBlackjackDealerStep(state);
+}
+
+function drawBlackjackDealerStep(state: GameState): void {
+  state.blackjack.dealerHand.push(drawBlackjackCard(state, 'dealer'));
+  state.blackjack.lastReward = 0;
+  state.blackjack.lastOutcome = 'Croupier tire';
+}
+
+function blackjackHasLiveHand(state: GameState): boolean {
+  const blackjack = state.blackjack;
+  return blackjackHandValue(blackjack.playerHand) <= 21 || Boolean(blackjack.splitHand && blackjackHandValue(blackjack.splitHand) <= 21);
+}
+
+function blackjackSplitOutcomeText(
+  results: { outcome: 'won' | 'lost' | 'push' | 'blackjack'; gain: number; label: string }[],
+): string {
+  const wins = results.filter((result) => result.outcome === 'won' || result.outcome === 'blackjack').length;
+  const pushes = results.filter((result) => result.outcome === 'push').length;
+  const losses = results.filter((result) => result.outcome === 'lost').length;
+  const parts = [
+    wins > 0 ? `${wins} victoire${wins > 1 ? 's' : ''}` : '',
+    pushes > 0 ? `${pushes} egalite${pushes > 1 ? 's' : ''}` : '',
+    losses > 0 ? `${losses} defaite${losses > 1 ? 's' : ''}` : '',
+  ].filter(Boolean);
+  return parts.join(', ');
 }
 
 function drawBlackjackCard(state: GameState, hand: 'player' | 'dealer'): BlackjackCard {
   if (state.blackjack.deck.length === 0) {
     state.blackjack.deck = shuffledBlackjackDeck();
   }
+  void hand;
+  return state.blackjack.deck.pop() ?? { rank: 'A', suit: 'spades' };
+}
 
-  if (hand === 'player' && Math.random() < blackjackAceBiasChance(state)) {
-    const aceIndex = state.blackjack.deck.findIndex((card) => card.rank === 'A');
-    if (aceIndex >= 0) {
-      const [ace] = state.blackjack.deck.splice(aceIndex, 1);
-      return ace;
-    }
+function activateBlackjackBonus(state: GameState, bonusId: BlackjackSideBonusId): void {
+  const blackjack = state.blackjack;
+  const bonus = blackjackBonusTrack(state, bonusId);
+  if (
+    !state.books.blackjack.unlocked ||
+    !isBookPanelOpen(state, 'blackjack') ||
+    blackjack.phase !== 'player' ||
+    blackjack.activeHand !== 'primary' ||
+    blackjack.splitHand !== null ||
+    blackjack.playerHand.length !== 2 ||
+    blackjack.playerHandDone ||
+    !bonus.unlocked ||
+    bonus.activatedThisHand
+  ) {
+    return;
   }
 
-  return state.blackjack.deck.pop() ?? { rank: 'A', suit: 'spades' };
+  const cost = blackjackCurrentBonusCost(state, bonusId);
+  if (state.resources.chips < cost) {
+    bonus.lastOutcome = 'Pas assez de Jetons';
+    return;
+  }
+
+  state.resources.chips -= cost;
+  bonus.activatedThisHand = true;
+  const outcome =
+    bonusId === 'pair'
+      ? evaluatePairBonus(blackjack.playerHand.slice(0, 2))
+      : evaluateTwentyOneThree(blackjack.playerHand.slice(0, 2), blackjack.dealerHand[0]);
+
+  if (!outcome) {
+    const refundLevel =
+      bonusId === 'pair'
+        ? Math.max(bonus.level, blackjackUpgradeCellLevel(state, 'pairRefund'))
+        : bonus.level;
+    const refund = blackjackMissRefund(cost, refundLevel, bonusId);
+    bonus.lastOutcome = refund > 0 ? `Rate, ${refund} rendu` : 'Rate';
+    bonus.lastPayout = refund;
+    bonus.lastXp = 0;
+    if (refund > 0) {
+      applyBlackjackMoneyGain(state, refund);
+    }
+    ensureBlackjackBankroll(state, blackjackCurrentMainBet(state));
+    return;
+  }
+
+  const payoutLevel =
+    bonusId === 'pair'
+      ? Math.max(bonus.level, blackjackUpgradeCellLevel(state, 'pairPayout'))
+      : Math.max(bonus.level, blackjackUpgradeCellLevel(state, 'twentyOneThreePayout'));
+  const xpLevel =
+    bonusId === 'pair'
+      ? Math.max(bonus.level, blackjackUpgradeCellLevel(state, 'pairXp'))
+      : Math.max(bonus.level, blackjackUpgradeCellLevel(state, 'twentyOneThreeXp'));
+  const jackpotLevel =
+    bonusId === 'twentyOneThree'
+      ? Math.max(payoutLevel, blackjackUpgradeCellLevel(state, 'twentyOneThreeJackpot'))
+      : payoutLevel;
+  const payout = Math.floor(cost * blackjackPayoutMultiplier(outcome.multiplier, jackpotLevel, bonusId, outcome.kind));
+  const xp = blackjackSideBonusXp(outcome.xp, state.blackjack.debt > 0, xpLevel);
+  bonus.xp += xp;
+  bonus.lastOutcome = outcome.label;
+  bonus.lastPayout = payout;
+  bonus.lastXp = xp;
+  blackjack.lastReward += payout;
+  applyBlackjackMoneyGain(state, payout);
+}
+
+function activateEnabledBlackjackBonus(state: GameState, bonusId: BlackjackSideBonusId): void {
+  const bonus = blackjackBonusTrack(state, bonusId);
+  if (bonus.autoEnabled && blackjackBonusAutoUnlocked(bonus.level)) {
+    activateBlackjackBonus(state, bonusId);
+  }
+}
+
+function resetBlackjackBonusHand(state: GameState, bonusId: BlackjackSideBonusId): void {
+  const bonus = blackjackBonusTrack(state, bonusId);
+  bonus.activatedThisHand = false;
+  bonus.lastPayout = 0;
+  bonus.lastXp = 0;
+  bonus.lastOutcome = bonus.unlocked ? 'Pret' : 'Verrouille';
+}
+
+function applyBlackjackMoneyGain(state: GameState, gain: number): void {
+  const split = blackjackMoneyGainSplit(gain, state.blackjack.debt);
+  state.resources.chips += split.bankrollGain;
+  state.blackjack.lastDebtPayment += split.debtPaid;
+  state.blackjack.debt = split.remainingDebt;
+}
+
+function ensureBlackjackBankroll(state: GameState, nextBet: number): void {
+  if (state.resources.chips > 0) {
+    return;
+  }
+
+  const loan = blackjackLoanAmount(nextBet);
+  state.resources.chips += loan;
+  const debtLevel =
+    blackjackUpgradeCellLevel(state, 'wagerDebt') >= blackjackUpgradeCellMaxLevel('wagerDebt')
+      ? 5
+      : state.books.blackjack.level;
+  state.blackjack.debt += blackjackLoanDebtForLevel(loan, debtLevel);
+  state.blackjack.lastOutcome = `${state.blackjack.lastOutcome} · Pret magique`;
 }
 
 function shuffledBlackjackDeck(): BlackjackCard[] {
@@ -1794,6 +2952,7 @@ function slimeTrainerMaxHealth(level: number): number {
 
 function grantDebugResources(state: GameState): void {
   state.mana += 999;
+  state.forbiddenGrimoire.keys += 1;
   state.resources.scales += 999;
   state.resources.runes += 999;
   state.resources.spores += 999;

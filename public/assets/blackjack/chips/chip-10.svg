@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <radialGradient id="feltGlow" cx="33%" cy="24%" r="74%">
+      <stop offset="0" stop-color="#4d3428"/>
+      <stop offset="1" stop-color="#130d10"/>
+    </radialGradient>
+    <linearGradient id="face" x1="28" x2="101" y1="20" y2="108" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8fe8b1"/>
+      <stop offset=".52" stop-color="#2d8f61"/>
+      <stop offset="1" stop-color="#15563a"/>
+    </linearGradient>
+    <filter id="lift" x="-22%" y="-22%" width="144%" height="144%">
+      <feDropShadow dx="0" dy="6" stdDeviation="4" flood-color="#000" flood-opacity=".38"/>
+    </filter>
+  </defs>
+  <circle cx="64" cy="64" r="57" fill="url(#feltGlow)" stroke="#d9b16f" stroke-width="6"/>
+  <g filter="url(#lift)">
+    <circle cx="64" cy="64" r="43" fill="url(#face)" stroke="#f2ffd8" stroke-width="5"/>
+    <circle cx="64" cy="64" r="27" fill="none" stroke="#f8ffe4" stroke-width="5" opacity=".92"/>
+    <path d="M64 17v18M64 93v18M28 28l13 13M87 87l13 13M100 28 87 41M41 87 28 100" stroke="#f2ffd8" stroke-width="8" stroke-linecap="round"/>
+    <path d="M64 33 72 53l21 11-21 11-8 20-8-20-21-11 21-11 8-20Z" fill="none" stroke="#f8ffe4" stroke-width="4" stroke-linejoin="round" opacity=".56"/>
+    <text x="64" y="76" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="900" fill="#fff8ce">10</text>
+  </g>
+</svg>

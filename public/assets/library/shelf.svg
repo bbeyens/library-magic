@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="560" viewBox="0 0 760 560" fill="none">
+  <defs>
+    <linearGradient id="shelfOuter" x1="42" y1="12" x2="698" y2="548" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#a76838"/>
+      <stop offset="0.42" stop-color="#63351f"/>
+      <stop offset="1" stop-color="#2b1711"/>
+    </linearGradient>
+    <linearGradient id="shelfInner" x1="90" y1="66" x2="650" y2="500" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3b2018"/>
+      <stop offset="0.55" stop-color="#21110e"/>
+      <stop offset="1" stop-color="#150b0a"/>
+    </linearGradient>
+    <linearGradient id="shelfBeam" x1="70" y1="0" x2="690" y2="42" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#b97942"/>
+      <stop offset="0.55" stop-color="#7b4326"/>
+      <stop offset="1" stop-color="#4a271b"/>
+    </linearGradient>
+    <filter id="shelfShadow" x="0" y="0" width="760" height="560" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="14" dy="18" stdDeviation="13" flood-color="#000" flood-opacity="0.46"/>
+    </filter>
+    <filter id="woodNoise" x="24" y="10" width="712" height="528" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035 0.22" numOctaves="4" seed="42"/>
+      <feColorMatrix type="saturate" values="0"/>
+      <feComponentTransfer><feFuncA type="table" tableValues="0 0.16"/></feComponentTransfer>
+      <feBlend in2="SourceGraphic" mode="multiply"/>
+    </filter>
+    <radialGradient id="warmBack" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(381 258) rotate(90) scale(293 346)">
+      <stop stop-color="#402015"/>
+      <stop offset="1" stop-color="#150b0a"/>
+    </radialGradient>
+  </defs>
+  <g>
+    <path d="M61 30C61 18 71 8 83 8H680C694 8 705 19 705 33V512C705 526 694 537 680 537H82C70 537 60 527 60 515L61 30Z" fill="#120b09" opacity="0.65"/>
+    <path d="M50 35C50 21 61 10 75 10H681C695 10 706 21 706 35V505C706 519 695 530 681 530H75C61 530 50 519 50 505V35Z" fill="url(#shelfOuter)" filter="url(#woodNoise)"/>
+    <path d="M95 75H662V486H95V75Z" fill="url(#warmBack)"/>
+    <path d="M100 82H657V480H100V82Z" fill="url(#shelfInner)" opacity="0.82"/>
+
+    <path d="M75 33H681V68H75V33Z" fill="url(#shelfBeam)"/>
+    <path d="M75 486H681V520H75V486Z" fill="url(#shelfBeam)"/>
+    <path d="M76 67H112V489H76V67Z" fill="url(#shelfBeam)"/>
+    <path d="M644 67H680V489H644V67Z" fill="url(#shelfBeam)"/>
+    <path d="M112 207H644V236H112V207Z" fill="url(#shelfBeam)"/>
+    <path d="M112 350H644V379H112V350Z" fill="url(#shelfBeam)"/>
+
+    <path d="M118 84H638" stroke="#d49455" stroke-width="4" opacity="0.28"/>
+    <path d="M118 213H638M118 356H638M118 493H638" stroke="#f0b06c" stroke-width="4" opacity="0.25"/>
+    <path d="M90 72V486M659 72V486" stroke="#2b160e" stroke-width="8" opacity="0.48"/>
+
+    <g opacity="0.95">
+    <rect x="72" y="200" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="76" y="204" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="88" cy="216" r="4" fill="#6b6258"/>
+    <circle cx="110" cy="216" r="4" fill="#6b6258"/>
+  </g>
+    <g opacity="0.95">
+    <rect x="642" y="200" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="646" y="204" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="658" cy="216" r="4" fill="#6b6258"/>
+    <circle cx="680" cy="216" r="4" fill="#6b6258"/>
+  </g>
+    <g opacity="0.95">
+    <rect x="72" y="343" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="76" y="347" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="88" cy="359" r="4" fill="#6b6258"/>
+    <circle cx="110" cy="359" r="4" fill="#6b6258"/>
+  </g>
+    <g opacity="0.95">
+    <rect x="642" y="343" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="646" y="347" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="658" cy="359" r="4" fill="#6b6258"/>
+    <circle cx="680" cy="359" r="4" fill="#6b6258"/>
+  </g>
+    <g opacity="0.95">
+    <rect x="72" y="482" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="76" y="486" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="88" cy="498" r="4" fill="#6b6258"/>
+    <circle cx="110" cy="498" r="4" fill="#6b6258"/>
+  </g>
+    <g opacity="0.95">
+    <rect x="642" y="482" width="54" height="31" rx="6" fill="#c9b89f"/>
+    <rect x="646" y="486" width="46" height="23" rx="4" fill="#aa9983" opacity="0.38"/>
+    <circle cx="658" cy="498" r="4" fill="#6b6258"/>
+    <circle cx="680" cy="498" r="4" fill="#6b6258"/>
+  </g>
+
+    <path d="M92 39C185 57 270 30 377 49C484 68 578 35 672 52" stroke="#dba066" stroke-width="3" opacity="0.18"/>
+    <path d="M102 507C193 493 300 517 395 503C501 486 590 511 667 498" stroke="#2a140e" stroke-width="5" opacity="0.35"/>
+    <path d="M50 35C50 21 61 10 75 10H681C695 10 706 21 706 35V505C706 519 695 530 681 530H75C61 530 50 519 50 505V35Z" stroke="#d49a62" stroke-width="5" opacity="0.72"/>
+    <path d="M63 42C63 30 73 22 84 22H672C684 22 694 32 694 44V494" stroke="#ffdaa0" stroke-width="2" opacity="0.22"/>
+  </g>
+</svg>

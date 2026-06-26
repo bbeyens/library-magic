@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Jackpot">
+  <rect x="18" y="28" width="60" height="43" rx="10" fill="#173f2d" stroke="#d2a454" stroke-width="7"/>
+  <path d="M31 25l8 12 9-18 9 18 8-12 4 19H27z" fill="#e9b84f" stroke="#fff0b9" stroke-width="3" stroke-linejoin="round"/>
+  <circle cx="34" cy="50" r="6" fill="#a874ff"/><circle cx="48" cy="50" r="6" fill="#fff0b9"/><circle cx="62" cy="50" r="6" fill="#a874ff"/>
+</svg>
