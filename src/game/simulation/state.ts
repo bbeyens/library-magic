@@ -1,4 +1,5 @@
 import type { BookId, ResourceId } from '../content/books';
+import type { ForbiddenOfferingResourceId } from '../content/forbiddenGrimoire';
 import { slimeTrainerEnemyForVictoryCount, type SlimeTrainerCommandId, type SlimeTrainerEnemy } from './slimeTrainerRules';
 
 export interface BookState {
@@ -99,31 +100,76 @@ export interface DefenseState {
 
 export type BlackjackRank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 export type BlackjackSuit = 'hearts' | 'diamonds' | 'clubs' | 'spades';
-export type BlackjackPhase = 'idle' | 'player' | 'won' | 'lost' | 'push' | 'blackjack';
+export type BlackjackPhase = 'idle' | 'player' | 'dealer' | 'won' | 'lost' | 'push' | 'blackjack';
+export type BlackjackHandId = 'primary' | 'split';
 
 export interface BlackjackCard {
   rank: BlackjackRank;
   suit: BlackjackSuit;
 }
 
-export interface BlackjackSkillsState {
-  rerollPlayer: number;
-  rerollDealer: number;
-  revealDealer: number;
-  aceBias: number;
+export interface BlackjackBonusTrackState {
+  unlocked: boolean;
+  level: number;
+  xp: number;
+  autoEnabled: boolean;
+  activatedThisHand: boolean;
+  lastOutcome: string;
+  lastPayout: number;
+  lastXp: number;
 }
+
+export type BlackjackUpgradeCellId =
+  | 'wagerBase'
+  | 'wagerWin'
+  | 'wagerNatural'
+  | 'wagerStreak'
+  | 'wagerDebt'
+  | 'actionStand'
+  | 'actionDouble'
+  | 'actionSplit'
+  | 'actionFaceSplit'
+  | 'actionMastery'
+  | 'autoDeal'
+  | 'autoSpeed'
+  | 'pairUnlock'
+  | 'pairPayout'
+  | 'pairXp'
+  | 'pairRefund'
+  | 'pairAuto'
+  | 'twentyOneThreeUnlock'
+  | 'twentyOneThreePayout'
+  | 'twentyOneThreeXp'
+  | 'twentyOneThreeJackpot'
+  | 'twentyOneThreeAuto';
+
+export type BlackjackUpgradeCellsState = Record<BlackjackUpgradeCellId, number>;
 
 export interface BlackjackState {
   deck: BlackjackCard[];
   playerHand: BlackjackCard[];
+  splitHand: BlackjackCard[] | null;
   dealerHand: BlackjackCard[];
   phase: BlackjackPhase;
   round: number;
-  playerRerollsUsed: number;
-  dealerRerollsUsed: number;
+  baseBetLevel: number;
+  activeHand: BlackjackHandId;
+  playerBet: number;
+  splitBet: number;
+  playerHandDone: boolean;
+  splitHandDone: boolean;
+  playerHandDoubled: boolean;
+  splitHandDoubled: boolean;
   dealerCardRevealed: boolean;
   lastReward: number;
   lastOutcome: string;
+  lastDebtPayment: number;
+  winStreak: number;
+  debt: number;
+  actions: BlackjackBonusTrackState;
+  pair: BlackjackBonusTrackState;
+  twentyOneThree: BlackjackBonusTrackState;
+  upgradeCells: BlackjackUpgradeCellsState;
 }
 
 export interface HundredState {
@@ -233,9 +279,20 @@ export interface OpenBookPanel {
   slot: BookPanelSlot;
 }
 
+export interface ForbiddenGrimoireState {
+  level: number;
+  keys: number;
+  selectedBookId: BookId | null;
+  offerings: Record<ForbiddenOfferingResourceId, number>;
+  lastOffered: Partial<Record<ForbiddenOfferingResourceId, number>>;
+  lastUnlockedBookId: BookId | null;
+  pulse: number;
+}
+
 export interface GameState {
   mana: number;
   resources: Record<ResourceId, number>;
+  forbiddenGrimoire: ForbiddenGrimoireState;
   selectedBook: BookId;
   openBookPanels: OpenBookPanel[];
   books: Record<BookId, BookState>;
@@ -244,7 +301,6 @@ export interface GameState {
   snake: SnakeState;
   runeTyping: RuneTypingState;
   defense: DefenseState;
-  blackjackSkills: BlackjackSkillsState;
   blackjack: BlackjackState;
   hundred: HundredState;
   targetSkills: TargetSkillsState;
@@ -323,14 +379,34 @@ export function createInitialState(): GameState {
       runes: 0,
       spores: 0,
       sigils: 0,
-      chips: 0,
+      chips: 50,
       fragments: 0,
       minerals: 0,
       marks: 0,
       gels: 0,
     },
+    forbiddenGrimoire: {
+      level: 1,
+      keys: 0,
+      selectedBookId: null,
+      offerings: {
+        mana: 0,
+        scales: 0,
+        runes: 0,
+        spores: 0,
+        sigils: 0,
+        chips: 0,
+        fragments: 0,
+        minerals: 0,
+        marks: 0,
+        gels: 0,
+      },
+      lastOffered: {},
+      lastUnlockedBookId: null,
+      pulse: 0,
+    },
     selectedBook: 'mana',
-    openBookPanels: [{ bookId: 'mana', slot: 0 }],
+    openBookPanels: [],
     books: {
       mana: {
         level: 1,
@@ -343,63 +419,63 @@ export function createInitialState(): GameState {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       typing: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       herbarium: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       defense: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       blackjack: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       hundred: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       mine: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       targets: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
       slimeTrainer: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: true,
+        unlocked: false,
         charge: 0,
       },
     },
@@ -469,23 +545,81 @@ export function createInitialState(): GameState {
       },
       enemies: [],
     },
-    blackjackSkills: {
-      rerollPlayer: 0,
-      rerollDealer: 0,
-      revealDealer: 0,
-      aceBias: 0,
-    },
     blackjack: {
       deck: [],
       playerHand: [],
+      splitHand: null,
       dealerHand: [],
       phase: 'idle',
       round: 0,
-      playerRerollsUsed: 0,
-      dealerRerollsUsed: 0,
+      baseBetLevel: 1,
+      activeHand: 'primary',
+      playerBet: 0,
+      splitBet: 0,
+      playerHandDone: false,
+      splitHandDone: false,
+      playerHandDoubled: false,
+      splitHandDoubled: false,
       dealerCardRevealed: false,
       lastReward: 0,
       lastOutcome: 'En attente',
+      lastDebtPayment: 0,
+      winStreak: 0,
+      debt: 0,
+      actions: {
+        unlocked: false,
+        level: 0,
+        xp: 0,
+        autoEnabled: false,
+        activatedThisHand: false,
+        lastOutcome: 'Verrouille',
+        lastPayout: 0,
+        lastXp: 0,
+      },
+      pair: {
+        unlocked: false,
+        level: 0,
+        xp: 0,
+        autoEnabled: false,
+        activatedThisHand: false,
+        lastOutcome: 'Verrouille',
+        lastPayout: 0,
+        lastXp: 0,
+      },
+      twentyOneThree: {
+        unlocked: false,
+        level: 0,
+        xp: 0,
+        autoEnabled: false,
+        activatedThisHand: false,
+        lastOutcome: 'Verrouille',
+        lastPayout: 0,
+        lastXp: 0,
+      },
+      upgradeCells: {
+        wagerBase: 1,
+        wagerWin: 1,
+        wagerNatural: 1,
+        wagerStreak: 1,
+        wagerDebt: 1,
+        actionStand: 1,
+        actionDouble: 1,
+        actionSplit: 1,
+        actionFaceSplit: 1,
+        actionMastery: 1,
+        autoDeal: 1,
+        autoSpeed: 1,
+        pairUnlock: 1,
+        pairPayout: 1,
+        pairXp: 1,
+        pairRefund: 1,
+        pairAuto: 1,
+        twentyOneThreeUnlock: 1,
+        twentyOneThreePayout: 1,
+        twentyOneThreeXp: 1,
+        twentyOneThreeJackpot: 1,
+        twentyOneThreeAuto: 1,
+      },
     },
     hundred: {
       total: 0,

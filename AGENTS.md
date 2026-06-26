@@ -1,5 +1,10 @@
 ## Agent skills
 
+Codex must autonomously select and use relevant skills from the task context
+before asking the user to name one. Ask for a skill choice only when multiple
+skills would change the outcome in meaningfully different ways and the right
+choice cannot be inferred from the repo, request, or existing project rules.
+
 ### Issue tracker
 
 Issues are tracked in GitHub Issues via the `gh` CLI; external PRs are not a triage request surface by default. See `docs/agents/issue-tracker.md`.
