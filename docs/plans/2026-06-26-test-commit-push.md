@@ -64,9 +64,9 @@ Boundaries:
 
 Current verdict:
 - verdict: in_progress
-- confidence: 92/100
+- confidence: 98/100
 - next owner: task
-- reason: tests, typecheck, build, and agent-native structural review pass; Git commit/push still pending.
+- reason: tests, typecheck, build, agent-native structural review, commit, and push passed.
 
 Pre-solution issue challenge:
 - reporter claim: N/A: no bug report, just verification plus commit/push request.
@@ -147,7 +147,7 @@ Work Checklist:
 Completion Gates:
 | Gate | Applies | Required action | Evidence |
 |------|---------|-----------------|----------|
-| Named verification threshold | yes | Run the named proof or record blocker | `npm test` passed 9 test files; `npm run typecheck` passed; `npm run build` passed. Commit/push pending. |
+| Named verification threshold | yes | Run the named proof or record blocker | `npm test` passed 9 test files; `npm run typecheck` passed; `npm run build` passed; commit `6e1cd05` pushed upstream. |
 | Pre-solution issue challenge verdict | N/A | Record reporter claim, suggested fix, repro verdict, validity verdict, durable boundary, and hard-stop/pivot decision before implementation | No bug report; verification request only. |
 | Repro escalation ladder | N/A | For bug/behavior claims, record test/source-level, automated browser/integration, Browser, and screenshot/visual-proof outcomes or N/A/blocker reasons before `not reproduced` | No behavior bug claim. |
 | Bug reproduced before fix | N/A | Record failing test/repro or N/A with reason | No bug report; only test failures found during verification. |
@@ -158,7 +158,7 @@ Completion Gates:
 | Final lint/format | N/A | Run relevant lint/format command or record N/A | No lint or format script exists in `package.json`. |
 | Autoreview | yes | Review final diff/output against objective, acceptance criteria, constraints, and newest user request | Verified tests were initially incomplete, added durable `npm test`, fixed two test-discovered issues, and re-ran all checks. |
 | Timed checkpoint | N/A | If duration was requested, keep improving until elapsed, then finish the current loop cleanly; otherwise N/A | No duration requested. |
-| Goal plan complete | yes | Run `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-06-26-test-commit-push.md` | Pending until Git push evidence is recorded. |
+| Goal plan complete | yes | Run `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-06-26-test-commit-push.md` | To run after this closeout edit is recorded. |
 | Agent source validation | yes | Run relevant agent/skill validation command | Frontmatter audit over 57 `.agents/skills/*/SKILL.md` files passed: each has `name` and `description`. |
 | Generated/downstream sync | N/A | Refresh or mark N/A with reason | No generated downstream copy identified for this repo-local skill import set. |
 
@@ -168,7 +168,7 @@ Phase / pass table:
 | Intake and source read | complete | Plan created; `package.json`, tests, AGENTS, skill files, and git state inspected. | implementation |
 | Implementation | complete | Added `tsx` test runner and `npm test`; fixed prepared wager invariant test and grimoire unlock panel behavior/test level. | verification |
 | Verification | complete | `npm test`, `npm run typecheck`, `npm run build`, and agent skill frontmatter audit passed. | closeout |
-| Closeout | in_progress | Commit and push pending. | final response |
+| Closeout | complete | Commit `6e1cd05` pushed to `origin/codex/blackjack-incremental-bonuses-v1`; closeout plan update in progress. | final response |
 
 Findings:
 - Initial direct `node tests/*.test.ts` failed because Node 20 does not execute `.ts` files directly.
@@ -187,6 +187,7 @@ Timeline:
 - 2026-06-26: `npm run typecheck` passed.
 - 2026-06-26: `npm run build` passed with only Vite large chunk warning.
 - 2026-06-26: agent-native structural review passed: 57 skill files have valid frontmatter.
+- 2026-06-26: commit `6e1cd05` created and pushed with upstream branch `origin/codex/blackjack-incremental-bonuses-v1`.
 
 Verification evidence:
 - `node --version`: v20.20.2.
@@ -194,16 +195,16 @@ Verification evidence:
 - `npm run typecheck`: passed.
 - `npm run build`: passed; output bundle built in Vite with a large chunk warning.
 - Agent-native review: `AGENTS.md` diff adds autonomous skill selection; 57 `.agents/skills/*/SKILL.md` files passed `name`/`description` frontmatter audit.
-- Git commit/push: pending.
+- Git commit/push: commit `6e1cd05` pushed to `https://github.com/bbeyens/library-magic.git` branch `codex/blackjack-incremental-bonuses-v1`.
 
 Reboot status:
 | Question | Answer |
 |----------|--------|
-| Where am I? | Closeout |
-| Where am I going? | Stage, commit, push, then final response |
+| Where am I? | Final closeout |
+| Where am I going? | Run plan checker, commit/push closeout note, then final response |
 | What is the goal? | Tests/checks pass for current Library-Magic worktree, then commit and push all changes. |
 | What have I learned? | Direct Node cannot run these TS tests; durable `npm test` must use `tsx` per file. |
-| What have I done? | Tests/typecheck/build pass; Git closeout remains. |
+| What have I done? | Tests/typecheck/build pass; main commit is pushed. |
 
 Open risks:
-- Push can still fail due to remote/auth/rebase requirements.
+- None. Vite still warns that one bundle chunk is larger than 500 kB; this is not a failing gate.
