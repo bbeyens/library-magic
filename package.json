@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc && vite build",
+    "test": "set -e; for test_file in tests/*.test.ts; do tsx \"$test_file\"; done",
     "preview": "vite preview --host 127.0.0.1",
     "typecheck": "tsc --noEmit"
   },
@@ -13,6 +14,7 @@
     "phaser": "^3.90.0"
   },
   "devDependencies": {
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vite": "^7.3.1"
   }

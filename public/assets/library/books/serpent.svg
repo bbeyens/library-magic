@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="190" height="252" viewBox="0 0 190 252" fill="none">
+  <defs>
+    <linearGradient id="serpent-cover" x1="42" y1="18" x2="151" y2="226" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#5c4aa0"/>
+      <stop offset="0.48" stop-color="#2b2148"/>
+      <stop offset="1" stop-color="#120b0b"/>
+    </linearGradient>
+    <linearGradient id="serpent-spine" x1="28" y1="24" x2="60" y2="232" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#160c0b"/>
+      <stop offset="0.35" stop-color="#5c4aa0"/>
+      <stop offset="1" stop-color="#0b0606"/>
+    </linearGradient>
+    <linearGradient id="serpent-pages" x1="132" y1="23" x2="173" y2="224" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f1dfbc"/>
+      <stop offset="0.5" stop-color="#b99f79"/>
+      <stop offset="1" stop-color="#6c523c"/>
+    </linearGradient>
+    <linearGradient id="serpent-top-pages" x1="43" y1="12" x2="159" y2="38" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#f4e5c3"/>
+      <stop offset="1" stop-color="#927557"/>
+    </linearGradient>
+    <filter id="serpent-shadow" x="0" y="0" width="190" height="252" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="10" dy="13" stdDeviation="7" flood-color="#000000" flood-opacity="0.48"/>
+    </filter>
+    <filter id="serpent-leather" x="20" y="12" width="152" height="228" filterUnits="userSpaceOnUse">
+      <feTurbulence type="fractalNoise" baseFrequency="0.95" numOctaves="3" seed="15" result="noise"/>
+      <feColorMatrix in="noise" type="saturate" values="0"/>
+      <feComponentTransfer>
+        <feFuncA type="table" tableValues="0 0.18"/>
+      </feComponentTransfer>
+      <feBlend in2="SourceGraphic" mode="overlay"/>
+    </filter>
+    <radialGradient id="serpent-gem" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(92 92) rotate(90) scale(47)">
+      <stop stop-color="#fff6d0"/>
+      <stop offset="0.32" stop-color="#a78cff"/>
+      <stop offset="1" stop-color="#5c4aa0"/>
+    </radialGradient>
+  </defs>
+  <g filter="url(#serpent-shadow)">
+    <path d="M39 21C40 14 45 10 53 10H139C153 10 166 23 166 37V218C166 230 156 240 144 240H47C38 240 31 233 31 224L39 21Z" fill="#070405" opacity="0.72"/>
+    <path d="M57 15H142C154 15 164 25 164 37H67C60 37 55 31 57 15Z" fill="url(#serpent-top-pages)"/>
+    <path d="M135 31H158C166 35 172 43 172 55V213C172 226 162 235 149 235H132V31Z" fill="url(#serpent-pages)"/>
+    <path d="M139 45H168M139 58H170M139 71H170M139 84H170M139 97H170M139 110H170M139 123H170M139 136H170M139 149H170M139 162H170M139 175H170M139 188H170M139 201H168M139 214H163" stroke="#5b4634" stroke-width="1.35" opacity="0.34"/>
+    <path d="M30 25C30 18 36 13 43 13H132C141 13 148 20 148 29V220C148 229 141 236 132 236H41C34 236 28 230 28 223L30 25Z" fill="url(#serpent-cover)"/>
+    <path d="M30 25C30 18 36 13 43 13H62V236H41C34 236 28 230 28 223L30 25Z" fill="url(#serpent-spine)" opacity="0.95"/>
+    <path d="M66 30H130C134 30 137 33 137 37V214C137 218 134 221 130 221H66V30Z" filter="url(#serpent-leather)" opacity="0.96"/>
+    <path d="M62 24V229" stroke="#f0d29f" stroke-width="4" opacity="0.32"/>
+    <path d="M76 47H125M75 203H126" stroke="#f7dfb1" stroke-width="3" stroke-linecap="round" opacity="0.27"/>
+    <path d="M35 33C47 26 50 41 50 60V202C50 219 44 228 35 222V33Z" fill="#000000" opacity="0.18"/>
+    <circle cx="98" cy="98" r="44" fill="#0e090e" opacity="0.62"/>
+    <circle cx="98" cy="98" r="36" stroke="#c8bba3" stroke-width="5" opacity="0.72"/>
+    <circle cx="98" cy="98" r="27" fill="url(#serpent-gem)" opacity="0.18"/>
+    <path d="M111 96C111 108 101 117 89 117C78 117 70 109 70 99C70 88 79 80 90 80C100 80 107 87 107 96C107 104 101 110 92 110C85 110 80 105 80 99C80 93 85 89 91 89C96 89 100 92 100 97" stroke="#a78cff" stroke-width="8" stroke-linecap="round"/>
+    <path d="M41 183H55V236H41V183Z" fill="#a78cff"/>
+    <path d="M41 183H55V236H41V183Z" fill="#ffffff" opacity="0.12"/>
+    <path d="M29 15H51V25C76 25 64 37 64 37H29V15Z" fill="#c8bba3" opacity="0.9"/>
+    <circle cx="38" cy="24" r="3.2" fill="#6d5d4c" opacity="0.72"/>
+    <path d="M124 15H146V25C171 25 159 37 159 37H124V15Z" fill="#c8bba3" opacity="0.9"/>
+    <circle cx="133" cy="24" r="3.2" fill="#6d5d4c" opacity="0.72"/>
+    <path d="M29 210H51V220C76 220 64 232 64 232H29V210Z" fill="#c8bba3" opacity="0.9"/>
+    <circle cx="38" cy="219" r="3.2" fill="#6d5d4c" opacity="0.72"/>
+    <path d="M124 210H146V220C171 220 159 232 159 232H124V210Z" fill="#c8bba3" opacity="0.9"/>
+    <circle cx="133" cy="219" r="3.2" fill="#6d5d4c" opacity="0.72"/>
+    <path d="M76 160H121" stroke="#c8bba3" stroke-width="2" opacity="0.36"/>
+    <text x="99" y="181" text-anchor="middle" fill="#f6ddb0" font-family="Georgia, serif" font-size="14" font-weight="700" letter-spacing="1.2">SERPENT</text>
+    <path d="M39 17H130C138 17 144 23 144 31V217C144 225 138 232 130 232H41" stroke="#fff0c2" stroke-width="2.4" opacity="0.2"/>
+  </g>
+</svg>

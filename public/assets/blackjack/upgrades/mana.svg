@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Mana">
+  <circle cx="48" cy="48" r="34" fill="#173f2d" stroke="#d2a454" stroke-width="7"/>
+  <path d="M48 14l23 34-23 34-23-34z" fill="#67c6ff" stroke="#e6f6ff" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M48 25l11 23-11 23-11-23z" fill="#d8f5ff" opacity=".72"/>
+</svg>
