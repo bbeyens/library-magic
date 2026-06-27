@@ -128,9 +128,9 @@ export const books: BookDefinition[] = [
   {
     id: 'mine',
     name: 'Mine des Profondeurs',
-    subtitle: 'Creuse des blocs de terre toujours plus coriaces.',
+    subtitle: 'Creuse, stocke les materiaux, puis echange-les en monnaie de mine.',
     resourceId: 'minerals',
-    resourceName: 'Minerais',
+    resourceName: 'Pieces de mine',
     icon: 'pickaxe',
     color: 0x9d6b41,
     accent: '#d69a58',

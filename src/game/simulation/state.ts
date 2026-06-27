@@ -78,10 +78,44 @@ export interface DefenseShot {
   timer: number;
 }
 
+export interface DefenseQueuedShot {
+  enemyId: number;
+  damageScale: number;
+}
+
+export type DefenseDamagePopupKind = 'normal' | 'critical' | 'superCritical';
+
+export interface DefenseDamagePopup {
+  id: number;
+  lane: number;
+  distance: number;
+  amount: number;
+  kind: DefenseDamagePopupKind;
+  timer: number;
+}
+
 export interface DefenseTowerState {
   id: 'unique';
   range: number;
   cooldown: number;
+}
+
+export interface DefenseSkillsState {
+  damage: number;
+  attackSpeed: number;
+  range: number;
+  damagePerMeter: number;
+  criticalChance: number;
+  criticalMultiplier: number;
+  ricochetCount: number;
+  ricochetChance: number;
+  superCriticalChance: number;
+  superCriticalMultiplier: number;
+  health: number;
+  healthRegen: number;
+  resistance: number;
+  moneyPerEnemy: number;
+  moneyPerWave: number;
 }
 
 export type DefenseSpeedMultiplier = 1 | 2 | 4;
@@ -96,11 +130,14 @@ export interface DefenseState {
   spawnTimer: number;
   spawnedThisWave: number;
   nextEnemyId: number;
+  nextDamagePopupId: number;
   lastReward: number;
   shotPulse: number;
   shot: DefenseShot | null;
+  queuedShots: DefenseQueuedShot[];
   tower: DefenseTowerState;
   enemies: DefenseEnemy[];
+  damagePopups: DefenseDamagePopup[];
 }
 
 export type BlackjackRank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
@@ -218,6 +255,7 @@ export interface TargetState {
 export interface MiningBlock {
   id: number;
   depth: number;
+  material: MiningBlockMaterialId;
   health: number;
   maxHealth: number;
   lastHit: number;
@@ -233,6 +271,7 @@ export interface MiningSkillsState {
 
 export interface MiningState {
   blocks: MiningBlock[];
+  materials: Record<MiningMaterialResourceId, number>;
   totalMined: number;
   deepestLayer: number;
   lastReward: number;
@@ -289,6 +328,7 @@ export interface ForbiddenGrimoireState {
   keys: number;
   selectedBookId: BookId | null;
   offerings: Record<ForbiddenOfferingResourceId, number>;
+  offeringsByBook: Partial<Record<BookId, Record<ForbiddenOfferingResourceId, number>>>;
   lastOffered: Partial<Record<ForbiddenOfferingResourceId, number>>;
   lastUnlockedBookId: BookId | null;
   pulse: number;
@@ -305,6 +345,7 @@ export interface GameState {
   snakeSkills: SnakeSkillsState;
   snake: SnakeState;
   runeTyping: RuneTypingState;
+  defenseSkills: DefenseSkillsState;
   defense: DefenseState;
   blackjack: BlackjackState;
   hundred: HundredState;
@@ -318,8 +359,109 @@ export interface GameState {
 
 export const SNAKE_BASE_GRID_SIZE = 4;
 export const SNAKE_MAX_GRID_SIZE = 9;
-export const MINING_GRID_COLUMNS = 3;
-export const MINING_GRID_ROWS = 5;
+export const MINING_GRID_COLUMNS = 7;
+export const MINING_GRID_ROWS = 7;
+export const MINING_SPRITE_LAYER_SIZE = 5;
+
+export type MiningBlockMaterialId =
+  | 'dirt'
+  | 'sand'
+  | 'stone'
+  | 'coal'
+  | 'iron'
+  | 'gold'
+  | 'ruby'
+  | 'lapis'
+  | 'diamond'
+  | 'emerald'
+  | 'obsidian';
+
+export type MiningMaterialResourceId =
+  | 'dirt'
+  | 'stone'
+  | 'sand'
+  | 'coal'
+  | 'iron'
+  | 'gold'
+  | 'ruby'
+  | 'lapis'
+  | 'diamond'
+  | 'emerald'
+  | 'obsidian';
+
+export interface MiningBlockMaterial {
+  id: MiningBlockMaterialId;
+  name: string;
+  shortName: string;
+  resourceId: MiningMaterialResourceId;
+  exchangeValue: number;
+}
+
+export interface MiningBlockSpriteTier {
+  spriteIndex: number;
+  materialId: MiningBlockMaterialId;
+  assetPath: string;
+}
+
+export interface MiningBlockDepthTier extends MiningBlockSpriteTier {
+  shadeLevel: number;
+}
+
+export interface MiningBlockCrackOverlay {
+  row: 1 | 2 | 3 | 4;
+  column: 1 | 2 | 3 | 4;
+}
+
+export const MINING_BLOCK_MATERIALS: Record<MiningBlockMaterialId, MiningBlockMaterial> = {
+  dirt: { id: 'dirt', name: 'Terre', shortName: 'Terre', resourceId: 'dirt', exchangeValue: 1 },
+  sand: { id: 'sand', name: 'Sable', shortName: 'Sable', resourceId: 'sand', exchangeValue: 2 },
+  stone: { id: 'stone', name: 'Pierre', shortName: 'Pierre', resourceId: 'stone', exchangeValue: 3 },
+  coal: { id: 'coal', name: 'Charbon', shortName: 'Charbon', resourceId: 'coal', exchangeValue: 5 },
+  iron: { id: 'iron', name: 'Fer', shortName: 'Fer', resourceId: 'iron', exchangeValue: 8 },
+  gold: { id: 'gold', name: 'Or', shortName: 'Or', resourceId: 'gold', exchangeValue: 13 },
+  ruby: { id: 'ruby', name: 'Rubis', shortName: 'Rubis', resourceId: 'ruby', exchangeValue: 21 },
+  lapis: { id: 'lapis', name: 'Lapis', shortName: 'Lapis', resourceId: 'lapis', exchangeValue: 34 },
+  diamond: { id: 'diamond', name: 'Diamant', shortName: 'Diam', resourceId: 'diamond', exchangeValue: 55 },
+  emerald: { id: 'emerald', name: 'Emeraude', shortName: 'Emer', resourceId: 'emerald', exchangeValue: 89 },
+  obsidian: { id: 'obsidian', name: 'Obsidienne', shortName: 'Obsi', resourceId: 'obsidian', exchangeValue: 144 },
+};
+
+export const MINING_MATERIAL_RESOURCE_IDS: MiningMaterialResourceId[] = [
+  'dirt',
+  'stone',
+  'sand',
+  'coal',
+  'iron',
+  'gold',
+  'ruby',
+  'lapis',
+  'diamond',
+  'emerald',
+  'obsidian',
+];
+
+export const MINING_BLOCK_SPRITE_TIERS: MiningBlockSpriteTier[] = [
+  { spriteIndex: 1, materialId: 'dirt', assetPath: '/assets/Block%20terre/1%20block%20herb.jpg' },
+  { spriteIndex: 2, materialId: 'dirt', assetPath: '/assets/Block%20terre/2%20block%20terre%20A.jpg' },
+  { spriteIndex: 3, materialId: 'sand', assetPath: '/assets/Block%20terre/3%20block%20sable.jpg' },
+  { spriteIndex: 4, materialId: 'stone', assetPath: '/assets/Block%20terre/4%20block%20cobblestone%20under.jpg' },
+  { spriteIndex: 5, materialId: 'stone', assetPath: '/assets/Block%20terre/5%20block%20cobblestone.jpg' },
+  { spriteIndex: 6, materialId: 'stone', assetPath: '/assets/Block%20terre/6%20block%20rock.jpg' },
+  { spriteIndex: 7, materialId: 'coal', assetPath: '/assets/Block%20terre/7%20block%20charbon.jpg' },
+  { spriteIndex: 8, materialId: 'iron', assetPath: '/assets/Block%20terre/8%20block%20iron.jpg' },
+  { spriteIndex: 9, materialId: 'gold', assetPath: '/assets/Block%20terre/9%20block%20gold%20B.jpg' },
+  { spriteIndex: 10, materialId: 'ruby', assetPath: '/assets/Block%20terre/10%20block%20ruby.jpg' },
+  { spriteIndex: 11, materialId: 'lapis', assetPath: '/assets/Block%20terre/11%20block%20lapis%20lazuli.jpg' },
+  { spriteIndex: 12, materialId: 'diamond', assetPath: '/assets/Block%20terre/12%20block%20diamand.jpg' },
+  { spriteIndex: 13, materialId: 'emerald', assetPath: '/assets/Block%20terre/13%20block%20emerald%20.jpg' },
+  { spriteIndex: 14, materialId: 'iron', assetPath: '/assets/Block%20terre/14%20block%20iron%20full.jpg' },
+  { spriteIndex: 15, materialId: 'gold', assetPath: '/assets/Block%20terre/15%20block%20gold%20full.jpg' },
+  { spriteIndex: 16, materialId: 'ruby', assetPath: '/assets/Block%20terre/16%20block%20ruby%20full.jpg' },
+  { spriteIndex: 17, materialId: 'lapis', assetPath: '/assets/Block%20terre/17%20block%20lapis%20lazuli%20full.jpg' },
+  { spriteIndex: 18, materialId: 'diamond', assetPath: '/assets/Block%20terre/18%20block%20diamond%20full.jpg' },
+  { spriteIndex: 19, materialId: 'emerald', assetPath: '/assets/Block%20terre/19%20block%20emerald%20full.jpg' },
+  { spriteIndex: 20, materialId: 'obsidian', assetPath: '/assets/Block%20terre/20%20block%20obsidian.jpg' },
+];
 
 export function snakeGridSizeForLevel(level: number): number {
   return Math.min(SNAKE_MAX_GRID_SIZE, SNAKE_BASE_GRID_SIZE + level);
@@ -360,12 +502,57 @@ export function miningBlockMaxHealth(depth: number): number {
   return 3 + Math.floor((layer - 1) * 1.45) + Math.floor((layer - 1) * (layer - 1) * 0.08);
 }
 
+export function miningBlockSpriteTierForDepth(depth: number): MiningBlockDepthTier {
+  const layer = Math.max(1, Math.floor(depth));
+  const rawTier = Math.floor((layer - 1) / MINING_SPRITE_LAYER_SIZE);
+  const spriteTier = MINING_BLOCK_SPRITE_TIERS[Math.min(rawTier, MINING_BLOCK_SPRITE_TIERS.length - 1)]!;
+  return {
+    ...spriteTier,
+    shadeLevel: ((layer - 1) % MINING_SPRITE_LAYER_SIZE) + 1,
+  };
+}
+
+export function miningBlockMaterialForDepth(depth: number): MiningBlockMaterial {
+  return MINING_BLOCK_MATERIALS[miningBlockSpriteTierForDepth(depth).materialId];
+}
+
+export function miningBlockMaterialById(materialId: MiningBlockMaterialId): MiningBlockMaterial {
+  return MINING_BLOCK_MATERIALS[materialId] ?? MINING_BLOCK_MATERIALS.dirt;
+}
+
+export function createInitialMiningMaterials(): Record<MiningMaterialResourceId, number> {
+  return Object.fromEntries(MINING_MATERIAL_RESOURCE_IDS.map((resourceId) => [resourceId, 0])) as Record<MiningMaterialResourceId, number>;
+}
+
+export function miningMaterialExchangeValue(resourceId: MiningMaterialResourceId): number {
+  return MINING_BLOCK_MATERIALS[resourceId].exchangeValue;
+}
+
+export function miningBlockCrackOverlayForDamage(
+  health: number,
+  maxHealth: number,
+  blockId: number,
+): MiningBlockCrackOverlay | null {
+  if (maxHealth <= 0) {
+    return null;
+  }
+  const damagePercent = Math.max(0, Math.min(100, 100 - (Math.max(0, health) / maxHealth) * 100));
+  if (damagePercent < 5) {
+    return null;
+  }
+  const column = damagePercent <= 25 ? 1 : damagePercent <= 50 ? 2 : damagePercent <= 75 ? 3 : 4;
+  const row = ((Math.max(0, Math.floor(blockId)) % 4) + 1) as 1 | 2 | 3 | 4;
+  return { row, column };
+}
+
 export function createInitialMiningBlocks(): MiningBlock[] {
   return Array.from({ length: MINING_GRID_COLUMNS * MINING_GRID_ROWS }, (_, id) => {
     const maxHealth = miningBlockMaxHealth(1);
+    const material = miningBlockMaterialForDepth(1);
     return {
       id,
       depth: 1,
+      material: material.id,
       health: maxHealth,
       maxHealth,
       lastHit: 0,
@@ -406,6 +593,7 @@ export function createInitialState(): GameState {
         marks: 0,
         gels: 0,
       },
+      offeringsByBook: {},
       lastOffered: {},
       lastUnlockedBookId: null,
       pulse: 0,
@@ -531,6 +719,23 @@ export function createInitialState(): GameState {
       lastCompletedWord: null,
       lastFeedback: 'idle',
     },
+    defenseSkills: {
+      damage: 0,
+      attackSpeed: 0,
+      range: 0,
+      damagePerMeter: 0,
+      criticalChance: 0,
+      criticalMultiplier: 0,
+      ricochetCount: 0,
+      ricochetChance: 0,
+      superCriticalChance: 0,
+      superCriticalMultiplier: 0,
+      health: 0,
+      healthRegen: 0,
+      resistance: 0,
+      moneyPerEnemy: 0,
+      moneyPerWave: 0,
+    },
     defense: {
       running: false,
       wave: 1,
@@ -541,15 +746,18 @@ export function createInitialState(): GameState {
       spawnTimer: 0,
       spawnedThisWave: 0,
       nextEnemyId: 1,
+      nextDamagePopupId: 1,
       lastReward: 0,
       shotPulse: 0,
       shot: null,
+      queuedShots: [],
       tower: {
         id: 'unique',
-        range: 0.68,
+        range: 0.552,
         cooldown: 0,
       },
       enemies: [],
+      damagePopups: [],
     },
     blackjack: {
       deck: [],
@@ -663,6 +871,7 @@ export function createInitialState(): GameState {
     },
     mining: {
       blocks: createInitialMiningBlocks(),
+      materials: createInitialMiningMaterials(),
       totalMined: 0,
       deepestLayer: 1,
       lastReward: 0,

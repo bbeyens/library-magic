@@ -1,0 +1,331 @@
+{
+  "source": "/Users/zbeyens/Documents/Library magic/experiments/2026-06-27-fire-elemental-idle-pixel-snapper/fire-elemental-idle-selected-clean.png",
+  "frameWidth": 48,
+  "frameHeight": 42,
+  "stages": [
+    {
+      "stage": 1,
+      "targetBox": [
+        14,
+        26
+      ],
+      "frames": [
+        {
+          "sourceBox": [
+            21,
+            13,
+            32,
+            34
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        },
+        {
+          "sourceBox": [
+            20,
+            7,
+            36,
+            41
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        },
+        {
+          "sourceBox": [
+            17,
+            10,
+            32,
+            38
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        },
+        {
+          "sourceBox": [
+            17,
+            11,
+            28,
+            36
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        },
+        {
+          "sourceBox": [
+            12,
+            7,
+            29,
+            41
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        },
+        {
+          "sourceBox": [
+            14,
+            12,
+            26,
+            35
+          ],
+          "placedAt": [
+            17,
+            13
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 2,
+      "targetBox": [
+        20,
+        42
+      ],
+      "frames": [
+        {
+          "sourceBox": [
+            18,
+            0,
+            38,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            16,
+            0,
+            36,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            15,
+            0,
+            34,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            10,
+            0,
+            33,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            10,
+            0,
+            29,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            7,
+            0,
+            28,
+            42
+          ],
+          "placedAt": [
+            14,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 3,
+      "targetBox": [
+        36,
+        42
+      ],
+      "frames": [
+        {
+          "sourceBox": [
+            12,
+            0,
+            48,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            9,
+            0,
+            40,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            5,
+            0,
+            43,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            4,
+            0,
+            41,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            0,
+            0,
+            37,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        },
+        {
+          "sourceBox": [
+            0,
+            0,
+            36,
+            42
+          ],
+          "placedAt": [
+            6,
+            0
+          ]
+        }
+      ]
+    },
+    {
+      "stage": 4,
+      "targetBox": [
+        42,
+        38
+      ],
+      "frames": [
+        {
+          "sourceBox": [
+            7,
+            0,
+            48,
+            38
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        },
+        {
+          "sourceBox": [
+            6,
+            0,
+            48,
+            38
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        },
+        {
+          "sourceBox": [
+            4,
+            0,
+            46,
+            40
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        },
+        {
+          "sourceBox": [
+            1,
+            0,
+            44,
+            39
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        },
+        {
+          "sourceBox": [
+            0,
+            0,
+            46,
+            38
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        },
+        {
+          "sourceBox": [
+            0,
+            0,
+            43,
+            40
+          ],
+          "placedAt": [
+            3,
+            1
+          ]
+        }
+      ]
+    }
+  ]
+}

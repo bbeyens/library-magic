@@ -39,7 +39,15 @@ import {
   manaWandCount,
   defenseTowerAttackInterval,
   defenseTowerDamage,
-  defenseWaveEnemyCount,
+  defenseEnemyReward,
+  defenseMaxTowerHealth,
+  defenseMoneyPerWave,
+  defenseSkillCost,
+  defenseSkillMaxLevel,
+  defenseTowerHealthRegenPerSecond,
+  defenseTowerRange,
+  defenseTowerRangePercent,
+  defenseTowerResistance,
   defenseWaveProgress,
   hundredOptionRange,
   hundredTargetMax,
@@ -65,6 +73,7 @@ import {
   snakeTotalMultiplier,
   targetSkillCost,
   targetSkillMaxLevel,
+  type DefenseSkillId,
   type ManaSkillId,
   type BlackjackUpgradeCellId,
   type BlackjackUpgradeCost,
@@ -82,7 +91,22 @@ import {
   type TargetSkillId,
 } from '../game/simulation/targetRules';
 import type { SlimeTrainerCommandId } from '../game/simulation/slimeTrainerRules';
-import type { BlackjackCard, BookPanelSlot, GameState, SnakeCell, SnakeDirection } from '../game/simulation/state';
+import {
+  MINING_BLOCK_MATERIALS,
+  MINING_GRID_COLUMNS,
+  MINING_GRID_ROWS,
+  MINING_MATERIAL_RESOURCE_IDS,
+  miningBlockCrackOverlayForDamage,
+  miningBlockMaterialById,
+  miningBlockSpriteTierForDepth,
+  miningMaterialExchangeValue,
+  type BlackjackCard,
+  type BookPanelSlot,
+  type GameState,
+  type MiningBlock,
+  type SnakeCell,
+  type SnakeDirection,
+} from '../game/simulation/state';
 
 let rootElement: HTMLDivElement | null = null;
 let openUpgradePanel: BookId | null = null;
@@ -93,7 +117,6 @@ let lastOpenUpgradePanel: BookId | null = null;
 let lastUpgradePanelMode: 'detail' | 'compact' = 'detail';
 let lastSnakeRewardMarker = '';
 let lastRuneTypingRewardMarker = '';
-let lastDefenseRewardMarker = '';
 let lastBlackjackRewardMarker = '';
 let lastHundredRewardMarker = '';
 let lastTargetRewardMarker = '';
@@ -110,6 +133,10 @@ let blackjackAutoDealMarker = '';
 let blackjackDealerStepTimeout: number | null = null;
 let blackjackDealerStepMarker = '';
 let lastManaAutoCastCount = 0;
+let manaClickEffectFlip = false;
+let manaClickTimestamps: number[] = [];
+let manaClickScaleResetTimeout: number | null = null;
+let wandCastEffectFlip = false;
 let lastHundredDisplayedProgress = 0;
 let lastHundredProgressAnimationMarker = '';
 let pendingHundredProgressAnimationMarker = '';
@@ -124,6 +151,10 @@ let suppressNextPanelClickUntil = 0;
 let activePanelInteractionCount = 0;
 const FLOATING_GAIN_MAX_VISIBLE = 18;
 const FLOATING_GAIN_FLUSH_MS = 80;
+const CRYSTAL_CLICK_RATE_WINDOW_MS = 1000;
+const CRYSTAL_CLICK_RATE_FOR_MAX_SHAKE = 10;
+const CRYSTAL_CLICK_SCALE_RESET_MS = 1500;
+const CRYSTAL_CLICK_SCALE_CLICKS_FOR_MAX = 100;
 const BLACKJACK_CARD_RECEIVE_MS = 760;
 const BLACKJACK_CARD_STAGGER_MS = 150;
 const BLACKJACK_SCORE_REVEAL_BUFFER_MS = 180;
@@ -136,6 +167,7 @@ const BOOK_PANEL_SIZE_PRESETS = [
   { id: 'medium', label: 'M', width: 370 },
   { id: 'large', label: 'L', width: 496 },
 ] as const;
+const DEFENSE_LARGE_PANEL_SCALE = 1.3;
 type BookPanelSizePreset = (typeof BOOK_PANEL_SIZE_PRESETS)[number];
 type BookPanelSizePresetId = BookPanelSizePreset['id'];
 interface BlackjackDisplayState {
@@ -284,6 +316,12 @@ function renderHud(state: GameState): void {
           gameStore.dispatch({ type: 'buySnakeSkill', skillId });
         }
       }
+      if (action === 'buyDefenseSkill') {
+        const skillId = button.dataset.skillId as DefenseSkillId | undefined;
+        if (skillId) {
+          gameStore.dispatch({ type: 'buyDefenseSkill', skillId });
+        }
+      }
       if (action === 'buyTargetSkill') {
         const skillId = button.dataset.skillId as TargetSkillId | undefined;
         if (skillId) {
@@ -426,6 +464,9 @@ function renderHud(state: GameState): void {
           gameStore.dispatch({ type: 'digMiningBlock', blockId });
         }
       }
+      if (action === 'exchangeMiningMaterials') {
+        gameStore.dispatch({ type: 'exchangeMiningMaterials' });
+      }
       if (action === 'trainSlime') {
         const commandId = button.dataset.commandId as SlimeTrainerCommandId | undefined;
         if (commandId) {
@@ -502,14 +543,6 @@ function runHudTransientEffects(state: GameState): void {
     }
   }
 
-  if (isBookPanelOpen(state, 'defense') && state.defense.lastReward > 0) {
-    const marker = `${state.defense.score}:${Math.floor(state.resources.sigils)}:${state.defense.shotPulse}`;
-    if (marker !== lastDefenseRewardMarker) {
-      lastDefenseRewardMarker = marker;
-      showFloatingGain(state.defense.lastReward, '.defense-arena');
-    }
-  }
-
   if (isBookPanelOpen(state, 'blackjack') && state.blackjack.lastReward > 0 && !blackjackMotionIsSettling()) {
     const marker = `${state.blackjack.round}:${Math.floor(state.resources.chips)}:${state.blackjack.phase}`;
     if (marker !== lastBlackjackRewardMarker) {
@@ -535,7 +568,7 @@ function runHudTransientEffects(state: GameState): void {
   }
 
   if (isBookPanelOpen(state, 'mine') && state.mining.lastReward > 0) {
-    const marker = `${state.mining.totalMined}:${Math.floor(state.resources.minerals)}:${state.mining.hitPulse}`;
+    const marker = `${state.mining.totalMined}:${state.mining.lastBrokenDepth}:${state.mining.hitPulse}`;
     if (marker !== lastMiningRewardMarker) {
       lastMiningRewardMarker = marker;
       showFloatingGain(state.mining.lastReward, '.mining-grid');
@@ -661,9 +694,12 @@ function updateDynamicHudValues(state: GameState): void {
   setDynamicText('typing-reward', runeTypingRewardPreview(state));
   setDynamicText('typing-combo', state.runeTyping.combo);
   setDynamicText('typing-penalty', state.runeTyping.penaltyWordsRemaining);
-  setDynamicText('defense-enemy-count', state.defense.enemies.length);
   animateHundredProgress(state);
   updateDynamicDefensePanel(state);
+}
+
+function defenseHealthPercent(state: GameState): number {
+  return Math.max(0, Math.min(100, (state.defense.towerHealth / defenseMaxTowerHealth(state)) * 100));
 }
 
 function updateDynamicDefensePanel(state: GameState): void {
@@ -671,14 +707,19 @@ function updateDynamicDefensePanel(state: GameState): void {
     return;
   }
 
+  const healthPercent = defenseHealthPercent(state);
+  const healthBar = rootElement.querySelector<HTMLElement>('.defense-health');
   const healthFill = rootElement.querySelector<HTMLElement>('.defense-health i');
+  if (healthBar) {
+    healthBar.classList.toggle('is-full', healthPercent >= 100);
+  }
   if (healthFill) {
-    healthFill.style.width = `${Math.max(0, Math.min(100, state.defense.towerHealth * 10))}%`;
+    healthFill.style.width = `${healthPercent}%`;
   }
 
-  const waveFill = rootElement.querySelector<HTMLElement>('.defense-wave i');
+  const waveFill = rootElement.querySelector<HTMLElement>('.defense-wave-fill');
   if (waveFill) {
-    waveFill.style.width = `${Math.round(defenseWaveProgress(state) * 100)}%`;
+    waveFill.style.width = `${Math.round(defenseWaveProgress(state) * 25)}%`;
   }
 
   const actorsLayer = rootElement.querySelector<HTMLElement>('.defense-actors');
@@ -716,15 +757,26 @@ function updateDynamicDefensePanel(state: GameState): void {
   const currentShot = actorsLayer.querySelector<SVGSVGElement>('.defense-shot');
   if (!state.defense.shot) {
     currentShot?.remove();
-    return;
+  } else if (currentShot?.dataset.shotId !== String(state.defense.shot.id)) {
+    currentShot?.remove();
+    actorsLayer.insertAdjacentHTML('afterbegin', defenseShotMarkup(state.defense));
   }
 
-  if (currentShot?.dataset.shotId === String(state.defense.shot.id)) {
-    return;
+  const livePopupIds = new Set<string>();
+  for (const popup of state.defense.damagePopups) {
+    const popupId = String(popup.id);
+    livePopupIds.add(popupId);
+    if (!actorsLayer.querySelector<HTMLElement>(`.defense-damage-popup[data-popup-id="${popupId}"]`)) {
+      actorsLayer.insertAdjacentHTML('beforeend', defenseDamagePopupMarkup(popup));
+    }
   }
 
-  currentShot?.remove();
-  actorsLayer.insertAdjacentHTML('afterbegin', defenseShotMarkup(state.defense));
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-damage-popup').forEach((popupElement) => {
+    const popupId = popupElement.dataset.popupId;
+    if (!popupId || !livePopupIds.has(popupId)) {
+      popupElement.remove();
+    }
+  });
 }
 
 function animateHundredProgress(state: GameState): void {
@@ -902,7 +954,6 @@ function beginPanelInteraction(): void {
 function endPanelInteraction(): void {
   activePanelInteractionCount = Math.max(0, activePanelInteractionCount - 1);
   if (activePanelInteractionCount === 0) {
-    lastRenderSignature = '';
     renderHud(gameStore.snapshot);
   }
 }
@@ -1060,7 +1111,7 @@ function cycleBookPanelSize(bookId: BookId, panel: HTMLElement): void {
   bookPanelSizePresetIds.set(bookId, nextPreset.id);
   panel.classList.add('is-drag-positioned', 'is-resized');
   setBookPanelPosition(bookId, panel, currentLeft, currentTop);
-  setBookPanelSize(bookId, panel, nextPreset.width);
+  setBookPanelSize(bookId, panel, getBookPanelPresetWidth(bookId, nextPreset));
   setBookPanelPosition(bookId, panel, currentLeft, currentTop);
   lastRenderSignature = '';
   renderHud(gameStore.snapshot);
@@ -1072,10 +1123,18 @@ function getBookPanelPreset(bookId: BookId): BookPanelSizePreset {
 }
 
 function bookPanelSizeFromPreset(bookId: BookId, preset: BookPanelSizePreset): { width: number; height: number } {
+  const width = getBookPanelPresetWidth(bookId, preset);
   return {
-    width: preset.width,
-    height: getBookPanelHeightForWidth(bookId, preset.width),
+    width,
+    height: getBookPanelHeightForWidth(bookId, width),
   };
+}
+
+function getBookPanelPresetWidth(bookId: BookId, preset: BookPanelSizePreset): number {
+  if (bookId === 'defense' && preset.id === 'large') {
+    return Math.round(preset.width * DEFENSE_LARGE_PANEL_SCALE);
+  }
+  return preset.width;
 }
 
 function getBookPanelSize(bookId: BookId): { width: number; height: number } {
@@ -1131,7 +1190,7 @@ function bookOverlay(
   const position = bookPanelPositions.get(bookId);
   const panelSizePreset = getBookPanelPreset(bookId);
   const size = getBookPanelSize(bookId);
-  const dragClass = `${position ? ' is-drag-positioned' : ''} is-resized`;
+  const dragClass = `${position ? ' is-drag-positioned' : ''} is-resized panel-size-${panelSizePreset.id}`;
   const panelVars = [
     position ? `--panel-left:${position.left}px; --panel-top:${position.top}px;` : '',
     size ? `--panel-width:${size.width}px; --panel-height:${size.height}px;` : '',
@@ -1222,6 +1281,7 @@ function createHudSignature(state: GameState): string {
   const targetSkills = state.targetSkills;
   const mining = state.mining;
   const miningSkills = state.miningSkills;
+  const defenseSkills = state.defenseSkills;
   const slimeTrainer = state.slimeTrainer;
 
   return [
@@ -1243,7 +1303,7 @@ function createHudSignature(state: GameState): string {
     state.snake.invincibleTimer.toFixed(1),
     state.snake.body.map((cell) => `${cell.x},${cell.y}`).join(';'),
     state.defense.wave,
-    state.defense.towerHealth,
+    Math.ceil(state.defense.towerHealth),
     state.defense.score,
     state.defense.best,
     state.defense.lastReward,
@@ -1299,7 +1359,8 @@ function createHudSignature(state: GameState): string {
     mining.lastReward,
     mining.lastBrokenDepth,
     mining.hitPulse,
-    mining.blocks.map((block) => `${block.id},${block.depth},${block.health},${block.lastHit}`).join(';'),
+    mining.blocks.map((block) => `${block.id},${block.depth},${block.material},${block.health},${block.lastHit}`).join(';'),
+    MINING_MATERIAL_RESOURCE_IDS.map((resourceId) => `${resourceId}:${Math.floor(mining.materials[resourceId])}`).join(';'),
     slimeTrainer.level,
     slimeTrainer.xp,
     slimeTrainer.victories,
@@ -1338,6 +1399,21 @@ function createHudSignature(state: GameState): string {
     snakeSkills.bonusFruit,
     snakeSkills.extraLife,
     snakeSkills.edgeWrap,
+    defenseSkills.damage,
+    defenseSkills.attackSpeed,
+    defenseSkills.range,
+    defenseSkills.damagePerMeter,
+    defenseSkills.criticalChance,
+    defenseSkills.criticalMultiplier,
+    defenseSkills.ricochetCount,
+    defenseSkills.ricochetChance,
+    defenseSkills.superCriticalChance,
+    defenseSkills.superCriticalMultiplier,
+    defenseSkills.health,
+    defenseSkills.healthRegen,
+    defenseSkills.resistance,
+    defenseSkills.moneyPerEnemy,
+    defenseSkills.moneyPerWave,
     targetSkills.spawnSpeed,
     targetSkills.targetCount,
     targetSkills.damage,
@@ -1356,6 +1432,9 @@ function upgradePanel(bookId: BookId, state: GameState, shouldAnimate: boolean, 
   }
   if (bookId === 'serpent') {
     return snakeUpgradePanel(state, shouldAnimate, mode);
+  }
+  if (bookId === 'defense') {
+    return defenseUpgradePanel(state, shouldAnimate, mode);
   }
   if (bookId === 'targets') {
     return targetUpgradePanel(state, shouldAnimate, mode);
@@ -1389,26 +1468,39 @@ function upgradePanel(bookId: BookId, state: GameState, shouldAnimate: boolean, 
     `;
   }
   return `
-    <section class="upgrade-panel ${shouldAnimate ? 'is-entering' : ''}" aria-label="Ameliorations">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="${bookId}" title="Fermer">×</button>
-      <div class="upgrade-panel-grid">
-        <button class="upgrade-entry is-primary" data-action="buyUpgrade" data-book-id="${bookId}">
-          <strong>Puissance</strong>
-          <span>Lv ${book.level}</span>
-          <small>${upgradeManaCost(bookId, state)} Mana${resourceLabel}</small>
-        </button>
-        <div class="upgrade-entry">
-          <strong>Automatisation</strong>
-          <span>${book.automation > 0 ? 'Active' : 'Lv 2'}</span>
-          <small>Se debloque avec Puissance</small>
-        </div>
-        <div class="upgrade-entry">
-          <strong>Resonance</strong>
-          <span>Lv ${Math.max(0, book.level - 3)}</span>
-          <small>Bonus a partir du Lv 4</small>
-        </div>
-      </div>
-    </section>
+    ${standardUpgradePanel(bookId, shouldAnimate, 'Table des upgrades', definition.name, [
+      {
+        action: 'buyUpgrade',
+        bookId,
+        icon: '▲',
+        title: 'Puissance',
+        subtitle: `Lv ${book.level}`,
+        levelLabel: `Lv ${book.level}`,
+        detail: 'Upgrade principal du livre',
+        costHtml: standardManaCostHtml(upgradeManaCost(bookId, state), resourceLabel),
+        costText: `${upgradeManaCost(bookId, state)} Mana${resourceLabel}`,
+      },
+      {
+        icon: '⌁',
+        title: 'Automatisation',
+        subtitle: book.automation > 0 ? 'Active' : 'Verrouillee',
+        levelLabel: book.automation > 0 ? 'On' : 'Lv 2',
+        detail: 'Se debloque avec Puissance',
+        costHtml: 'Progression',
+        costText: 'Progression',
+        isInfo: true,
+      },
+      {
+        icon: '✦',
+        title: 'Resonance',
+        subtitle: `Lv ${Math.max(0, book.level - 3)}`,
+        levelLabel: `Lv ${Math.max(0, book.level - 3)}`,
+        detail: 'Bonus a partir du Lv 4',
+        costHtml: 'Passif',
+        costText: 'Passif',
+        isInfo: true,
+      },
+    ])}
   `;
 }
 
@@ -1437,6 +1529,23 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
           ${snakeSkillCompactButton(state, 'bonusFruit', '●')}
           ${snakeSkillCompactButton(state, 'extraLife', '♡')}
           ${snakeSkillCompactButton(state, 'edgeWrap', '⇄')}
+        </div>
+      </div>
+    `;
+  }
+  if (bookId === 'defense') {
+    return `
+      <div class="mini-skill-popover ${shouldAnimate ? 'is-entering' : ''}" aria-label="Mini competences du bastion">
+        <div class="mini-skill-scroll is-mana">
+          ${defenseSkillCompactButton(state, 'damage', '▲')}
+          ${defenseSkillCompactButton(state, 'attackSpeed', '⌁')}
+          ${defenseSkillCompactButton(state, 'range', '◎')}
+          ${defenseSkillCompactButton(state, 'criticalChance', '◇')}
+          ${defenseSkillCompactButton(state, 'ricochetCount', '↷')}
+          ${defenseSkillCompactButton(state, 'health', '♥')}
+          ${defenseSkillCompactButton(state, 'resistance', '▣')}
+          ${defenseSkillCompactButton(state, 'moneyPerEnemy', '◆')}
+          ${defenseSkillCompactButton(state, 'moneyPerWave', '◈')}
         </div>
       </div>
     `;
@@ -1496,6 +1605,234 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
   `;
 }
 
+interface StandardUpgradeTrack {
+  action?: string;
+  skillId?: string;
+  bookId?: BookId;
+  icon: string;
+  title: string;
+  subtitle: string;
+  levelLabel: string;
+  detail: string;
+  costHtml: string;
+  costText: string;
+  isMaxed?: boolean;
+  isInfo?: boolean;
+  tier?: 'gray' | 'green' | 'blue' | 'purple' | 'red' | 'yellow';
+}
+
+function standardUpgradePanel(
+  bookId: BookId,
+  shouldAnimate: boolean,
+  title: string,
+  subtitle: string,
+  tracks: StandardUpgradeTrack[],
+): string {
+  return `
+    <section class="upgrade-panel is-mana-skills is-blackjack-upgrades is-standard-upgrades ${shouldAnimate ? 'is-entering' : ''}" aria-label="${title}">
+      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="${bookId}" title="Fermer">×</button>
+      <div class="blackjack-upgrade-panel-header">
+        <div>
+          <strong>${title}</strong>
+          <span>${subtitle}</span>
+        </div>
+        <button class="blackjack-upgrade-hide" data-action="toggleCompactUpgradePanel" data-book-id="${bookId}" title="Masquer le panneau complet">
+          Compact
+        </button>
+      </div>
+      <div class="blackjack-upgrade-board" aria-label="${title}">
+        ${tracks.map(standardUpgradeTrackRow).join('')}
+      </div>
+    </section>
+  `;
+}
+
+function standardUpgradeTrackRow(track: StandardUpgradeTrack): string {
+  const stateClass = track.isInfo ? 'info' : track.isMaxed ? 'owned is-maxed' : 'next';
+  const tier = track.tier ?? (track.isInfo ? 'gray' : track.isMaxed ? 'green' : 'blue');
+  const actionAttrs = track.action && !track.isMaxed
+    ? `${track.action ? `data-action="${track.action}"` : ''}${track.skillId ? ` data-skill-id="${track.skillId}"` : ''}${track.bookId ? ` data-book-id="${track.bookId}"` : ''}`
+    : 'aria-disabled="true"';
+  return `
+    <article class="blackjack-upgrade-track is-standard-track">
+      <div class="blackjack-upgrade-track-main">
+        <div class="blackjack-upgrade-title">
+          <span class="blackjack-upgrade-icon blackjack-upgrade-glyph">${track.icon}</span>
+          <header>
+            <strong>${track.title}</strong>
+            <span>${track.subtitle}</span>
+          </header>
+        </div>
+      </div>
+      <div class="blackjack-upgrade-lane">
+        <div class="blackjack-upgrade-nodes">
+          <button
+            class="blackjack-upgrade-node is-${stateClass} is-tier-${tier}"
+            type="button"
+            ${actionAttrs}
+            aria-label="${track.title}: ${track.levelLabel}. ${track.detail} Cout: ${track.costText}."
+          >
+            <b>${track.icon}</b>
+            <span>${track.levelLabel}</span>
+            <i class="blackjack-upgrade-tooltip" role="tooltip">
+              <strong>${track.title}</strong>
+              <small>${track.levelLabel}</small>
+              <small>${track.detail}</small>
+              <em class="blackjack-tooltip-cost">
+                <span>Cout</span>
+                <b>${track.costHtml}</b>
+              </em>
+            </i>
+          </button>
+        </div>
+      </div>
+    </article>
+  `;
+}
+
+function standardManaCostHtml(cost: number, extraCost = ''): string {
+  return `${blackjackResourceCost('mana', String(cost))}${extraCost ? `<span class="standard-upgrade-extra-cost">${extraCost}</span>` : ''}`;
+}
+
+function defenseUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
+  if (mode === 'compact') {
+    return `
+      <section class="upgrade-panel is-compact ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences du bastion">
+        <button class="upgrade-panel-close" data-action="toggleCompactUpgradePanel" data-book-id="defense" title="Fermer">×</button>
+        <div class="compact-upgrade-grid is-mana">
+          ${defenseSkillCompactButton(state, 'damage', '▲')}
+          ${defenseSkillCompactButton(state, 'attackSpeed', '⌁')}
+          ${defenseSkillCompactButton(state, 'range', '◎')}
+          ${defenseSkillCompactButton(state, 'criticalChance', '◇')}
+          ${defenseSkillCompactButton(state, 'ricochetCount', '↷')}
+          ${defenseSkillCompactButton(state, 'health', '♥')}
+          ${defenseSkillCompactButton(state, 'resistance', '▣')}
+          ${defenseSkillCompactButton(state, 'moneyPerEnemy', '◆')}
+          ${defenseSkillCompactButton(state, 'moneyPerWave', '◈')}
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <section class="upgrade-panel is-mana-skills is-blackjack-upgrades is-standard-upgrades ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences du bastion">
+      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="defense" title="Fermer">×</button>
+      <div class="blackjack-upgrade-panel-header">
+        <div>
+          <strong>Table des upgrades</strong>
+          <span>Bastion</span>
+        </div>
+        <button class="blackjack-upgrade-hide" data-action="toggleCompactUpgradePanel" data-book-id="defense" title="Masquer le panneau complet">
+          Compact
+        </button>
+      </div>
+      <div class="blackjack-upgrade-board defense-upgrade-board" aria-label="Upgrades bastion">
+        ${defenseUpgradeRow('Attaque', 'Degats, cadence et critiques', [
+          defenseSkillTrack(state, 'damage', '▲', 'Damage', `${defenseTowerDamage(state)} degats`, '+1 degat par niveau'),
+          defenseSkillTrack(state, 'attackSpeed', '⌁', 'Attack speed', `${defenseTowerAttackInterval(state).toFixed(2)}s`, 'Reduit le cooldown de tir'),
+          defenseSkillTrack(state, 'damagePerMeter', '⇢', 'Damage / metre', `+${(state.defenseSkills.damagePerMeter * 0.75).toFixed(1)}/m`, 'Plus un ennemi est loin, plus il prend cher'),
+          defenseSkillTrack(state, 'criticalChance', '◇', 'Critical chance', `${Math.round(Math.min(60, state.defenseSkills.criticalChance * 2))}%`, 'Chance de coup critique'),
+          defenseSkillTrack(state, 'criticalMultiplier', '✦', 'Critical multiplier', `x${(2 + state.defenseSkills.criticalMultiplier * 0.125).toFixed(2)}`, 'Multiplicateur des critiques'),
+          defenseSkillTrack(state, 'superCriticalChance', '✹', 'Super critic chance', `${Math.round(Math.min(25, state.defenseSkills.superCriticalChance))}%`, 'Chance de super critique'),
+          defenseSkillTrack(state, 'superCriticalMultiplier', '✷', 'Super critical multiplier', `x${(3 + state.defenseSkills.superCriticalMultiplier * 0.25).toFixed(2)}`, 'Multiplicateur du super critique'),
+        ])}
+        ${defenseUpgradeRow('Défense', 'Vie, soin et mitigation', [
+          defenseSkillTrack(state, 'health', '♥', 'Vie', `${Math.round(state.defense.towerHealth)}/${defenseMaxTowerHealth(state)}`, '+2 PV max par niveau'),
+          defenseSkillTrack(state, 'healthRegen', '+', 'Regen de vie', `${defenseTowerHealthRegenPerSecond(state).toFixed(2)}/s`, 'Regeneration continue'),
+          defenseSkillTrack(state, 'resistance', '▣', 'Resistance', `${Math.round(defenseTowerResistance(state) * 100)}%`, 'Reduit les degats entrants'),
+        ])}
+        ${defenseUpgradeRow('Utility', 'Portee, ricochets et gains', [
+          defenseSkillTrack(state, 'range', '◎', 'Range', `${Math.round(defenseTowerRangePercent(state) * 100)}%`, 'Agrandit le cercle de portee'),
+          defenseSkillTrack(state, 'ricochetCount', '↷', 'Ricochet count', `${state.defenseSkills.ricochetCount}`, 'Nombre de rebonds possibles'),
+          defenseSkillTrack(state, 'ricochetChance', '⤷', 'Ricochet chance', `${Math.round(Math.min(80, state.defenseSkills.ricochetChance * 4))}%`, 'Chance de declencher un ricochet'),
+          defenseSkillTrack(state, 'moneyPerEnemy', '◆', 'Monnaie / ennemi', `${defenseEnemyReward(state)} sceaux`, '+1 sceau par ennemi'),
+          defenseSkillTrack(state, 'moneyPerWave', '◈', 'Monnaie / vague', `${defenseMoneyPerWave(state)} sceaux`, '+3 sceaux par vague'),
+        ])}
+      </div>
+    </section>
+  `;
+}
+
+function defenseUpgradeRow(title: string, subtitle: string, tracks: StandardUpgradeTrack[]): string {
+  return `
+    <article class="blackjack-upgrade-track defense-upgrade-row">
+      <div class="blackjack-upgrade-track-main defense-upgrade-row-main">
+        <header>
+          <strong>${title}</strong>
+          <span>${subtitle}</span>
+        </header>
+      </div>
+      <div class="defense-upgrade-nodes">
+        ${tracks.map(defenseUpgradeNode).join('')}
+      </div>
+    </article>
+  `;
+}
+
+function defenseUpgradeNode(track: StandardUpgradeTrack): string {
+  const actionAttributes = track.action && track.skillId ? `data-action="${track.action}" data-skill-id="${track.skillId}"` : '';
+  const disabled = track.isMaxed ? 'disabled' : '';
+  const title = `${track.title} - ${track.subtitle} - ${track.levelLabel} - ${track.costText}`;
+  return `
+    <button
+      class="blackjack-upgrade-node defense-upgrade-node ${track.isMaxed ? 'is-owned is-maxed' : ''}"
+      ${actionAttributes}
+      ${disabled}
+      title="${title}"
+      aria-label="${title}"
+    >
+      <b>${track.icon}</b>
+      <span>${track.levelLabel.replace('Lv ', '')}</span>
+      <i class="blackjack-upgrade-tooltip" role="tooltip">
+        <strong>${track.title}</strong>
+        <small>${track.subtitle}</small>
+        <small>${track.detail}</small>
+        <em class="blackjack-tooltip-cost">
+          <span>Cout</span>
+          <b>${track.costHtml}</b>
+        </em>
+      </i>
+    </button>
+  `;
+}
+
+function defenseSkillTrack(
+  state: GameState,
+  skillId: DefenseSkillId,
+  icon: string,
+  label: string,
+  value: string,
+  detail: string,
+): StandardUpgradeTrack {
+  const level = state.defenseSkills[skillId];
+  const maxLevel = defenseSkillMaxLevel(skillId);
+  const isMaxed = level >= maxLevel;
+  const cost = defenseSkillCost(state, skillId);
+  return {
+    action: 'buyDefenseSkill',
+    skillId,
+    icon,
+    title: label,
+    subtitle: value,
+    levelLabel: `Lv ${level}/${maxLevel}`,
+    detail,
+    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
+    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    isMaxed,
+  };
+}
+
+function defenseSkillCompactButton(state: GameState, skillId: DefenseSkillId, icon: string): string {
+  const level = state.defenseSkills[skillId];
+  const maxLevel = defenseSkillMaxLevel(skillId);
+  const isMaxed = level >= maxLevel;
+  return `
+    <button class="compact-upgrade-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyDefenseSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
+      <span>${icon}</span><strong>${level}</strong>
+    </button>
+  `;
+}
+
 function snakeUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
   if (mode === 'compact') {
     return `
@@ -1515,40 +1852,42 @@ function snakeUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'deta
   }
 
   return `
-    <section class="upgrade-panel is-mana-skills ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences du serpent">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="serpent" title="Fermer">×</button>
-      <div class="mana-skill-grid">
-        ${snakeSkillButton(state, 'speed', 'Vitesse', `${snakeMoveInterval(state).toFixed(2)}s/case`, '-0.022s par niveau, cap 0.10s')}
-        ${snakeSkillButton(state, 'gridSize', 'Taille grille', `${snakeGridSize(state)}x${snakeGridSize(state)}`, '+1 case par axe, max 9x9')}
-        ${snakeSkillButton(state, 'automation', 'Automatisation', snakeAutomationActive(state) ? 'Active' : 'Off', 'Assistance de direction bornee')}
-        ${snakeSkillButton(state, 'baseMultiplier', 'Base multi', `x${snakeBaseMultiplier(state).toFixed(1)}`, 'Monte par +0.1 jusqu a x5')}
-        ${snakeSkillButton(state, 'bonusFruit', 'Fruits bonus', snakeBonusFruitLabel(state), 'Orange, poire, banane')}
-        ${snakeSkillButton(state, 'extraLife', 'Vie sup.', `${state.snakeSkills.extraLife}`, 'Collision absorbee puis invincible')}
-        ${snakeSkillButton(state, 'edgeWrap', 'Traverse bord', state.snakeSkills.edgeWrap > 0 ? 'On' : 'Off', 'Sortir revient cote oppose')}
-      </div>
-    </section>
+    ${standardUpgradePanel('serpent', shouldAnimate, 'Table des upgrades', 'Serpent', [
+      snakeSkillTrack(state, 'speed', '↯', 'Vitesse', `${snakeMoveInterval(state).toFixed(2)}s/case`, '-0.022s par niveau, cap 0.10s'),
+      snakeSkillTrack(state, 'gridSize', '▦', 'Taille grille', `${snakeGridSize(state)}x${snakeGridSize(state)}`, '+1 case par axe, max 9x9'),
+      snakeSkillTrack(state, 'automation', '⌁', 'Automatisation', snakeAutomationActive(state) ? 'Active' : 'Off', 'Assistance de direction bornee'),
+      snakeSkillTrack(state, 'baseMultiplier', '×', 'Base multi', `x${snakeBaseMultiplier(state).toFixed(1)}`, 'Monte par +0.1 jusqu a x5'),
+      snakeSkillTrack(state, 'bonusFruit', '●', 'Fruits bonus', snakeBonusFruitLabel(state), 'Orange, poire, banane'),
+      snakeSkillTrack(state, 'extraLife', '♡', 'Vie sup.', `${state.snakeSkills.extraLife}`, 'Collision absorbee puis invincible'),
+      snakeSkillTrack(state, 'edgeWrap', '⇄', 'Traverse bord', state.snakeSkills.edgeWrap > 0 ? 'On' : 'Off', 'Sortir revient cote oppose'),
+    ])}
   `;
 }
 
-function snakeSkillButton(
+function snakeSkillTrack(
   state: GameState,
   skillId: SnakeSkillId,
+  icon: string,
   label: string,
   value: string,
   detail: string,
-): string {
+): StandardUpgradeTrack {
   const level = state.snakeSkills[skillId];
   const maxLevel = snakeSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = snakeSkillCost(state, skillId);
-  return `
-    <button class="mana-skill-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buySnakeSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <strong>${label}</strong>
-      <span>Lv ${level}/${maxLevel}</span>
-      <em>${value}</em>
-      <small>${isMaxed ? 'MAX' : `${cost} Mana`} · ${detail}</small>
-    </button>
-  `;
+  return {
+    action: 'buySnakeSkill',
+    skillId,
+    icon,
+    title: label,
+    subtitle: value,
+    levelLabel: `Lv ${level}/${maxLevel}`,
+    detail,
+    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
+    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    isMaxed,
+  };
 }
 
 function snakeSkillCompactButton(state: GameState, skillId: SnakeSkillId, icon: string): string {
@@ -1578,37 +1917,39 @@ function targetUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'det
   }
 
   return `
-    <section class="upgrade-panel is-mana-skills ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences des cibles">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="targets" title="Fermer">×</button>
-      <div class="mana-skill-grid">
-        ${targetSkillButton(state, 'spawnSpeed', 'Apparition', `${targetSpawnInterval(state.targetSkills.spawnSpeed).toFixed(2)}s`, 'Les cibles arrivent plus vite')}
-        ${targetSkillButton(state, 'targetCount', 'Cibles max', `${targetMaxActiveTargets(state.targetSkills.targetCount)}`, 'Plus de cibles en meme temps')}
-        ${targetSkillButton(state, 'damage', 'Degats', `${targetAttackDamage(state.targetSkills.damage)}`, 'Chaque clic tape plus fort')}
-        ${targetSkillButton(state, 'automation', 'Automatisation', targetAutomationLabel(state), 'Tir automatique sur les cibles')}
-      </div>
-    </section>
+    ${standardUpgradePanel('targets', shouldAnimate, 'Table des upgrades', 'Cibles', [
+      targetSkillTrack(state, 'spawnSpeed', '↯', 'Apparition', `${targetSpawnInterval(state.targetSkills.spawnSpeed).toFixed(2)}s`, 'Les cibles arrivent plus vite'),
+      targetSkillTrack(state, 'targetCount', '◎', 'Cibles max', `${targetMaxActiveTargets(state.targetSkills.targetCount)}`, 'Plus de cibles en meme temps'),
+      targetSkillTrack(state, 'damage', '▲', 'Degats', `${targetAttackDamage(state.targetSkills.damage)}`, 'Chaque clic tape plus fort'),
+      targetSkillTrack(state, 'automation', '⌁', 'Automatisation', targetAutomationLabel(state), 'Tir automatique sur les cibles'),
+    ])}
   `;
 }
 
-function targetSkillButton(
+function targetSkillTrack(
   state: GameState,
   skillId: TargetSkillId,
+  icon: string,
   label: string,
   value: string,
   detail: string,
-): string {
+): StandardUpgradeTrack {
   const level = state.targetSkills[skillId];
   const maxLevel = targetSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = targetSkillCost(state, skillId);
-  return `
-    <button class="mana-skill-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyTargetSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <strong>${label}</strong>
-      <span>Lv ${level}/${maxLevel}</span>
-      <em>${value}</em>
-      <small>${isMaxed ? 'MAX' : `${cost} Mana`} · ${detail}</small>
-    </button>
-  `;
+  return {
+    action: 'buyTargetSkill',
+    skillId,
+    icon,
+    title: label,
+    subtitle: value,
+    levelLabel: `Lv ${level}/${maxLevel}`,
+    detail,
+    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
+    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    isMaxed,
+  };
 }
 
 function targetSkillCompactButton(state: GameState, skillId: TargetSkillId, icon: string): string {
@@ -1655,36 +1996,38 @@ function miningUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'det
   }
 
   return `
-    <section class="upgrade-panel is-mana-skills ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences de mine">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="mine" title="Fermer">×</button>
-      <div class="mana-skill-grid">
-        ${miningSkillButton(state, 'pickaxeForce', 'Force de pioche', `${miningPickaxeDamage(state)} degats`, '+1 degat par niveau')}
-        ${miningSkillButton(state, 'splashDamage', 'Splash', `${miningSplashDamage(state)} voisin`, 'Tape les blocs adjacents')}
-        ${miningSkillButton(state, 'automation', 'Automatisation', miningAutomationLabel(state), 'Creuse le bloc le plus fragile')}
-      </div>
-    </section>
+    ${standardUpgradePanel('mine', shouldAnimate, 'Table des upgrades', 'Mine', [
+      miningSkillTrack(state, 'pickaxeForce', '▲', 'Force de pioche', `${miningPickaxeDamage(state)} degats`, '+1 degat par niveau'),
+      miningSkillTrack(state, 'splashDamage', '✣', 'Splash', `${miningSplashDamage(state)} voisin`, 'Tape les blocs adjacents'),
+      miningSkillTrack(state, 'automation', '⌁', 'Automatisation', miningAutomationLabel(state), 'Creuse le bloc le plus fragile'),
+    ])}
   `;
 }
 
-function miningSkillButton(
+function miningSkillTrack(
   state: GameState,
   skillId: MiningSkillId,
+  icon: string,
   label: string,
   value: string,
   detail: string,
-): string {
+): StandardUpgradeTrack {
   const level = state.miningSkills[skillId];
   const maxLevel = miningSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = miningSkillCost(state, skillId);
-  return `
-    <button class="mana-skill-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyMiningSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <strong>${label}</strong>
-      <span>Lv ${level}/${maxLevel}</span>
-      <em>${value}</em>
-      <small>${isMaxed ? 'MAX' : `${cost} Mana`} · ${detail}</small>
-    </button>
-  `;
+  return {
+    action: 'buyMiningSkill',
+    skillId,
+    icon,
+    title: label,
+    subtitle: value,
+    levelLabel: `Lv ${level}/${maxLevel}`,
+    detail,
+    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
+    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    isMaxed,
+  };
 }
 
 function miningSkillCompactButton(state: GameState, skillId: MiningSkillId, icon: string): string {
@@ -1855,6 +2198,8 @@ function blackjackUpgradeCellRow(state: GameState, row: BlackjackUpgradeRowConfi
 function blackjackUpgradeCellButton(state: GameState, cell: BlackjackUpgradeCellConfig): string {
   const level = blackjackUpgradeCellLevel(state, cell.id);
   const maxLevel = blackjackCurrentUpgradeCellMaxLevel(cell.id);
+  const displayLevel = blackjackUpgradeCellDisplayLevel(level);
+  const displayMaxLevel = blackjackUpgradeCellDisplayLevel(maxLevel);
   const tier = blackjackCurrentUpgradeCellTier(state, cell.id);
   const canBuy = blackjackCanBuyUpgradeCell(state, cell.id);
   const cost = blackjackCurrentUpgradeCellCost(state, cell.id);
@@ -1868,13 +2213,13 @@ function blackjackUpgradeCellButton(state: GameState, cell: BlackjackUpgradeCell
       class="blackjack-upgrade-node is-${stateClass} is-tier-${tier}"
       type="button"
       ${attrs}
-      aria-label="${cell.title}: niveau ${level}/${maxLevel}. ${effect} Cout: ${blackjackUpgradeCostText(cost)}."
+      aria-label="${cell.title}: niveau ${displayLevel}/${displayMaxLevel}. ${effect} Cout: ${blackjackUpgradeCostText(cost)}."
     >
       ${blackjackUpgradeIcon(cell.iconAsset, cell.title, 'is-node-icon')}
-      <span>${level >= maxLevel ? 'MAX' : `Lv ${level}`}</span>
+      <span>${level >= maxLevel ? 'MAX' : `Lv ${displayLevel}`}</span>
       <i class="blackjack-upgrade-tooltip" role="tooltip">
         <strong>${cell.title}</strong>
-        <small>Niveau ${level}/${maxLevel}</small>
+        <small>Niveau ${displayLevel}/${displayMaxLevel}</small>
         <small>${effect}</small>
         <em class="blackjack-tooltip-cost">
           <span>Cout</span>
@@ -1883,6 +2228,10 @@ function blackjackUpgradeCellButton(state: GameState, cell: BlackjackUpgradeCell
       </i>
     </button>
   `;
+}
+
+function blackjackUpgradeCellDisplayLevel(internalLevel: number): number {
+  return Math.max(0, internalLevel - 1);
 }
 
 function blackjackUpgradeCostHtml(cost: BlackjackUpgradeCost): string {
@@ -1959,38 +2308,40 @@ function manaUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detai
   }
 
   return `
-    <section class="upgrade-panel is-mana-skills ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences de mana">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="mana" title="Fermer">×</button>
-      <div class="mana-skill-grid">
-        ${manaSkillButton(state, 'power', 'Puissance', `+${state.manaSkills.power} par clic`, '+1 mana par niveau')}
-        ${manaSkillButton(state, 'automation', 'Automatisation', automationLabel(state), automationDetail(state))}
-        ${manaSkillButton(state, 'criticalHit', 'Critical hit', `${state.manaSkills.criticalHit}%`, '1% par niveau, max 20%')}
-        ${manaSkillButton(state, 'criticalEffect', 'Critical effect', `x${manaCriticalMultiplier(state).toFixed(1)}`, 'Critique plus violent, max x6')}
-        ${manaSkillButton(state, 'extraWands', 'Plus de baguette', `${manaWandCount(state) || 0}/10`, 'Max 10 baguettes ensemble')}
-      </div>
-    </section>
+    ${standardUpgradePanel('mana', shouldAnimate, 'Table des upgrades', 'Mana', [
+      manaSkillTrack(state, 'power', '▲', 'Puissance', `+${state.manaSkills.power} par clic`, '+1 mana par niveau'),
+      manaSkillTrack(state, 'automation', '⌁', 'Automatisation', automationLabel(state), automationDetail(state)),
+      manaSkillTrack(state, 'criticalHit', '◇', 'Critical hit', `${state.manaSkills.criticalHit}%`, '1% par niveau, max 20%'),
+      manaSkillTrack(state, 'criticalEffect', '✦', 'Critical effect', `x${manaCriticalMultiplier(state).toFixed(1)}`, 'Critique plus violent, max x6'),
+      manaSkillTrack(state, 'extraWands', '✧', 'Plus de baguette', `${manaWandCount(state) || 0}/10`, 'Max 10 baguettes ensemble'),
+    ])}
   `;
 }
 
-function manaSkillButton(
+function manaSkillTrack(
   state: GameState,
   skillId: ManaSkillId,
+  icon: string,
   label: string,
   value: string,
   detail: string,
-): string {
+): StandardUpgradeTrack {
   const level = state.manaSkills[skillId];
   const maxLevel = manaSkillMaxLevel(skillId);
   const isMaxed = maxLevel !== null && level >= maxLevel;
   const cost = manaSkillCost(state, skillId);
-  return `
-    <button class="mana-skill-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyManaSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <strong>${label}</strong>
-      <span>Lv ${level}${maxLevel === null ? '' : `/${maxLevel}`}</span>
-      <em>${value}</em>
-      <small>${isMaxed ? 'MAX' : `${cost} Mana`} · ${detail}</small>
-    </button>
-  `;
+  return {
+    action: 'buyManaSkill',
+    skillId,
+    icon,
+    title: label,
+    subtitle: value,
+    levelLabel: `Lv ${level}${maxLevel === null ? '' : `/${maxLevel}`}`,
+    detail,
+    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
+    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    isMaxed,
+  };
 }
 
 function manaSkillCompactButton(state: GameState, skillId: ManaSkillId, icon: string): string {
@@ -2069,15 +2420,53 @@ function showCrystalClickEffect(amount: number): void {
   if (!manaOrb) {
     return;
   }
+  const manaSprite = manaOrb.querySelector<HTMLElement>('.mana-sprite');
+  const now = performance.now();
+  manaClickTimestamps = manaClickTimestamps.filter((timestamp) => now - timestamp <= CRYSTAL_CLICK_SCALE_RESET_MS);
+  manaClickTimestamps.push(now);
+  const recentClickCount = manaClickTimestamps.filter((timestamp) => now - timestamp <= CRYSTAL_CLICK_RATE_WINDOW_MS).length;
+  const fastClickBoost = Math.min(1, Math.max(0, (recentClickCount - 1) / (CRYSTAL_CLICK_RATE_FOR_MAX_SHAKE - 1)));
+  const scaleProgress = Math.min(1, Math.max(0, (manaClickTimestamps.length - 1) / (CRYSTAL_CLICK_SCALE_CLICKS_FOR_MAX - 1)));
+  const shakePower = 1 + fastClickBoost;
+  const baseShake = 0.4;
+  const clickScale = 1 + scaleProgress;
+  manaOrb.style.setProperty('--crystal-shake-s', `${baseShake * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-sn', `${-baseShake * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-m', `${baseShake * 2 * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-mn', `${baseShake * -2 * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-l', `${baseShake * 3 * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-ln', `${baseShake * -3 * shakePower}px`);
+  manaOrb.style.setProperty('--crystal-shake-r', `${baseShake * 0.75 * shakePower}deg`);
+  manaOrb.style.setProperty('--crystal-shake-rn', `${baseShake * -0.75 * shakePower}deg`);
+  manaOrb.style.setProperty('--crystal-click-scale', clickScale.toFixed(3));
+  manaOrb.classList.add('is-click-charged');
+  if (manaClickScaleResetTimeout !== null) {
+    window.clearTimeout(manaClickScaleResetTimeout);
+  }
+  manaClickScaleResetTimeout = window.setTimeout(() => {
+    manaClickTimestamps = [];
+    manaOrb.style.setProperty('--crystal-click-scale', '1');
+    manaOrb.classList.remove('is-click-charged');
+    manaClickScaleResetTimeout = null;
+  }, CRYSTAL_CLICK_SCALE_RESET_MS);
 
-  manaOrb.classList.remove('is-clicked');
+  manaClickEffectFlip = !manaClickEffectFlip;
+  manaOrb.classList.remove('is-clicked-a', 'is-clicked-b');
+  if (manaSprite) {
+    manaSprite.style.animation = 'none';
+  }
+  manaOrb.style.animation = 'none';
   void manaOrb.offsetWidth;
-  manaOrb.classList.add('is-clicked');
+  manaOrb.style.animation = '';
+  if (manaSprite) {
+    manaSprite.style.animation = '';
+  }
+  manaOrb.classList.add(manaClickEffectFlip ? 'is-clicked-a' : 'is-clicked-b');
   const clickToken = String(performance.now());
   manaOrb.dataset.clickToken = clickToken;
   window.setTimeout(() => {
     if (manaOrb.dataset.clickToken === clickToken) {
-      manaOrb.classList.remove('is-clicked');
+      manaOrb.classList.remove('is-clicked-a', 'is-clicked-b');
     }
   }, 1000);
 
@@ -2099,7 +2488,7 @@ function showCrystalClickEffect(amount: number): void {
 
 function manaSparkCount(amount: number): number {
   const gain = Math.max(1, Math.round(amount));
-  return Math.min(42, Math.max(2, Math.ceil(Math.sqrt(gain) * 2.2)));
+  return Math.min(18, Math.max(2, Math.ceil(Math.sqrt(gain) * 1.35)));
 }
 
 function showWandCastEffect(): void {
@@ -2109,13 +2498,21 @@ function showWandCastEffect(): void {
     return;
   }
 
-  wands.classList.remove('is-casting');
-  manaOrb.classList.remove('is-wand-hit');
+  wandCastEffectFlip = !wandCastEffectFlip;
+  wands.classList.remove('is-casting-a', 'is-casting-b');
+  manaOrb.classList.remove('is-wand-hit-a', 'is-wand-hit-b');
   void wands.offsetWidth;
-  wands.classList.add('is-casting');
-  manaOrb.classList.add('is-wand-hit');
-  wands.addEventListener('animationend', () => wands.classList.remove('is-casting'), { once: true });
-  window.setTimeout(() => manaOrb.classList.remove('is-wand-hit'), 760);
+  void manaOrb.offsetWidth;
+  wands.classList.add(wandCastEffectFlip ? 'is-casting-a' : 'is-casting-b');
+  manaOrb.classList.add(wandCastEffectFlip ? 'is-wand-hit-a' : 'is-wand-hit-b');
+  const castToken = String(performance.now());
+  wands.dataset.castToken = castToken;
+  window.setTimeout(() => {
+    if (wands.dataset.castToken === castToken) {
+      wands.classList.remove('is-casting-a', 'is-casting-b');
+      manaOrb.classList.remove('is-wand-hit-a', 'is-wand-hit-b');
+    }
+  }, 660);
 }
 
 function showFloatingGain(amount: number, targetSelector = '.mana-orb'): void {
@@ -2184,6 +2581,18 @@ function snakePanel(state: GameState): string {
   const hearts = Array.from({ length: Math.min(3, snakeExtraLivesRemaining(state) + 1) }, () => '<span>♥</span>').join('');
   const canToggleAutomation = state.snakeSkills.automation > 0;
   const automationEnabled = canToggleAutomation && state.snakeSkills.automationEnabled;
+  const multiplier = snakeTotalMultiplier(state);
+  const automationButton = canToggleAutomation
+    ? `
+      <button
+        class="snake-auto-toggle ${automationEnabled ? 'is-on' : 'is-off'}"
+        data-action="toggleSnakeAutomation"
+        title="Automatisation serpent"
+        aria-label="Automatisation serpent"
+        aria-pressed="${automationEnabled ? 'true' : 'false'}"
+      >⌁</button>
+    `
+    : '';
   const bodyKeys = new Set(snake.body.map(cellKey));
   const headKey = cellKey(snake.body[0]);
   const foodKey = cellKey(snake.food);
@@ -2210,19 +2619,10 @@ function snakePanel(state: GameState): string {
   return `
     <div class="snake-panel">
       <div class="snake-board-shell">
-        <div class="snake-stats" aria-label="Etat du serpent">
-          <strong>+${snakeTotalMultiplier(state).toFixed(1).replace('.', ',')}</strong>
-          <div class="snake-hearts" aria-label="Vies">${hearts}</div>
-          <button
-            class="snake-auto-toggle ${automationEnabled ? 'is-on' : 'is-off'}"
-            data-action="toggleSnakeAutomation"
-            title="Automatisation serpent"
-            aria-label="Automatisation serpent"
-            aria-pressed="${automationEnabled ? 'true' : 'false'}"
-            ${canToggleAutomation ? '' : 'disabled'}
-          >⌁</button>
-        </div>
+        ${automationButton}
         <div class="snake-board has-snake-sprite" style="--snake-grid-size:${snake.gridSize}" role="img" aria-label="Mini jeu Snake du Livre du Serpent">
+          <div class="snake-board-hearts" aria-label="Vies">${hearts}</div>
+          <strong class="snake-board-multiplier" style="--snake-multiplier-hue:${snakeMultiplierHue(multiplier)}deg">+${multiplier.toFixed(1).replace('.', ',')}</strong>
           <span class="snake-spriterrific-familiar" aria-hidden="true"></span>
           ${cells}
           ${snakeSegments}
@@ -2230,6 +2630,15 @@ function snakePanel(state: GameState): string {
       </div>
     </div>
   `;
+}
+
+function snakeMultiplierHue(multiplier: number): number {
+  const stops = [52, 32, 8, 338, 286, 232, 190, 142];
+  const progress = Math.max(0, Math.min(stops.length - 1, (multiplier - 1) * 1.4));
+  const index = Math.floor(progress);
+  const nextIndex = Math.min(stops.length - 1, index + 1);
+  const blend = progress - index;
+  return Math.round(stops[index] + (stops[nextIndex] - stops[index]) * blend);
 }
 
 function snakeAtlasSegments(body: SnakeCell[], gridSize: number, headDirection: SnakeDirection, moveFrame: number): string {
@@ -2340,19 +2749,29 @@ function isOppositeSnakeDirection(first: SnakeDirection, second: SnakeDirection)
 }
 
 function miningPanel(state: GameState): string {
+  const exchangeValue = miningMaterialExchangeTotal(state);
   const blocks = state.mining.blocks
     .map((block) => {
       const health = Math.max(0, Math.round((block.health / block.maxHealth) * 100));
+      const material = miningBlockMaterialById(block.material);
+      const spriteTier = miningBlockSpriteTierForDepth(block.depth);
+      const crackOverlay = miningBlockCrackOverlayForDamage(block.health, block.maxHealth, block.id);
+      const crackStyle = crackOverlay
+        ? `--crack-opacity:0.75; --crack-x:${crackOverlay.column - 1}; --crack-y:${crackOverlay.row - 1};`
+        : '--crack-opacity:0; --crack-x:0; --crack-y:0;';
       return `
         <button
-          class="mining-block"
+          class="${miningBlockClassNames(state, block)}"
           data-action="digMiningBlock"
           data-block-id="${block.id}"
-          style="--block-health:${health}%; --block-depth:${Math.min(9, block.depth)}; --block-hit:${block.lastHit % 2}"
-          title="Profondeur ${block.depth}, ${block.health}/${block.maxHealth} PV"
-          aria-label="Bloc de terre profondeur ${block.depth}, ${block.health} PV sur ${block.maxHealth}"
+          data-material="${material.id}"
+          data-sprite-index="${spriteTier.spriteIndex}"
+          data-shade-level="${spriteTier.shadeLevel}"
+          style="--block-health:${health}%; --block-depth:${Math.min(9, block.depth)}; --block-hit:${block.lastHit % 2}; --block-shade:${spriteTier.shadeLevel}; --block-sprite:url('${spriteTier.assetPath}'); ${crackStyle}"
+          title="${material.name} - profondeur ${block.depth}, ${block.health}/${block.maxHealth} PV"
+          aria-label="Bloc de ${material.name} profondeur ${block.depth}, ${block.health} PV sur ${block.maxHealth}"
         >
-          <span>${block.depth}</span>
+          <b>${material.shortName}</b>
           <i>${block.health}</i>
         </button>
       `;
@@ -2362,13 +2781,20 @@ function miningPanel(state: GameState): string {
   return `
     <div class="mining-panel">
       <div class="mining-grid-shell">
-        <div class="mining-stats" aria-label="Etat de la mine">
-          <span>▰ <strong data-dynamic-value="minerals">${Math.floor(state.resources.minerals)}</strong></span>
-          <span>▲ <strong>${miningPickaxeDamage(state)}</strong></span>
-          <span>✣ <strong>${miningSplashDamage(state)}</strong></span>
-          <span>⌁ <strong>${miningAutomationLabel(state)}</strong></span>
+        <div class="mining-material-bank" aria-label="Ressources de mine">
+          ${miningMaterialStocks(state)}
+          <button
+            class="mining-exchange"
+            data-action="exchangeMiningMaterials"
+            title="Echanger les ressources contre monnaie de mine"
+            aria-label="Echanger les ressources de mine contre ${exchangeValue} pieces de mine"
+            ${exchangeValue > 0 ? '' : 'disabled'}
+          >
+            <span>⇄</span>
+            <strong>${exchangeValue}</strong>
+          </button>
         </div>
-        <div class="mining-grid" role="grid" aria-label="Mine des Profondeurs 3 par 5">
+        <div class="mining-grid" role="grid" aria-label="Mine des Profondeurs 7 par 7">
           ${blocks}
         </div>
         <div class="mining-depth" aria-label="Profondeur">
@@ -2378,6 +2804,50 @@ function miningPanel(state: GameState): string {
       </div>
     </div>
   `;
+}
+
+function miningMaterialStocks(state: GameState): string {
+  return MINING_MATERIAL_RESOURCE_IDS.map((resourceId) => {
+    const amount = Math.floor(state.mining.materials[resourceId]);
+    const material = MINING_BLOCK_MATERIALS[resourceId];
+    return `
+      <span class="mining-material-stock is-${resourceId}" title="${material.name}" aria-label="${material.name}: ${amount}">
+        <i></i>
+        <strong>${amount}</strong>
+      </span>
+    `;
+  }).join('');
+}
+
+function miningMaterialExchangeTotal(state: GameState): number {
+  return MINING_MATERIAL_RESOURCE_IDS.reduce((total, resourceId) => {
+    return total + Math.floor(state.mining.materials[resourceId]) * miningMaterialExchangeValue(resourceId);
+  }, 0);
+}
+
+function miningBlockClassNames(state: GameState, block: MiningBlock): string {
+  const spriteTier = miningBlockSpriteTierForDepth(block.depth);
+  const classes = ['mining-block', `is-${block.material}`, `is-shade-${spriteTier.shadeLevel}`, `is-sprite-${spriteTier.spriteIndex}`];
+  const x = block.id % MINING_GRID_COLUMNS;
+  const y = Math.floor(block.id / MINING_GRID_COLUMNS);
+  const neighbors: Array<[string, number, number]> = [
+    ['left', x - 1, y],
+    ['right', x + 1, y],
+    ['up', x, y - 1],
+    ['down', x, y + 1],
+  ];
+
+  for (const [side, neighborX, neighborY] of neighbors) {
+    if (neighborX < 0 || neighborX >= MINING_GRID_COLUMNS || neighborY < 0 || neighborY >= MINING_GRID_ROWS) {
+      continue;
+    }
+    const neighbor = state.mining.blocks[neighborY * MINING_GRID_COLUMNS + neighborX];
+    if (neighbor && block.depth > neighbor.depth) {
+      classes.push(`has-shadow-${side}`);
+    }
+  }
+
+  return classes.join(' ');
 }
 
 function slimeTrainerPanel(state: GameState): string {
@@ -3235,9 +3705,8 @@ function targetPanel(state: GameState): string {
 function defensePanel(state: GameState): string {
   const defense = state.defense;
   const hasTiledTerrain = hasDefenseTiledMap();
-  const healthPercent = Math.max(0, Math.min(100, defense.towerHealth * 10));
-  const wavePercent = Math.round(defenseWaveProgress(state) * 100);
   const attackInterval = defenseTowerAttackInterval(state).toFixed(2);
+  const rangeScale = defenseTowerRange(state);
 
   return `
     <div class="defense-panel">
@@ -3245,14 +3714,8 @@ function defensePanel(state: GameState): string {
         <div class="defense-terrain ${hasTiledTerrain ? 'is-tiled' : 'is-fallback'}" aria-hidden="true">
           ${renderDefenseTiledTerrain()}
         </div>
-        <div class="defense-stats" aria-label="Etat du bastion">
-          <span>♥ <strong>${defense.towerHealth}/10</strong></span>
-          <span>◆ <strong data-dynamic-value="sigils">${Math.floor(state.resources.sigils)}</strong></span>
-          <span>W <strong>${defense.wave}</strong></span>
-        </div>
-        <div class="defense-health" aria-hidden="true"><i style="width:${healthPercent}%"></i></div>
-        <div class="defense-range" aria-hidden="true"></div>
-        <div class="defense-wave" aria-label="Progression vague"><i style="width:${wavePercent}%"></i></div>
+        <div class="defense-range" style="--defense-range-scale:${rangeScale.toFixed(3)}" aria-hidden="true"></div>
+        ${defenseWaveRail(state)}
         <div class="defense-lanes" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </div>
@@ -3270,16 +3733,16 @@ function defensePanel(state: GameState): string {
         <div class="defense-mini-stats" aria-label="Bastion">
           <span>▲ <strong>${defenseTowerDamage(state)}</strong></span>
           <span>⌁ <strong>${attackInterval}s</strong></span>
-          <button class="defense-speed-toggle" data-action="cycleDefenseSpeed" data-book-id="defense" title="Vitesse du jeu TD" aria-label="Changer la vitesse du tower defense">x${defense.speedMultiplier}</button>
-          <span>◎ <strong data-dynamic-value="defense-enemy-count">${defense.enemies.length}</strong>/${defenseWaveEnemyCount(state)}</span>
+          <span>◎ <strong>${Math.round(defenseTowerRangePercent(state) * 100)}%</strong></span>
         </div>
+        <button class="defense-speed-toggle" data-action="cycleDefenseSpeed" data-book-id="defense" title="Vitesse du jeu TD" aria-label="Changer la vitesse du tower defense">x${defense.speedMultiplier}</button>
       </div>
     </div>
   `;
 }
 
 function defenseActorsMarkup(defense: GameState['defense']): string {
-  return `${defenseShotMarkup(defense)}${defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join('')}`;
+  return `${defenseShotMarkup(defense)}${defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join('')}${defense.damagePopups.map((popup) => defenseDamagePopupMarkup(popup)).join('')}`;
 }
 
 function defenseEnemyMarkup(enemy: GameState['defense']['enemies'][number]): string {
@@ -3306,6 +3769,35 @@ function defenseShotMarkup(defense: GameState['defense']): string {
     <svg class="defense-shot" data-shot-id="${defense.shot.id}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
       <line x1="50" y1="50" x2="${shotTarget.x}" y2="${shotTarget.y}"></line>
     </svg>
+  `;
+}
+
+function defenseWaveRail(state: GameState): string {
+  const wave = state.defense.wave;
+  const progress = Math.round(defenseWaveProgress(state) * 100);
+  const markerValues = wave === 1 ? [1, 2, 3, 4] : [wave - 1, wave, wave + 1, wave + 2];
+  const currentIndex = markerValues.indexOf(wave);
+  const segmentStart = 12.5 + currentIndex * 25;
+  const segmentWidth = progress * 0.25;
+
+  return `
+    <div class="defense-wave" aria-label="Vague ${wave}">
+      <div class="defense-wave-track">
+        <i class="defense-wave-fill" style="left:${segmentStart}%; width:${segmentWidth}%"></i>
+      </div>
+    </div>
+  `;
+}
+
+function defenseDamagePopupMarkup(popup: GameState['defense']['damagePopups'][number]): string {
+  const position = defenseEnemyPosition(popup);
+  return `
+    <span
+      class="defense-damage-popup is-${popup.kind}"
+      data-popup-id="${popup.id}"
+      style="--damage-x:${position.x}%; --damage-y:${position.y}%"
+      aria-hidden="true"
+    >${popup.amount}</span>
   `;
 }
 

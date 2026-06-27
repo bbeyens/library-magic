@@ -75,6 +75,7 @@ const GID_FLIP_HORIZONTAL = 0x80000000;
 const GID_FLIP_VERTICAL = 0x40000000;
 const GID_FLIP_DIAGONAL = 0x20000000;
 const GID_MASK = 0x1fffffff;
+const DEFENSE_ANIMATION_REST_MS = 500;
 const DEFENSE_FOREGROUND_LAYER_NAMES = new Set([
   'Rock',
   'Mousse arbre/ tente/ fleur',
@@ -137,7 +138,32 @@ const TILESET_MANIFEST: Record<string, Omit<TilesetDefinition, 'firstgid'>> = {
     imageWidth: 192,
     imageHeight: 64,
     imageUrl: '/assets/td/tiles/Tileset%20TD/3%20Animated%20Objects/1%20Flag/1.png',
-    animations: new Map(),
+    animations: new Map([
+      [
+        12,
+        tilesetFrameAnimation('/assets/td/tiles/Tileset%20TD/3%20Animated%20Objects/1%20Flag/1.png', 192, 64, 12, 12, [
+          12, 14, 16, 18, 20, 22,
+        ]),
+      ],
+      [
+        13,
+        tilesetFrameAnimation('/assets/td/tiles/Tileset%20TD/3%20Animated%20Objects/1%20Flag/1.png', 192, 64, 12, 13, [
+          13, 15, 17, 19, 21, 23,
+        ]),
+      ],
+      [
+        24,
+        tilesetFrameAnimation('/assets/td/tiles/Tileset%20TD/3%20Animated%20Objects/1%20Flag/1.png', 192, 64, 12, 24, [
+          24, 26, 28, 30, 32, 34,
+        ]),
+      ],
+      [
+        25,
+        tilesetFrameAnimation('/assets/td/tiles/Tileset%20TD/3%20Animated%20Objects/1%20Flag/1.png', 192, 64, 12, 25, [
+          25, 27, 29, 31, 33, 35,
+        ]),
+      ],
+    ]),
   },
   'Campfire A.tsx': {
     name: 'Campfire A',
@@ -316,8 +342,8 @@ function renderTile(
     return '';
   }
 
-  const frameDuration = animation.duration;
-  const frameImage = renderTileFrame(frames, sourceX, sourceY, frameDuration);
+  const frameDuration = animation.duration + (frameCount > 1 ? DEFENSE_ANIMATION_REST_MS : 0);
+  const frameImage = renderTileFrame(frames, sourceX, sourceY);
 
   return `
     <span
@@ -404,6 +430,35 @@ function normalizeAnimations(definition: TilesetDefinition, tiles: NonNullable<T
   return animations;
 }
 
+function tilesetFrameAnimation(
+  imageUrl: string,
+  imageWidth: number,
+  imageHeight: number,
+  columns: number,
+  baseTileId: number,
+  frameTileIds: number[],
+): TilesetAnimation {
+  const baseColumn = baseTileId % columns;
+  const baseRow = Math.floor(baseTileId / columns);
+  const frames = frameTileIds.map((tileId) => {
+    const frameColumn = tileId % columns;
+    const frameRow = Math.floor(tileId / columns);
+    return {
+      imageUrl,
+      imageWidth,
+      imageHeight,
+      duration: 250,
+      sourceOffsetX: (frameColumn - baseColumn) * 16,
+      sourceOffsetY: (frameRow - baseRow) * 16,
+    };
+  });
+
+  return {
+    frames,
+    duration: frames.reduce((total, frame) => total + (frame.duration ?? 0), 0),
+  };
+}
+
 function fallbackAnimation(tileset: TilesetDefinition): TilesetAnimation {
   const frames =
     tileset.fallbackAnimation ??
@@ -434,13 +489,10 @@ function renderTileFrame(
   frames: TilesetAnimationFrame[],
   sourceX: number,
   sourceY: number,
-  frameDuration: number,
 ): string {
   const frame = frames[0];
   const sheetWidthScale = frame.imageWidth / 16;
   const sheetHeightScale = frame.imageHeight / 16;
-  const phase = Date.now() % frameDuration;
-  const delay = Math.round(-phase);
   const positions = frames
     .map((tileFrame, index) => {
       const frameSourceX = sourceX + (tileFrame.sourceOffsetX ?? 0);
@@ -461,7 +513,7 @@ function renderTileFrame(
         height:${percent(sheetHeightScale)};
         background-image:url('${frame.imageUrl}');
         ${positions}
-        --td-frame-delay:${delay}ms;
+        --td-frame-delay:0ms;
       "
     ></span>
   `;

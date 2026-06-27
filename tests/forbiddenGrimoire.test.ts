@@ -55,6 +55,26 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });
+  state.mana = 40;
+  state.resources.scales = 10;
+
+  applyAction(state, { type: 'offerForbiddenGrimoire' });
+  applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'herbarium' });
+
+  assert.equal(state.forbiddenGrimoire.selectedBookId, 'herbarium');
+  assert.equal(state.forbiddenGrimoire.offerings.mana, 0);
+  assert.equal(state.forbiddenGrimoire.offerings.scales, 0);
+
+  applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });
+
+  assert.equal(state.forbiddenGrimoire.selectedBookId, 'typing');
+  assert.equal(state.forbiddenGrimoire.offerings.mana, 40);
+  assert.equal(state.forbiddenGrimoire.offerings.scales, 10);
+}
+
+{
+  const state = createInitialState();
   state.forbiddenGrimoire.level = 2;
   state.forbiddenGrimoire.keys = 1;
   applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });
@@ -67,7 +87,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
   assert.equal(state.books.serpent.unlocked, false);
   assert.equal(state.books.typing.unlocked, true);
   assert.equal(state.selectedBook, 'typing');
-  assert.deepEqual(state.openBookPanels, [{ bookId: 'typing', slot: 0 }]);
+  assert.deepEqual(state.openBookPanels, [{ bookId: 'typing', slot: 3 }]);
   assert.equal(state.forbiddenGrimoire.keys, 0);
   assert.equal(state.forbiddenGrimoire.level, 2);
   assert.equal(state.forbiddenGrimoire.selectedBookId, null);

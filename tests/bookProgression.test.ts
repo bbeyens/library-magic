@@ -32,7 +32,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
   assert.equal(state.mana, 0);
   assert.equal(state.forbiddenGrimoire.keys, 0);
   assert.equal(state.selectedBook, 'serpent');
-  assert.deepEqual(state.openBookPanels, [{ bookId: 'serpent', slot: 0 }]);
+  assert.deepEqual(state.openBookPanels, [{ bookId: 'serpent', slot: 3 }]);
 }
 
 {
@@ -71,6 +71,37 @@ import { createInitialState } from '../src/game/simulation/state.ts';
   assert.deepEqual(state.resources, resourcesBefore);
   assert.equal(state.selectedBook, 'mana');
   assert.deepEqual(state.openBookPanels, []);
+}
+
+{
+  const state = createInitialState();
+  applyAction(state, { type: 'unlockAllBooks' });
+
+  applyAction(state, { type: 'selectBook', bookId: 'mana' });
+  applyAction(state, { type: 'selectBook', bookId: 'typing' });
+
+  assert.deepEqual(state.openBookPanels, [
+    { bookId: 'mana', slot: 3 },
+    { bookId: 'typing', slot: 0 },
+  ]);
+  assert.equal(state.selectedBook, 'typing');
+}
+
+{
+  const state = createInitialState();
+  applyAction(state, { type: 'unlockAllBooks' });
+  state.openBookPanels = [
+    { bookId: 'mana', slot: 3 },
+    { bookId: 'typing', slot: 0 },
+  ];
+
+  applyAction(state, { type: 'selectBook', bookId: 'typing' });
+
+  assert.deepEqual(state.openBookPanels, [
+    { bookId: 'mana', slot: 3 },
+    { bookId: 'typing', slot: 0 },
+  ]);
+  assert.equal(state.selectedBook, 'typing');
 }
 
 console.log('bookProgression ok');

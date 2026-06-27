@@ -195,7 +195,8 @@ button {
 
 .book-overlay.panel-slot-3,
 .book-overlay.panel-slot-7 {
-  left: calc(var(--panel-left-col) + (var(--panel-width-auto) + var(--panel-gap)) * 3);
+  right: var(--panel-left-col);
+  left: auto;
 }
 
 .book-overlay.panel-slot-8 {
@@ -301,6 +302,8 @@ button {
   grid-template-columns: 58px 19px;
   min-height: 58px;
   margin-bottom: 0;
+  opacity: 1;
+  background: transparent;
 }
 
 .book-page-header.is-minimal.has-mini-skills {
@@ -357,7 +360,9 @@ button {
   color: #eef4ee;
   font-size: 30px;
   line-height: 1;
-  background: linear-gradient(180deg, #43baf1, #167eaa);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(67, 186, 241, 0.3) 0 46%, rgba(22, 126, 170, 0.7) 76% 100%),
+    linear-gradient(180deg, rgba(67, 186, 241, 0.7), rgba(22, 126, 170, 0.7));
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.24);
   box-shadow:
     inset 0 -8px 0 rgba(0, 0, 0, 0.16),
@@ -375,7 +380,9 @@ button {
   color: #eef4ee;
   font-size: 0;
   line-height: 1;
-  background: linear-gradient(180deg, #326d83, #24495d);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(50, 109, 131, 0.3) 0 44%, rgba(36, 73, 93, 0.7) 76% 100%),
+    linear-gradient(180deg, rgba(50, 109, 131, 0.7), rgba(36, 73, 93, 0.7));
   box-shadow:
     inset 0 -7px 0 rgba(0, 0, 0, 0.18),
     0 4px 0 rgba(0, 0, 0, 0.2);
@@ -539,8 +546,8 @@ button {
   }
 
   .mini-skill-popover .compact-upgrade-entry strong {
-    top: -5px;
-    right: -5px;
+    top: 1px;
+    right: 1px;
     min-width: 20px;
     height: 20px;
     font-size: 10px;
@@ -582,7 +589,7 @@ button {
 }
 
 .compact-upgrade-grid.is-blackjack {
-  grid-template-columns: repeat(5, 48px);
+  grid-template-columns: repeat(5, minmax(36px, 48px));
   gap: 7px;
 }
 
@@ -963,7 +970,6 @@ button.compact-upgrade-entry {
 
 .blackjack-upgrade-node[data-action]:hover,
 .blackjack-upgrade-node[data-action]:focus-visible {
-  transform: translateY(-1px);
   box-shadow:
     inset 0 -3px 0 rgba(83, 53, 29, 0.12),
     0 5px 0 rgba(83, 53, 29, 0.12),
@@ -1008,7 +1014,9 @@ button.compact-upgrade-entry {
 }
 
 .upgrade-panel.is-blackjack-upgrades {
-  overflow: visible;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border-color: rgba(219, 176, 92, 0.84);
   color: #f8edcf;
   background:
@@ -1067,6 +1075,7 @@ button.compact-upgrade-entry {
 }
 
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-board {
+  min-width: 0;
   gap: 5px;
   padding: 0 12px 6px 0;
 }
@@ -1075,6 +1084,7 @@ button.compact-upgrade-entry {
   position: relative;
   z-index: 1;
   grid-template-columns: minmax(150px, 0.58fr) minmax(0, 1.42fr);
+  min-width: 0;
   gap: 8px;
   min-height: 62px;
   padding: 6px;
@@ -1231,6 +1241,7 @@ button.compact-upgrade-entry {
 }
 
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-lane {
+  min-width: 0;
   align-content: center;
   gap: 0;
   padding: 0;
@@ -1248,7 +1259,8 @@ button.compact-upgrade-entry {
 }
 
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-nodes {
-  grid-template-columns: repeat(5, minmax(38px, 1fr));
+  min-width: 0;
+  grid-template-columns: repeat(5, minmax(34px, 1fr));
   gap: 6px;
 }
 
@@ -1276,6 +1288,19 @@ button.compact-upgrade-entry {
   height: 26px;
 }
 
+.blackjack-upgrade-glyph {
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(245, 214, 147, 0.22);
+  border-radius: 8px;
+  color: #fff0c0;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  background: rgba(255, 244, 205, 0.08);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.24);
+}
+
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node b {
   color: #9de8ff;
   font-size: 14px;
@@ -1283,6 +1308,89 @@ button.compact-upgrade-entry {
 
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node span {
   display: none;
+}
+
+.upgrade-panel.is-standard-upgrades .blackjack-upgrade-nodes {
+  grid-template-columns: minmax(74px, 112px);
+  justify-content: start;
+}
+
+.upgrade-panel.is-standard-upgrades .blackjack-upgrade-node b {
+  color: inherit;
+  font-size: 19px;
+}
+
+.upgrade-panel.is-standard-upgrades .blackjack-upgrade-node span {
+  display: block;
+  margin-top: 2px;
+  color: rgba(255, 240, 192, 0.86);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.32);
+}
+
+.defense-upgrade-category {
+  margin: 7px 0 1px;
+  color: #ffe29a;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.defense-upgrade-category:first-child {
+  margin-top: 0;
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-board {
+  gap: 8px;
+  padding-right: 12px;
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-row {
+  grid-template-columns: minmax(104px, 0.36fr) minmax(0, 1.64fr);
+  min-height: 62px;
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-row-main {
+  align-content: center;
+}
+
+.defense-upgrade-nodes {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  overflow-y: visible;
+  padding: 2px 2px 7px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 214, 147, 0.34) transparent;
+}
+
+.defense-upgrade-nodes::-webkit-scrollbar {
+  height: 5px;
+}
+
+.defense-upgrade-nodes::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.defense-upgrade-nodes::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(245, 214, 147, 0.34);
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-node {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-node b {
+  font-size: 16px;
+}
+
+.upgrade-panel.is-blackjack-upgrades .defense-upgrade-node span {
+  font-size: 7px;
 }
 
 .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-tooltip span,
@@ -1341,7 +1449,8 @@ button.compact-upgrade-entry {
   top: calc(100% + 10px);
   bottom: auto;
   z-index: 9999;
-  width: min(260px, 64cqw);
+  width: min(240px, calc(100cqw - 24px));
+  max-width: calc(100cqw - 24px);
   padding: 9px 10px;
   border-color: #d7aa55;
   color: #1a3428;
@@ -1410,19 +1519,197 @@ button.compact-upgrade-entry {
   font-size: 13px;
 }
 
-@media (max-width: 760px) {
+.standard-upgrade-extra-cost {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 5px;
+  color: #77522a;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+@container book-panel (max-width: 420px) {
+  .upgrade-panel.is-compact {
+    inset: 86px 10px auto 10px;
+    min-height: 92px;
+    padding: 10px;
+  }
+
+  .compact-upgrade-grid.is-blackjack {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 5px;
+    padding-right: 18px;
+  }
+
+  .compact-upgrade-grid.is-blackjack .compact-upgrade-entry {
+    min-height: 62px;
+  }
+
+  .compact-upgrade-grid.is-blackjack .compact-upgrade-entry span {
+    font-size: 22px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades {
+    inset: 86px 10px 10px;
+    padding: 10px 8px 10px 10px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-panel-header {
+    top: -10px;
+    margin: -10px 34px 7px -10px;
+    padding: 7px 8px 6px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-panel-header strong {
+    font-size: 13px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-hide {
+    min-height: 23px;
+    padding: 2px 7px;
+    font-size: 10px;
+  }
+
   .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-track {
     grid-template-columns: 1fr;
+    gap: 6px;
+    min-height: 0;
+    padding: 6px;
   }
 
   .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-track-main {
-    padding: 0 0 10px;
+    padding: 0 0 6px;
     border-right: 0;
     border-bottom: 1px solid rgba(245, 214, 147, 0.16);
   }
 
+  .blackjack-upgrade-title {
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .blackjack-upgrade-icon {
+    width: 25px;
+    height: 25px;
+  }
+
   .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-nodes {
-    grid-template-columns: repeat(3, minmax(62px, 1fr));
+    grid-template-columns: repeat(5, minmax(28px, 1fr));
+    gap: 4px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node {
+    height: 38px;
+    padding: 3px;
+    border-radius: 8px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node .blackjack-upgrade-icon.is-node-icon {
+    width: 23px;
+    height: 23px;
+  }
+}
+
+@container book-panel (max-width: 280px) {
+  .upgrade-panel.is-compact {
+    inset: 78px 8px auto 8px;
+    min-height: 78px;
+    padding: 8px;
+  }
+
+  .compact-upgrade-grid.is-blackjack {
+    gap: 3px;
+    padding-right: 16px;
+  }
+
+  .compact-upgrade-grid.is-blackjack .compact-upgrade-entry {
+    min-height: 52px;
+    border-radius: 8px;
+  }
+
+  .compact-upgrade-grid.is-blackjack .compact-upgrade-entry span {
+    font-size: 18px;
+  }
+
+  .compact-upgrade-grid.is-blackjack .compact-upgrade-entry strong {
+    right: 4px;
+    bottom: 4px;
+    min-width: 17px;
+    height: 17px;
+    font-size: 10px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades {
+    inset: 78px 8px 8px;
+    padding: 8px 6px 8px 8px;
+    scrollbar-width: none;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades::-webkit-scrollbar {
+    width: 0;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-panel-header {
+    margin: -8px 30px 6px -8px;
+    padding: 6px 7px 5px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-panel-header span {
+    display: none;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-hide {
+    min-height: 22px;
+    padding: 2px 6px;
+    font-size: 9px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-board {
+    gap: 4px;
+    padding-right: 0;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-track {
+    padding: 5px;
+    border-radius: 8px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-track header strong {
+    font-size: 11px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-track header span {
+    font-size: 8px;
+  }
+
+  .blackjack-upgrade-title {
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .blackjack-upgrade-icon {
+    width: 21px;
+    height: 21px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-nodes {
+    gap: 3px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node {
+    height: 32px;
+    min-width: 0;
+    border-radius: 7px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-node .blackjack-upgrade-icon.is-node-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .upgrade-panel.is-blackjack-upgrades .blackjack-upgrade-tooltip {
+    display: none;
   }
 }
 
@@ -1521,6 +1808,28 @@ button.upgrade-entry {
   box-shadow: none;
 }
 
+.book-overlay[data-book-id="mine"] {
+  width: min(var(--panel-width, var(--panel-max-width)), var(--panel-max-width), calc(100cqh - 24px), calc(100cqw - 112px));
+  aspect-ratio: 1 / 1;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #ece5d0;
+  background: #272a28;
+}
+
+.book-overlay[data-book-id="mine"] .book-page-body {
+  inset: 0;
+}
+
+.book-overlay[data-book-id="mine"] .book-page-header {
+  position: absolute;
+  left: clamp(10px, 2.5cqw, 18px);
+  top: clamp(10px, 2.5cqw, 18px);
+  z-index: 9;
+}
+
 .book-overlay[data-book-id="defense"] .book-page-body,
 .book-overlay[data-book-id="blackjack"] .book-page-body,
 .book-overlay[data-book-id="hundred"] .book-page-body,
@@ -1603,7 +1912,6 @@ button.upgrade-entry {
 .mana-panel::before {
   z-index: 0;
   background:
-    conic-gradient(from -35deg at 50% 50%, transparent 0deg, rgba(203, 236, 255, 0.14) 18deg, transparent 42deg, transparent 138deg, rgba(151, 221, 255, 0.12) 162deg, transparent 194deg, transparent 360deg),
     radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.5) 0 1px, transparent 2px),
     radial-gradient(circle at 82% 28%, rgba(255, 255, 255, 0.38) 0 1px, transparent 2px),
     radial-gradient(circle at 26% 78%, rgba(255, 232, 174, 0.34) 0 1px, transparent 2px),
@@ -1624,6 +1932,15 @@ button.upgrade-entry {
   z-index: 4;
   display: grid;
   place-items: center;
+  --crystal-shake-s: 0.4px;
+  --crystal-shake-sn: -0.4px;
+  --crystal-shake-m: 0.8px;
+  --crystal-shake-mn: -0.8px;
+  --crystal-shake-l: 1.2px;
+  --crystal-shake-ln: -1.2px;
+  --crystal-shake-r: 0.3deg;
+  --crystal-shake-rn: -0.3deg;
+  --crystal-click-scale: 1;
   width: clamp(220px, 54%, 390px);
   aspect-ratio: 1;
   height: auto;
@@ -1632,12 +1949,11 @@ button.upgrade-entry {
   border-radius: 50%;
   line-height: 1;
   background:
-    radial-gradient(circle, rgba(186, 237, 255, 0.28), rgba(112, 199, 255, 0.07) 50%, transparent 72%),
-    radial-gradient(circle, rgba(167, 140, 255, 0.14), transparent 68%);
+    radial-gradient(circle, rgba(186, 237, 255, 0.2), rgba(112, 199, 255, 0.06) 48%, transparent 70%),
+    radial-gradient(circle, rgba(167, 140, 255, 0.1), transparent 66%);
   cursor: pointer;
   transform: translateZ(0);
-  animation: crystal-idle 2600ms ease-in-out infinite;
-  transition: filter 120ms ease;
+  contain: layout style;
 }
 
 .mana-orb::before,
@@ -1654,24 +1970,20 @@ button.upgrade-entry {
 .mana-orb::before {
   border: 1px solid rgba(157, 226, 255, 0.42);
   box-shadow:
-    0 0 34px rgba(112, 199, 255, 0.38),
+    0 0 18px rgba(112, 199, 255, 0.28),
     inset 0 0 34px rgba(112, 199, 255, 0.16);
-  animation: crystal-ring 4200ms linear infinite;
 }
 
 .mana-orb::after {
   inset: 56px;
   background:
-    conic-gradient(from 90deg, transparent, rgba(255, 255, 255, 0.2), transparent 28%, transparent),
     radial-gradient(circle, rgba(112, 199, 255, 0.16), transparent 66%);
-  filter: blur(1px);
-  animation: crystal-halo-spin 9000ms linear infinite;
 }
 
 .mana-orb-aura {
   inset: 0;
-  background: radial-gradient(circle, rgba(112, 199, 255, 0.24), transparent 62%);
-  animation: crystal-aura 1800ms ease-in-out infinite alternate;
+  background: radial-gradient(circle, rgba(112, 199, 255, 0.18), transparent 62%);
+  opacity: 0.76;
 }
 
 .mana-sprite {
@@ -1683,31 +1995,52 @@ button.upgrade-entry {
   background-repeat: no-repeat;
   background-size: 500% 200%;
   image-rendering: auto;
-  filter:
-    drop-shadow(0 0 24px rgba(156, 230, 255, 0.86))
-    drop-shadow(0 20px 24px rgba(0, 0, 0, 0.46));
   transform-origin: 50% 58%;
   transform: scale(1);
-  animation: spriterrific-crystal-idle 1333ms steps(1, end) infinite;
+  transition: transform 360ms cubic-bezier(0.2, 0.9, 0.18, 1);
+  animation: spriterrific-crystal-idle 1800ms steps(1, end) infinite;
+  will-change: background-position, transform;
 }
 
 .mana-orb:active {
-  filter: brightness(1.16);
+  transform: translateY(1px);
 }
 
-.mana-orb.is-clicked {
-  animation:
-    crystal-click 420ms cubic-bezier(0.18, 1.35, 0.32, 1),
-    crystal-idle 2600ms ease-in-out 420ms infinite;
+.mana-orb.is-click-charged .mana-sprite {
+  transform: scale(var(--crystal-click-scale));
 }
 
-.mana-orb.is-clicked .mana-sprite {
+.mana-orb.is-clicked-a {
+  animation: crystal-click-a 420ms cubic-bezier(0.18, 1.35, 0.32, 1);
+}
+
+.mana-orb.is-clicked-b {
+  animation: crystal-click-b 420ms cubic-bezier(0.18, 1.35, 0.32, 1);
+}
+
+.mana-orb.is-clicked-a .mana-sprite {
   background-image: url("/assets/spriterrific/crystal/relic-use-s/export/spritesheet.png");
-  animation: spriterrific-crystal-use 1000ms steps(1, end) both;
+  animation: spriterrific-crystal-use-a 1000ms steps(1, end) both;
 }
 
-.mana-orb.is-wand-hit {
-  filter: brightness(1.28);
+.mana-orb.is-clicked-b .mana-sprite {
+  background-image: url("/assets/spriterrific/crystal/relic-use-s/export/spritesheet.png");
+  animation: spriterrific-crystal-use-b 1000ms steps(1, end) both;
+}
+
+.mana-orb.is-wand-hit-a .mana-sprite {
+  background-image: url("/assets/spriterrific/crystal/relic-use-s/export/spritesheet.png");
+  animation: spriterrific-crystal-use-a 620ms steps(1, end) both;
+}
+
+.mana-orb.is-wand-hit-b .mana-sprite {
+  background-image: url("/assets/spriterrific/crystal/relic-use-s/export/spritesheet.png");
+  animation: spriterrific-crystal-use-b 620ms steps(1, end) both;
+}
+
+.mana-orb.is-wand-hit-a .mana-orb-aura,
+.mana-orb.is-wand-hit-b .mana-orb-aura {
+  animation: crystal-aura-pulse 540ms ease-out both;
 }
 
 .magic-wands {
@@ -1727,48 +2060,56 @@ button.upgrade-entry {
   position: absolute;
   left: 50%;
   top: 50%;
-  width: 76px;
-  height: 16px;
-  transform-origin: 92% 50%;
+  width: 108px;
+  height: 32px;
+  transform-origin: 88px 50%;
 }
 
 .magic-wand::before {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 5px;
-  width: 58px;
-  height: 6px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #5b3727, #d4a36a 72%, #f6e7c2);
-  box-shadow:
-    inset 0 -2px 0 rgba(58, 34, 22, 0.38),
-    0 2px 4px rgba(52, 34, 26, 0.24);
+  left: 0;
+  top: 50%;
+  width: 96px;
+  height: 32px;
+  background-image: url("/assets/spriterrific/wand/arcane-wand/export/spritesheet.png");
+  background-repeat: no-repeat;
+  background-size: 400% 100%;
+  background-position: 0% 0%;
+  image-rendering: pixelated;
+  transform: translateY(-50%);
+  transform-origin: 88px 50%;
 }
 
 .magic-wand::after {
-  content: "✦";
+  content: "";
   position: absolute;
-  right: 0;
-  top: -8px;
-  color: #eaf8ff;
-  font-size: 18px;
-  text-shadow:
-    0 0 8px rgba(112, 199, 255, 0.95),
-    0 0 16px rgba(237, 159, 255, 0.8);
+  left: 82px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  opacity: 0;
+  background: radial-gradient(circle, #f7feff 0 18%, #7fe3ff 20% 44%, rgba(127, 227, 255, 0) 70%);
+  transform: scale(0.4);
+  pointer-events: none;
 }
 
 .magic-wand i {
   position: absolute;
-  left: 66px;
-  top: 7px;
-  width: 150px;
-  height: 3px;
+  left: 87px;
+  top: 14px;
+  width: 190px;
+  height: 5px;
   border-radius: 999px;
   opacity: 0;
-  background: linear-gradient(90deg, rgba(234, 248, 255, 0.95), rgba(112, 199, 255, 0.62), transparent);
-  box-shadow: 0 0 12px rgba(112, 199, 255, 0.75);
+  background:
+    linear-gradient(90deg, rgba(249, 254, 255, 0.95) 0 8%, rgba(124, 222, 255, 0.82) 12% 42%, rgba(237, 159, 255, 0.28) 68%, transparent 100%);
+  box-shadow:
+    0 0 9px rgba(112, 199, 255, 0.56),
+    0 0 18px rgba(237, 159, 255, 0.22);
   transform-origin: 0 50%;
+  transform: scaleX(0.05);
 }
 
 .wand-1 {
@@ -1811,57 +2152,21 @@ button.upgrade-entry {
   transform: translate(calc(-50% + var(--wand-right-distance)), 84px) rotate(196deg);
 }
 
-.magic-wands.is-casting .magic-wand {
-  animation: wand-flick 760ms ease-out both;
+.magic-wands.is-casting-a .magic-wand::before,
+.magic-wands.is-casting-b .magic-wand::before {
+  animation:
+    wand-sprite-cast 560ms steps(1, end) both,
+    wand-recoil 560ms ease-out both;
 }
 
-.magic-wands.is-casting .magic-wand i {
-  animation: wand-light 760ms ease-out both;
+.magic-wands.is-casting-a .magic-wand::after,
+.magic-wands.is-casting-b .magic-wand::after {
+  animation: wand-tip-flare 560ms ease-out both;
 }
 
-.magic-wands.is-casting .wand-2,
-.magic-wands.is-casting .wand-2 i {
-  animation-delay: 45ms;
-}
-
-.magic-wands.is-casting .wand-3,
-.magic-wands.is-casting .wand-3 i {
-  animation-delay: 90ms;
-}
-
-.magic-wands.is-casting .wand-4,
-.magic-wands.is-casting .wand-4 i {
-  animation-delay: 135ms;
-}
-
-.magic-wands.is-casting .wand-5,
-.magic-wands.is-casting .wand-5 i {
-  animation-delay: 180ms;
-}
-
-.magic-wands.is-casting .wand-6,
-.magic-wands.is-casting .wand-6 i {
-  animation-delay: 225ms;
-}
-
-.magic-wands.is-casting .wand-7,
-.magic-wands.is-casting .wand-7 i {
-  animation-delay: 270ms;
-}
-
-.magic-wands.is-casting .wand-8,
-.magic-wands.is-casting .wand-8 i {
-  animation-delay: 315ms;
-}
-
-.magic-wands.is-casting .wand-9,
-.magic-wands.is-casting .wand-9 i {
-  animation-delay: 360ms;
-}
-
-.magic-wands.is-casting .wand-10,
-.magic-wands.is-casting .wand-10 i {
-  animation-delay: 405ms;
+.magic-wands.is-casting-a .magic-wand i,
+.magic-wands.is-casting-b .magic-wand i {
+  animation: wand-beam 560ms ease-out both;
 }
 
 .mana-spark {
@@ -1873,9 +2178,7 @@ button.upgrade-entry {
   border-radius: 50%;
   background:
     radial-gradient(circle, #f8feff 0 24%, #9fe7ff 25% 58%, rgba(112, 199, 255, 0.28) 60% 100%);
-  box-shadow:
-    0 0 10px rgba(255, 255, 255, 0.95),
-    0 0 18px rgba(112, 199, 255, 0.86);
+  box-shadow: 0 0 8px rgba(112, 199, 255, 0.72);
   transform: translate(-50%, -50%);
   pointer-events: none;
   animation: mana-spark-burst 520ms ease-out forwards;
@@ -1982,6 +2285,21 @@ button.upgrade-entry {
   }
 }
 
+@keyframes crystal-aura-pulse {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.98);
+  }
+  38% {
+    opacity: 1;
+    transform: scale(1.06);
+  }
+  100% {
+    opacity: 0.76;
+    transform: scale(1);
+  }
+}
+
 @keyframes crystal-ring {
   0% {
     transform: rotate(0deg) scale(1);
@@ -2000,27 +2318,63 @@ button.upgrade-entry {
   }
 }
 
-@keyframes crystal-click {
+@keyframes crystal-click-a {
   0% {
-    transform: translate(0, 0);
+    transform: translate(0, 0) rotate(0deg);
   }
-  18% {
-    transform: translate(-2px, 1px);
+  12% {
+    transform: translate(var(--crystal-shake-l), var(--crystal-shake-sn)) rotate(var(--crystal-shake-r));
   }
-  34% {
-    transform: translate(2px, -1px);
+  24% {
+    transform: translate(var(--crystal-shake-mn), var(--crystal-shake-ln)) rotate(var(--crystal-shake-rn));
+  }
+  36% {
+    transform: translate(var(--crystal-shake-l), var(--crystal-shake-m)) rotate(var(--crystal-shake-rn));
   }
   50% {
-    transform: translate(-1px, 1px);
+    transform: translate(var(--crystal-shake-sn), var(--crystal-shake-l)) rotate(var(--crystal-shake-r));
   }
-  66% {
-    transform: translate(1px, -1px);
+  64% {
+    transform: translate(var(--crystal-shake-m), var(--crystal-shake-mn)) rotate(var(--crystal-shake-r));
   }
-  82% {
-    transform: translate(-1px, 0);
+  78% {
+    transform: translate(var(--crystal-shake-ln), var(--crystal-shake-s)) rotate(var(--crystal-shake-rn));
+  }
+  90% {
+    transform: translate(var(--crystal-shake-s), 0) rotate(0deg);
   }
   100% {
-    transform: translate(0, 0);
+    transform: translate(0, 0) rotate(0deg);
+  }
+}
+
+@keyframes crystal-click-b {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  12% {
+    transform: translate(var(--crystal-shake-ln), var(--crystal-shake-m)) rotate(var(--crystal-shake-rn));
+  }
+  24% {
+    transform: translate(var(--crystal-shake-m), var(--crystal-shake-l)) rotate(var(--crystal-shake-r));
+  }
+  36% {
+    transform: translate(var(--crystal-shake-ln), var(--crystal-shake-sn)) rotate(var(--crystal-shake-r));
+  }
+  50% {
+    transform: translate(var(--crystal-shake-s), var(--crystal-shake-ln)) rotate(var(--crystal-shake-rn));
+  }
+  64% {
+    transform: translate(var(--crystal-shake-mn), var(--crystal-shake-m)) rotate(var(--crystal-shake-rn));
+  }
+  78% {
+    transform: translate(var(--crystal-shake-l), var(--crystal-shake-sn)) rotate(var(--crystal-shake-r));
+  }
+  90% {
+    transform: translate(var(--crystal-shake-sn), 0) rotate(0deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
   }
 }
 
@@ -2035,30 +2389,74 @@ button.upgrade-entry {
   }
 }
 
-@keyframes wand-flick {
+@keyframes wand-sprite-cast {
   0% {
-    filter: brightness(1);
+    background-position: 0% 0%;
   }
-  35% {
-    filter: brightness(1.6);
+  24.99% {
+    background-position: 0% 0%;
   }
+  25% {
+    background-position: 33.333% 0%;
+  }
+  49.99% {
+    background-position: 33.333% 0%;
+  }
+  50% {
+    background-position: 66.666% 0%;
+  }
+  74.99% {
+    background-position: 66.666% 0%;
+  }
+  75%,
   100% {
-    filter: brightness(1);
+    background-position: 100% 0%;
   }
 }
 
-@keyframes wand-light {
+@keyframes wand-recoil {
+  0% {
+    transform: translateY(-50%) translateX(0);
+  }
+  35% {
+    transform: translateY(-50%) translateX(-7px);
+  }
+  100% {
+    transform: translateY(-50%) translateX(0);
+  }
+}
+
+@keyframes wand-tip-flare {
   0% {
     opacity: 0;
-    transform: scaleX(0.12);
+    transform: scale(0.45);
   }
-  24% {
+  28% {
+    opacity: 0.95;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.62);
+  }
+}
+
+@keyframes wand-beam {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.04);
+  }
+  18% {
     opacity: 1;
+    transform: scaleX(0.98);
+  }
+  72% {
+    opacity: 0.82;
     transform: scaleX(1);
   }
   100% {
     opacity: 0;
-    transform: scaleX(1.08);
+    transform: scaleX(1);
   }
 }
 
@@ -2097,7 +2495,42 @@ button.upgrade-entry {
   }
 }
 
-@keyframes spriterrific-crystal-use {
+@keyframes spriterrific-crystal-use-a {
+  0%,
+  12.49% {
+    background-position: 0% 0%;
+  }
+  12.5%,
+  24.99% {
+    background-position: 25% 0%;
+  }
+  25%,
+  37.49% {
+    background-position: 50% 0%;
+  }
+  37.5%,
+  49.99% {
+    background-position: 75% 0%;
+  }
+  50%,
+  62.49% {
+    background-position: 100% 0%;
+  }
+  62.5%,
+  74.99% {
+    background-position: 0% 100%;
+  }
+  75%,
+  87.49% {
+    background-position: 25% 100%;
+  }
+  87.5%,
+  100% {
+    background-position: 50% 100%;
+  }
+}
+
+@keyframes spriterrific-crystal-use-b {
   0%,
   12.49% {
     background-position: 0% 0%;
@@ -2571,57 +3004,26 @@ button.upgrade-entry {
   justify-items: center;
   align-content: center;
   padding:
-    clamp(58px, 10.5cqw, 74px)
-    clamp(14px, 3.8cqw, 28px)
-    clamp(12px, 2.8cqw, 20px);
+    clamp(64px, 9.8cqw, 78px)
+    clamp(20px, 4.2cqw, 34px)
+    clamp(16px, 3.4cqw, 28px);
   border: 0;
   border-radius: 8px;
   color: #f3f6ff;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent 34%),
-    #43536b;
+    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 34%),
+    rgba(54, 73, 98, 0.62);
   box-shadow:
-    inset 0 -8px 0 rgba(21, 29, 43, 0.22),
-    inset 0 0 0 3px rgba(111, 129, 154, 0.28);
-}
-
-.snake-stats {
-  position: absolute;
-  top: clamp(14px, 3.2cqw, 24px);
-  right: clamp(76px, 13.5cqw, 108px);
-  z-index: 3;
-  width: auto;
-  display: grid;
-  justify-items: end;
-  gap: 4px;
-  pointer-events: none;
-}
-
-.snake-stats strong {
-  color: #05070b;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(25px, 6cqw, 40px);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0;
-}
-
-.snake-hearts {
-  display: flex;
-  gap: clamp(4px, 1.6cqw, 9px);
-}
-
-.snake-hearts span {
-  color: #ff365f;
-  font-size: clamp(22px, 5.8cqw, 38px);
-  line-height: 1;
-  text-shadow:
-    0 3px 0 rgba(112, 18, 43, 0.42),
-    0 5px 8px rgba(0, 0, 0, 0.2);
+    inset 0 -5px 0 rgba(21, 29, 43, 0.14),
+    inset 0 0 0 2px rgba(111, 129, 154, 0.18);
 }
 
 .snake-auto-toggle {
-  width: clamp(34px, 8cqw, 48px);
+  position: absolute;
+  top: clamp(9px, 2.3cqw, 16px);
+  right: clamp(56px, 8.8cqw, 72px);
+  z-index: 5;
+  width: clamp(30px, 5.6cqw, 42px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -2661,7 +3063,7 @@ button.upgrade-entry {
   isolation: isolate;
   align-self: center;
   box-sizing: border-box;
-  width: min(91%, 74cqh, 540px);
+  width: min(94%, 86cqh, 560px);
   height: auto;
   aspect-ratio: 1;
   display: grid;
@@ -2677,6 +3079,43 @@ button.upgrade-entry {
     inset 0 0 0 2px rgba(255, 255, 255, 0.04),
     0 8px 0 rgba(20, 26, 38, 0.34);
   image-rendering: pixelated;
+}
+
+.snake-board-hearts,
+.snake-board-multiplier {
+  position: absolute;
+  z-index: 12;
+  pointer-events: none;
+}
+
+.snake-board-hearts {
+  left: clamp(8px, 2.2cqw, 14px);
+  top: clamp(7px, 2cqw, 13px);
+  display: flex;
+  gap: clamp(3px, 1.1cqw, 7px);
+}
+
+.snake-board-hearts span {
+  color: #ff365f;
+  font-size: clamp(18px, 4.4cqw, 31px);
+  line-height: 1;
+  text-shadow:
+    0 2px 0 rgba(112, 18, 43, 0.55),
+    0 4px 8px rgba(0, 0, 0, 0.32);
+}
+
+.snake-board-multiplier {
+  right: clamp(8px, 2.2cqw, 14px);
+  top: clamp(6px, 1.7cqw, 12px);
+  color: hsl(var(--snake-multiplier-hue, 52) 92% 58%);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(20px, 4.7cqw, 35px);
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-shadow:
+    0 2px 0 rgba(19, 22, 16, 0.5),
+    0 0 11px hsl(var(--snake-multiplier-hue, 52) 92% 58% / 0.32);
 }
 
 .snake-cell {
@@ -4417,10 +4856,16 @@ button.blackjack-chip-token {
 .target-panel,
 .mining-panel {
   flex: 1;
+  height: 100%;
   min-height: 0;
   display: grid;
   place-items: stretch;
   container-type: size;
+  padding: 0;
+}
+
+.book-overlay[data-book-id="mine"] .book-page-body {
+  inset: 0;
 }
 
 .target-gallery,
@@ -4541,25 +4986,20 @@ button.blackjack-chip-token {
   min-height: 0;
   overflow: hidden;
   display: grid;
-  grid-template-rows: auto 1fr auto;
-  gap: clamp(8px, 2.2cqw, 14px);
-  padding:
-    clamp(58px, 13cqw, 78px)
-    clamp(14px, 4cqw, 28px)
-    clamp(16px, 4cqw, 28px);
-  border: 3px solid rgba(75, 47, 38, 0.92);
-  border-radius: clamp(26px, 7.5cqw, 42px);
-  color: #fff0c8;
+  place-items: stretch;
+  padding: clamp(8px, 1.8cqw, 13px);
+  border: 0;
+  border-radius: 10px;
+  color: #e9e3d2;
   background:
-    linear-gradient(rgba(255, 221, 165, 0.09) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 221, 165, 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 50% 24%, rgba(255, 209, 120, 0.16), transparent 36%),
-    #4a382b;
-  background-size: 18px 18px, 18px 18px, auto, auto;
+    linear-gradient(rgba(183, 190, 176, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(183, 190, 176, 0.04) 1px, transparent 1px),
+    radial-gradient(circle at 52% 48%, rgba(107, 118, 104, 0.13), transparent 42%),
+    rgba(41, 44, 42, 0.72);
+  background-size: 22px 22px, 22px 22px, auto, auto;
   box-shadow:
-    inset 0 -8px 0 rgba(38, 23, 18, 0.28),
-    inset 0 0 0 2px rgba(255, 238, 196, 0.12),
-    0 12px 0 rgba(44, 28, 23, 0.24);
+    inset 0 0 0 2px rgba(17, 20, 18, 0.22),
+    inset 0 -8px 0 rgba(10, 12, 11, 0.12);
 }
 
 .mining-grid-shell .mining-stats {
@@ -4570,8 +5010,25 @@ button.blackjack-chip-token {
   z-index: 4;
 }
 
+.mining-material-bank {
+  position: absolute;
+  left: clamp(8px, 1.7cqw, 12px);
+  top: 50%;
+  width: clamp(38px, 6.2cqw, 48px);
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  flex-wrap: nowrap;
+  gap: 4px;
+  align-items: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .mining-grid-shell .mining-stats span,
-.mining-depth {
+.mining-depth,
+.mining-material-stock,
+.mining-exchange {
   min-width: 48px;
   height: 30px;
   display: inline-grid;
@@ -4581,52 +5038,164 @@ button.blackjack-chip-token {
   padding: 0 8px;
   border: 2px solid rgba(48, 31, 24, 0.76);
   border-radius: 8px;
-  color: #352218;
+  color: #252722;
   font-size: 14px;
   font-weight: 900;
-  background: rgba(255, 228, 184, 0.86);
-  box-shadow: inset 0 -4px 0 rgba(55, 35, 27, 0.13);
+  background: rgba(218, 213, 192, 0.88);
+  box-shadow: inset 0 -4px 0 rgba(39, 42, 35, 0.13);
+}
+
+.mining-material-stock,
+.mining-exchange {
+  width: 100%;
+  min-width: 0;
+  height: clamp(21px, 3.9cqw, 25px);
+  gap: 3px;
+  padding: 0 4px;
+  border-width: 1px;
+  color: #efe6c9;
+  font-size: 11px;
+  background: rgba(28, 30, 27, 0.82);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.18),
+    0 2px 0 rgba(0, 0, 0, 0.16);
+  pointer-events: auto;
+}
+
+.mining-material-stock i {
+  width: 9px;
+  aspect-ratio: 1;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 2px;
+  background: var(--material-color, #9f9276);
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.18);
+}
+
+.mining-material-stock.is-dirt { --material-color: #7c5435; }
+.mining-material-stock.is-sand { --material-color: #b79d65; }
+.mining-material-stock.is-stone { --material-color: #8a8a87; }
+.mining-material-stock.is-coal { --material-color: #262626; }
+.mining-material-stock.is-iron { --material-color: #c28e60; }
+.mining-material-stock.is-gold { --material-color: #d9ad37; }
+.mining-material-stock.is-ruby { --material-color: #b92142; }
+.mining-material-stock.is-lapis { --material-color: #2c53b8; }
+.mining-material-stock.is-diamond { --material-color: #49d0dd; }
+.mining-material-stock.is-emerald { --material-color: #32be65; }
+.mining-material-stock.is-obsidian { --material-color: #2d2739; }
+
+.mining-exchange {
+  border-color: rgba(234, 199, 118, 0.72);
+  color: #ffe6a3;
+  cursor: pointer;
+}
+
+.mining-exchange:disabled {
+  opacity: 0.52;
+  cursor: default;
 }
 
 .mining-grid-shell .mining-grid {
   align-self: center;
-  justify-self: center;
-  width: min(100%, 320px);
-  max-height: 100%;
+  justify-self: end;
+  width: min(calc(100% - clamp(52px, 8.8cqw, 68px)), calc(100cqh - clamp(18px, 3cqw, 28px)));
+  height: auto;
+  aspect-ratio: 1;
+  min-height: 0;
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  grid-template-rows: repeat(5, minmax(0, 1fr));
-  gap: clamp(5px, 1.5cqw, 9px);
-  padding: clamp(7px, 2cqw, 12px);
-  border: 2px solid rgba(255, 229, 184, 0.22);
-  border-radius: 16px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-rows: repeat(7, minmax(0, 1fr));
+  gap: clamp(1px, 0.35cqw, 2px);
+  padding: clamp(3px, 0.75cqw, 5px);
+  border: 2px solid rgba(17, 20, 18, 0.7);
+  border-radius: 8px;
   background:
-    radial-gradient(circle at 50% 50%, rgba(255, 226, 172, 0.08), transparent 44%),
-    rgba(33, 23, 19, 0.22);
+    radial-gradient(circle at 50% 50%, rgba(131, 139, 124, 0.1), transparent 44%),
+    rgba(14, 16, 15, 0.38);
 }
 
 .mining-grid-shell .mining-block {
+  --block-base: #6f6958;
+  --block-light: rgba(195, 190, 166, 0.38);
+  --block-mid: rgba(75, 72, 61, 0.34);
+  --block-dark: rgba(42, 40, 34, 0.44);
+  --block-shade-alpha: 0;
+  --depth-shadow-up: transparent;
+  --depth-shadow-right: transparent;
+  --depth-shadow-down: transparent;
+  --depth-shadow-left: transparent;
+  --crack-opacity: 0;
+  --crack-x: 0;
+  --crack-y: 0;
+  --ore-color: transparent;
+  --ore-glint: transparent;
+  --ore-opacity: 0;
   position: relative;
+  isolation: isolate;
+  overflow: visible;
   min-width: 0;
   min-height: 0;
   aspect-ratio: 1;
   display: grid;
   place-items: center;
   align-content: center;
-  gap: 1px;
+  gap: 0;
   padding: 0;
-  border: 3px solid #33241d;
-  border-radius: 8px;
+  border: 2px solid rgba(18, 18, 16, 0.92);
+  border-radius: 2px;
   color: #ffe9b8;
   font-weight: 900;
-  background:
-    linear-gradient(180deg, rgba(255, 223, 157, 0.22), transparent 32%),
-    linear-gradient(180deg, transparent calc(var(--block-health) - 1%), rgba(31, 20, 17, 0.42) var(--block-health)),
-    hsl(27 34% calc(46% - var(--block-depth) * 2%));
+  background-color: var(--block-base);
+  background-image:
+    linear-gradient(rgba(0, 0, 0, var(--block-shade-alpha)), rgba(0, 0, 0, var(--block-shade-alpha))),
+    var(--block-sprite);
+  background-size: 100% 100%, cover;
+  background-position: center;
   cursor: pointer;
+  image-rendering: pixelated;
   box-shadow:
-    inset 0 -6px 0 rgba(35, 24, 20, 0.24),
+    inset 0 4px 0 rgba(255, 255, 255, 0.12),
+    inset 0 -7px 0 rgba(17, 13, 10, 0.22),
+    inset 0 7px 0 var(--depth-shadow-up),
+    inset -7px 0 0 var(--depth-shadow-right),
+    inset 0 -7px 0 var(--depth-shadow-down),
+    inset 7px 0 0 var(--depth-shadow-left),
     0 5px 0 rgba(30, 19, 16, 0.24);
+}
+
+.mining-grid-shell .mining-block.is-shade-1 { --block-shade-alpha: 0; }
+.mining-grid-shell .mining-block.is-shade-2 { --block-shade-alpha: 0.04; }
+.mining-grid-shell .mining-block.is-shade-3 { --block-shade-alpha: 0.08; }
+.mining-grid-shell .mining-block.is-shade-4 { --block-shade-alpha: 0.13; }
+.mining-grid-shell .mining-block.is-shade-5 { --block-shade-alpha: 0.18; }
+
+.mining-grid-shell .mining-block.has-shadow-up { --depth-shadow-up: rgba(0, 0, 0, 0.3); }
+.mining-grid-shell .mining-block.has-shadow-right { --depth-shadow-right: rgba(0, 0, 0, 0.28); }
+.mining-grid-shell .mining-block.has-shadow-down { --depth-shadow-down: rgba(0, 0, 0, 0.26); }
+.mining-grid-shell .mining-block.has-shadow-left { --depth-shadow-left: rgba(0, 0, 0, 0.28); }
+
+.mining-grid-shell .mining-block::before,
+.mining-grid-shell .mining-block::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.mining-grid-shell .mining-block::before {
+  display: none;
+}
+
+.mining-grid-shell .mining-block::after {
+  z-index: 3;
+  inset: -50%;
+  opacity: var(--crack-opacity);
+  background-image: url("/assets/Block%20terre/fissur.png");
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  background-position:
+    calc(var(--crack-x) * 100% / 3)
+    calc(var(--crack-y) * 100% / 3);
+  image-rendering: pixelated;
 }
 
 .mining-grid-shell .mining-block:active {
@@ -4634,22 +5203,136 @@ button.blackjack-chip-token {
   transform: translateY(2px);
 }
 
-.mining-grid-shell .mining-block span {
+.mining-grid-shell .mining-block span,
+.mining-grid-shell .mining-block b,
+.mining-grid-shell .mining-block i {
+  position: relative;
+  z-index: 4;
   color: inherit;
-  font-size: clamp(12px, 3.4cqw, 18px);
+  text-shadow: 0 2px 0 rgba(20, 14, 10, 0.58);
+}
+
+.mining-grid-shell .mining-block span {
+  font-size: clamp(8px, 2.05cqw, 11px);
   line-height: 1;
 }
 
+.mining-grid-shell .mining-block b {
+  display: none;
+  max-width: 92%;
+  overflow: hidden;
+  color: rgba(255, 245, 220, 0.92);
+  font-size: clamp(8px, 2.05cqw, 11px);
+  line-height: 1.05;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mining-grid-shell .mining-block i {
-  color: rgba(255, 239, 204, 0.82);
-  font-size: clamp(9px, 2.6cqw, 13px);
+  color: rgba(255, 243, 218, 0.94);
+  font-size: clamp(10px, 2.2cqw, 14px);
   font-style: normal;
   line-height: 1;
 }
 
+.mining-grid-shell .mining-block.is-sand {
+  --block-base: #626357;
+  --block-light: rgba(139, 139, 121, 0.42);
+  --block-mid: rgba(70, 71, 62, 0.38);
+  --block-dark: rgba(35, 36, 32, 0.44);
+}
+
+.mining-grid-shell .mining-block.is-dirt {
+  --block-base: #765034;
+  --block-light: rgba(151, 105, 62, 0.52);
+  --block-mid: rgba(74, 48, 30, 0.44);
+  --block-dark: rgba(42, 27, 19, 0.5);
+}
+
+.mining-grid-shell .mining-block.is-stone {
+  --block-base: #777777;
+  --block-light: rgba(166, 166, 166, 0.5);
+  --block-mid: rgba(80, 80, 80, 0.36);
+  --block-dark: rgba(42, 42, 42, 0.46);
+}
+
+.mining-grid-shell .mining-block.is-coal {
+  --block-base: #6c6c68;
+  --block-light: rgba(154, 154, 145, 0.38);
+  --block-mid: rgba(54, 54, 51, 0.42);
+  --block-dark: rgba(28, 28, 27, 0.58);
+  --ore-color: rgba(24, 24, 23, var(--ore-opacity));
+  --ore-glint: rgba(12, 12, 12, var(--ore-opacity));
+  --ore-opacity: 0.9;
+}
+
+.mining-grid-shell .mining-block.is-iron {
+  --block-base: #74716a;
+  --block-light: rgba(162, 158, 146, 0.44);
+  --block-mid: rgba(69, 67, 61, 0.38);
+  --block-dark: rgba(37, 35, 32, 0.48);
+  --ore-color: rgba(198, 145, 96, var(--ore-opacity));
+  --ore-glint: rgba(235, 188, 132, var(--ore-opacity));
+  --ore-opacity: 0.84;
+}
+
+.mining-grid-shell .mining-block.is-copper {
+  --block-base: #706e69;
+  --ore-color: rgba(192, 105, 62, var(--ore-opacity));
+  --ore-glint: rgba(93, 170, 145, calc(var(--ore-opacity) * 0.65));
+  --ore-opacity: 0.82;
+}
+
+.mining-grid-shell .mining-block.is-gold {
+  --block-base: #747067;
+  --ore-color: rgba(219, 173, 55, var(--ore-opacity));
+  --ore-glint: rgba(255, 225, 111, var(--ore-opacity));
+  --ore-opacity: 0.86;
+}
+
+.mining-grid-shell .mining-block.is-redstone {
+  --block-base: #6f6d69;
+  --ore-color: rgba(179, 40, 38, var(--ore-opacity));
+  --ore-glint: rgba(255, 88, 72, var(--ore-opacity));
+  --ore-opacity: 0.88;
+}
+
+.mining-grid-shell .mining-block.is-lapis {
+  --block-base: #706f6b;
+  --ore-color: rgba(44, 83, 184, var(--ore-opacity));
+  --ore-glint: rgba(92, 135, 235, var(--ore-opacity));
+  --ore-opacity: 0.86;
+}
+
+.mining-grid-shell .mining-block.is-diamond {
+  --block-base: #727571;
+  --ore-color: rgba(73, 208, 221, var(--ore-opacity));
+  --ore-glint: rgba(168, 249, 255, var(--ore-opacity));
+  --ore-opacity: 0.88;
+}
+
+.mining-grid-shell .mining-block.is-emerald {
+  --block-base: #70746d;
+  --ore-color: rgba(50, 190, 101, var(--ore-opacity));
+  --ore-glint: rgba(121, 244, 157, var(--ore-opacity));
+  --ore-opacity: 0.87;
+}
+
+.mining-grid-shell .mining-block.is-obsidian {
+  --block-base: #2d2739;
+  --block-light: rgba(87, 73, 112, 0.42);
+  --block-mid: rgba(27, 21, 37, 0.52);
+  --block-dark: rgba(12, 9, 18, 0.65);
+  --ore-color: rgba(52, 40, 82, var(--ore-opacity));
+  --ore-glint: rgba(111, 82, 166, var(--ore-opacity));
+  --ore-opacity: 0.72;
+}
+
 .mining-depth {
-  justify-self: center;
-  align-self: end;
+  position: absolute;
+  right: clamp(12px, 3cqw, 20px);
+  bottom: clamp(12px, 3cqw, 20px);
+  z-index: 4;
 }
 
 .mining-depth span::before {
@@ -4942,7 +5625,7 @@ button.blackjack-chip-token {
 }
 
 .book-overlay[data-book-id="defense"] {
-  width: min(var(--panel-width, var(--panel-max-width)), var(--panel-max-width), calc(100cqh - 24px), calc(100cqw - 112px));
+  width: min(var(--panel-width, var(--panel-max-width)), calc(100cqh - 24px), calc(100cqw - 112px));
   aspect-ratio: 1 / 1;
   height: auto;
   padding: 0;
@@ -5101,6 +5784,11 @@ button.blackjack-chip-token {
   animation-delay: var(--td-frame-delay);
 }
 
+.defense-tiled-tile.is-animated[data-frame-count="4"] .defense-tiled-frame {
+  animation: defense-tiled-frame-4 var(--td-frame-duration) steps(1, end) infinite;
+  animation-delay: var(--td-frame-delay);
+}
+
 .defense-tiled-tile.is-animated[data-frame-count="6"] .defense-tiled-frame {
   animation: defense-tiled-frame-6 var(--td-frame-duration) steps(1, end) infinite;
   animation-delay: var(--td-frame-delay);
@@ -5108,17 +5796,17 @@ button.blackjack-chip-token {
 
 @keyframes defense-tiled-frame-2 {
   0%,
-  49.999% {
+  24.999% {
     transform: translate(var(--td-frame-x-0), var(--td-frame-y-0));
   }
 
-  50%,
+  25%,
   100% {
     transform: translate(var(--td-frame-x-1), var(--td-frame-y-1));
   }
 }
 
-@keyframes defense-tiled-frame-6 {
+@keyframes defense-tiled-frame-4 {
   0%,
   16.666% {
     transform: translate(var(--td-frame-x-0), var(--td-frame-y-0));
@@ -5135,16 +5823,38 @@ button.blackjack-chip-token {
   }
 
   50%,
-  66.666% {
+  100% {
+    transform: translate(var(--td-frame-x-3), var(--td-frame-y-3));
+  }
+}
+
+@keyframes defense-tiled-frame-6 {
+  0%,
+  12.499% {
+    transform: translate(var(--td-frame-x-0), var(--td-frame-y-0));
+  }
+
+  12.5%,
+  24.999% {
+    transform: translate(var(--td-frame-x-1), var(--td-frame-y-1));
+  }
+
+  25%,
+  37.499% {
+    transform: translate(var(--td-frame-x-2), var(--td-frame-y-2));
+  }
+
+  37.5%,
+  49.999% {
     transform: translate(var(--td-frame-x-3), var(--td-frame-y-3));
   }
 
-  66.667%,
-  83.333% {
+  50%,
+  62.499% {
     transform: translate(var(--td-frame-x-4), var(--td-frame-y-4));
   }
 
-  83.334%,
+  62.5%,
   100% {
     transform: translate(var(--td-frame-x-5), var(--td-frame-y-5));
   }
@@ -5225,9 +5935,7 @@ button.blackjack-chip-token {
   gap: 7px;
 }
 
-.defense-stats span,
-.defense-mini-stats span,
-.defense-speed-toggle {
+.defense-stats span {
   min-width: 54px;
   height: 30px;
   display: inline-grid;
@@ -5244,22 +5952,58 @@ button.blackjack-chip-token {
   box-shadow: inset 0 -4px 0 rgba(93, 61, 46, 0.12);
 }
 
+.defense-mini-stats {
+  position: absolute;
+  z-index: 9;
+  left: clamp(16px, 3.4cqw, 28px);
+  top: clamp(116px, 19cqw, 156px);
+  display: grid;
+  gap: 9px;
+  justify-items: start;
+  pointer-events: none;
+}
+
+.defense-mini-stats span,
 .defense-speed-toggle {
+  min-width: 0;
+  height: auto;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: rgba(255, 246, 196, 0.94);
+  font-size: clamp(14px, 3.2cqw, 18px);
+  font-weight: 900;
+  line-height: 1;
+  background: transparent;
+  box-shadow: none;
+  text-shadow:
+    0 2px 0 rgba(34, 25, 20, 0.72),
+    0 0 4px rgba(34, 25, 20, 0.72);
+}
+
+.defense-speed-toggle {
+  position: absolute;
+  z-index: 11;
+  top: clamp(12px, 2.4cqw, 18px);
+  right: clamp(48px, 8cqw, 62px);
+  font-family: inherit;
   cursor: pointer;
 }
 
 .defense-speed-toggle:hover {
-  background: rgba(255, 240, 190, 0.9);
+  color: #ffffff;
 }
 
 .defense-stats strong,
 .defense-mini-stats strong {
-  color: #3d2a27;
-  font-size: 13px;
+  color: inherit;
+  font-size: 0.92em;
 }
 
-.defense-health,
-.defense-wave {
+.defense-health {
   position: absolute;
   z-index: 7;
   left: clamp(18px, 4.6cqw, 34px);
@@ -5275,12 +6019,104 @@ button.blackjack-chip-token {
   top: clamp(58px, 12cqw, 82px);
 }
 
-.defense-wave {
-  bottom: clamp(66px, 13cqw, 92px);
+.defense-health.is-full {
+  display: none;
 }
 
-.defense-health i,
-.defense-wave i {
+.defense-wave {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: clamp(48px, 9.8cqw, 70px);
+  width: min(54%, 300px);
+  transform: translateX(-50%);
+  display: block;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.defense-wave b {
+  display: none;
+}
+
+.defense-wave-track {
+  position: relative;
+  height: 20px;
+  overflow: visible;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.defense-wave-track::before {
+  content: "";
+  position: absolute;
+  left: 12.5%;
+  right: 12.5%;
+  top: 50%;
+  height: 2px;
+  background: rgba(255, 242, 192, 0.28);
+  transform: translateY(-50%);
+}
+
+.defense-wave-fill {
+  position: absolute;
+  top: 50%;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255, 174, 58, 0.9), rgba(255, 238, 120, 0.95));
+  transform: translateY(-50%);
+  transition: width 150ms ease;
+}
+
+.defense-wave-markers {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  align-items: center;
+  justify-items: center;
+  font-style: normal;
+  pointer-events: none;
+}
+
+.defense-wave-markers span {
+  display: grid;
+  place-items: center;
+  width: 17px;
+  height: 17px;
+  border: 2px solid rgba(53, 39, 35, 0.82);
+  border-radius: 50%;
+  color: #47352d;
+  background: #ffe28a;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.28),
+    inset 0 1px 0 rgba(255, 255, 255, 0.42);
+}
+
+.defense-wave-markers span.is-past {
+  color: #f8f4df;
+  background: #6a7767;
+}
+
+.defense-wave-markers span.is-current {
+  width: 22px;
+  height: 22px;
+  color: #ffffff;
+  background: #3086d4;
+  border-color: #eaf7ff;
+  box-shadow:
+    0 0 0 2px rgba(48, 134, 212, 0.42),
+    0 2px 0 rgba(0, 0, 0, 0.32);
+}
+
+.defense-health i {
   display: block;
   height: 100%;
   border-radius: inherit;
@@ -5291,23 +6127,19 @@ button.blackjack-chip-token {
   background: linear-gradient(90deg, #d94d3f, #ff8968);
 }
 
-.defense-wave i {
-  background: linear-gradient(90deg, #ffc36e, #fff0a6);
-}
-
 .defense-range {
   position: absolute;
   left: 50%;
   top: 50%;
   z-index: 1;
-  width: min(72cqw, 72cqh, 440px);
+  width: min(calc(100cqw - 6px), calc(100cqh - 6px));
   aspect-ratio: 1;
   border: 3px solid rgba(255, 245, 205, 0.72);
   border-radius: 50%;
   box-shadow:
     0 0 24px rgba(255, 231, 154, 0.28),
     inset 0 0 22px rgba(255, 231, 154, 0.18);
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%) scale(var(--defense-range-scale, 1));
   pointer-events: none;
 }
 
@@ -5358,6 +6190,40 @@ button.blackjack-chip-token {
   stroke-linecap: round;
   filter: drop-shadow(0 0 4px rgba(255, 195, 110, 0.9));
   animation: defense-shot-flash 180ms ease-out both;
+}
+
+.book-overlay .defense-damage-popup {
+  position: absolute;
+  left: var(--damage-x);
+  top: var(--damage-y);
+  z-index: 14;
+  pointer-events: none;
+  color: #ffffff;
+  font-size: clamp(22px, 6.2cqw, 42px);
+  font-weight: 900;
+  line-height: 1;
+  -webkit-text-stroke: 0.55px rgba(41, 28, 24, 0.9);
+  text-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.62),
+    0 0 10px rgba(255, 255, 255, 0.72);
+  transform: translate(-50%, -50%);
+  will-change: opacity, transform;
+  animation: defense-damage-pop 720ms cubic-bezier(0.16, 0.86, 0.3, 1) forwards;
+}
+
+.book-overlay .defense-damage-popup.is-critical {
+  color: #ffe45e;
+  text-shadow:
+    0 2px 0 rgba(72, 39, 17, 0.62),
+    0 0 9px rgba(255, 228, 94, 0.82);
+}
+
+.book-overlay .defense-damage-popup.is-superCritical {
+  color: #ff8b30;
+  font-size: clamp(25px, 7.2cqw, 48px);
+  text-shadow:
+    0 2px 0 rgba(72, 26, 9, 0.72),
+    0 0 12px rgba(255, 139, 48, 0.86);
 }
 
 .defense-tower {
@@ -5421,7 +6287,7 @@ button.blackjack-chip-token {
   left: var(--enemy-x);
   top: var(--enemy-y);
   z-index: 4;
-  width: clamp(39px, 9.3cqw, 66px);
+  width: clamp(47px, 11.2cqw, 79px);
   aspect-ratio: 1;
   background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_0.png");
   background-repeat: no-repeat;
@@ -5432,7 +6298,7 @@ button.blackjack-chip-token {
   transition:
     left 140ms linear,
     top 140ms linear;
-  animation: defense-enemy-walk 720ms steps(1, end) infinite;
+  animation: defense-enemy-walk 1220ms steps(1, end) infinite;
 }
 
 .defense-enemy.is-dying {
@@ -5459,14 +6325,17 @@ button.blackjack-chip-token {
 
 .defense-mini-stats {
   position: absolute;
-  left: clamp(18px, 4.6cqw, 34px);
-  right: clamp(18px, 4.6cqw, 34px);
-  bottom: clamp(18px, 4cqw, 30px);
-  z-index: 7;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 7px;
+  z-index: 9;
+  left: clamp(14px, 3cqw, 24px);
+  top: clamp(122px, 19cqw, 158px);
+  right: auto;
+  bottom: auto;
+  width: max-content;
+  display: grid;
+  grid-auto-flow: row;
+  gap: 9px;
+  justify-items: start;
+  pointer-events: none;
 }
 
 @keyframes defense-tower-pulse {
@@ -5491,33 +6360,52 @@ button.blackjack-chip-token {
   }
 }
 
+@keyframes defense-damage-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -28%) scale(0.72);
+  }
+  16% {
+    opacity: 1;
+    transform: translate(-50%, -80%) scale(1.14);
+  }
+  62% {
+    opacity: 0.94;
+    transform: translate(-50%, -132%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -178%) scale(0.88);
+  }
+}
+
 @keyframes defense-enemy-walk {
   0%,
-  16.666% {
+  9.835% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_0.png");
   }
 
-  16.667%,
-  33.333% {
+  9.836%,
+  19.671% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_1.png");
   }
 
-  33.334%,
-  49.999% {
+  19.672%,
+  29.507% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_2.png");
   }
 
-  50%,
-  66.666% {
+  29.508%,
+  39.343% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_3.png");
   }
 
-  66.667%,
-  83.333% {
+  39.344%,
+  49.179% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_4.png");
   }
 
-  83.334%,
+  49.18%,
   100% {
     background-image: url("/assets/td/tiles/Monster%20TD%201/1/generated/S_Walk_5.png");
   }

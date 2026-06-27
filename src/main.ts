@@ -129,16 +129,19 @@ function installDebugManaSkillHotkeys(): void {
     }
 
     const key = event.key.toLowerCase();
+    if (key === 'k') {
+      event.preventDefault();
+      gameStore.dispatch({ type: 'unlockAllBooks' });
+      return;
+    }
     if (key === 'i') {
       event.preventDefault();
-      gameStore.dispatch({ type: 'maxManaSkills' });
-      gameStore.dispatch({ type: 'maxSnakeSkills' });
-      gameStore.dispatch({ type: 'maxMiningSkills' });
+      gameStore.dispatch({ type: 'maxAllSkills' });
       return;
     }
     if (key === 'u') {
       event.preventDefault();
-      gameStore.dispatch({ type: 'resetManaSkills' });
+      gameStore.dispatch({ type: 'resetAllSkills' });
     }
   });
 }

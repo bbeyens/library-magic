@@ -65,7 +65,7 @@ The target-clicking Book Mini-Game. It produces Marques by clicking targets, imp
 _Avoid_: Target mode, aim trainer
 
 **Mine des Profondeurs**:
-The digging Book Mini-Game. It produces Minerais by breaking Blocs de terre in a 3x5 grid, where deeper replacement blocks have more hit points.
+The digging Book Mini-Game. It breaks Blocs de mine in a 7x7 grid. Blocks use numbered sprite tiers from `public/assets/Block terre`, one sprite for five layers; deeper replacements have more hit points, darker shading, and material-specific rewards that can be exchanged for Pieces de mine.
 _Avoid_: Mining mode, digging app
 
 **Slime Trainer**:
@@ -102,20 +102,24 @@ _Avoid_: Points, numbers
 The unique resource produced by Galerie des Cibles.
 _Avoid_: Target points, score
 
-**Minerais**:
-The unique resource produced by Mine des Profondeurs.
-_Avoid_: Ore points, dirt points, crystals
+**Pieces de mine**:
+The local Mine currency produced by exchanging Mine material resources. It is stored under the legacy `minerals` resource id for progression compatibility.
+_Avoid_: Mana, raw ore loot, crystals
 
 **Gels**:
 The unique resource produced by Slime Trainer.
 _Avoid_: Slime points, slime coins, XP
 
-**Bloc de terre**:
-A diggable cell inside Mine des Profondeurs. Each block has hit points and is replaced by a deeper block when broken.
+**Bloc de mine**:
+A diggable cell inside Mine des Profondeurs. Each block has hit points, a numbered sprite tier, a light-to-dark shade position inside its five-layer band, and a material such as Terre, Pierre, Sable, Charbon, Fer, Or, Rubis, Lapis, Diamant, Emeraude, or Obsidienne.
 _Avoid_: Tile, square, rock
 
+**Materiau de mine**:
+The material resource produced when a Bloc de mine breaks. Material resources are Terre, Pierre, Sable, Charbon, Fer, Or, Rubis, Lapis lazuli, Diamant, Emeraude, and Obsidienne; they are exchanged into Pieces de mine instead of Mana.
+_Avoid_: Mana reward, color only
+
 **Profondeur**:
-The escalating layer of a Bloc de terre. Greater Profondeur means the replacement block has more hit points.
+The escalating layer of a Bloc de mine. Greater Profondeur means the replacement block has more hit points, moves through sprite tiers every five layers, and may cast small neighbor shadows when it is lower than adjacent blocks.
 _Avoid_: Stage, wave, level
 
 ### Progression

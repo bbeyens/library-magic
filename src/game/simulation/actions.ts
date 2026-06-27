@@ -41,8 +41,13 @@ export {
 } from './slimeTrainerRules';
 import {
   createStartingSnakeBody,
+  createInitialMiningMaterials,
+  miningBlockMaterialForDepth,
   miningBlockMaxHealth,
+  miningMaterialExchangeValue,
   MINING_GRID_COLUMNS,
+  MINING_MATERIAL_RESOURCE_IDS,
+  MINING_GRID_ROWS,
   randomSnakeFood,
   snakeGridSizeForLevel,
   type BlackjackCard,
@@ -50,9 +55,11 @@ import {
   type BlackjackSuit,
   type BlackjackUpgradeCellId,
   type BookPanelSlot,
+  type DefenseDamagePopupKind,
   type DefenseEnemy,
   type GameState,
   type MiningBlock,
+  type MiningMaterialResourceId,
   type SnakeBonusFruitType,
   type SnakeCell,
   type SnakeDirection,
@@ -99,6 +106,22 @@ import {
 
 export type ManaSkillId = 'power' | 'automation' | 'criticalHit' | 'criticalEffect' | 'extraWands';
 export type SnakeSkillId = 'speed' | 'gridSize' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
+export type DefenseSkillId =
+  | 'damage'
+  | 'attackSpeed'
+  | 'range'
+  | 'damagePerMeter'
+  | 'criticalChance'
+  | 'criticalMultiplier'
+  | 'ricochetCount'
+  | 'ricochetChance'
+  | 'superCriticalChance'
+  | 'superCriticalMultiplier'
+  | 'health'
+  | 'healthRegen'
+  | 'resistance'
+  | 'moneyPerEnemy'
+  | 'moneyPerWave';
 export type MiningSkillId = 'pickaxeForce' | 'splashDamage' | 'automation';
 export type { TargetSkillId };
 export type { BlackjackSideBonusId };
@@ -132,6 +155,28 @@ const DEBUG_TARGET_SKILL_MAX_LEVELS: Record<TargetSkillId, number> = {
   automation: 10,
 };
 
+const DEBUG_DEFENSE_SKILL_MAX_LEVELS: Record<DefenseSkillId, number> = {
+  damage: 60,
+  attackSpeed: 30,
+  range: 12,
+  damagePerMeter: 40,
+  criticalChance: 30,
+  criticalMultiplier: 30,
+  ricochetCount: 5,
+  ricochetChance: 20,
+  superCriticalChance: 25,
+  superCriticalMultiplier: 25,
+  health: 30,
+  healthRegen: 30,
+  resistance: 25,
+  moneyPerEnemy: 40,
+  moneyPerWave: 40,
+};
+
+const DEFENSE_TOWER_BASE_RANGE_PERCENT = 0.3;
+const DEFENSE_TOWER_MAX_RANGE_PERCENT = 0.8;
+const DEFENSE_TOWER_DIRT_EDGE_RANGE = 0.36;
+
 const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
   pickaxeForce: 30,
   splashDamage: 12,
@@ -139,7 +184,9 @@ const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
 };
 
 const BOOK_PANEL_SLOTS: BookPanelSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+const BOOK_PANEL_OPEN_SLOTS: BookPanelSlot[] = [3, 0, 1, 2, 7, 4, 5, 6, 8];
 const DEFENSE_ENEMY_DEATH_DURATION = 0.62;
+const DEFENSE_DAMAGE_POPUP_DURATION = 0.72;
 
 export type GameAction =
   | { type: 'selectBook'; bookId: BookId }
@@ -148,6 +195,7 @@ export type GameAction =
   | { type: 'chargeMana' }
   | { type: 'buyManaSkill'; skillId: ManaSkillId }
   | { type: 'buySnakeSkill'; skillId: SnakeSkillId }
+  | { type: 'buyDefenseSkill'; skillId: DefenseSkillId }
   | { type: 'buyTargetSkill'; skillId: TargetSkillId }
   | { type: 'buyMiningSkill'; skillId: MiningSkillId }
   | { type: 'unlockBlackjackBonus'; bonusId: BlackjackSideBonusId }
@@ -164,7 +212,9 @@ export type GameAction =
   | { type: 'maxManaSkills' }
   | { type: 'maxSnakeSkills' }
   | { type: 'maxMiningSkills' }
+  | { type: 'maxAllSkills' }
   | { type: 'resetManaSkills' }
+  | { type: 'resetAllSkills' }
   | { type: 'buyUpgrade'; bookId: BookId }
   | { type: 'togglePin'; bookId: BookId }
   | { type: 'unlockBook'; bookId: BookId }
@@ -184,6 +234,7 @@ export type GameAction =
   | { type: 'chooseHundredOption'; optionId: HundredOptionId }
   | { type: 'attackTarget'; targetId: number }
   | { type: 'digMiningBlock'; blockId: number }
+  | { type: 'exchangeMiningMaterials' }
   | { type: 'trainSlime'; commandId: SlimeTrainerCommandId }
   | { type: 'enemyAttackSlime' }
   | { type: 'cycleDefenseSpeed' }
@@ -211,6 +262,9 @@ export function applyAction(state: GameState, action: GameAction): void {
       return;
     case 'buySnakeSkill':
       buySnakeSkill(state, action.skillId);
+      return;
+    case 'buyDefenseSkill':
+      buyDefenseSkill(state, action.skillId);
       return;
     case 'buyTargetSkill':
       buyTargetSkill(state, action.skillId);
@@ -260,8 +314,14 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'maxMiningSkills':
       maxMiningSkills(state);
       return;
+    case 'maxAllSkills':
+      maxAllSkills(state);
+      return;
     case 'resetManaSkills':
       resetManaSkills(state);
+      return;
+    case 'resetAllSkills':
+      resetAllSkills(state);
       return;
     case 'buyUpgrade':
       buyUpgrade(state, action.bookId);
@@ -319,6 +379,9 @@ export function applyAction(state: GameState, action: GameAction): void {
       return;
     case 'digMiningBlock':
       digMiningBlock(state, action.blockId);
+      return;
+    case 'exchangeMiningMaterials':
+      exchangeMiningMaterials(state);
       return;
     case 'trainSlime':
       trainSlime(state, action.commandId);
@@ -547,6 +610,141 @@ export function targetSkillCost(state: GameState, skillId: TargetSkillId): numbe
   }
 }
 
+export function defenseSkillMaxLevel(skillId: DefenseSkillId): number {
+  return DEBUG_DEFENSE_SKILL_MAX_LEVELS[skillId];
+}
+
+export function defenseSkillCost(state: GameState, skillId: DefenseSkillId): number {
+  const level = state.defenseSkills[skillId];
+  switch (skillId) {
+    case 'damage':
+      return Math.round(80 * Math.pow(1.26, level));
+    case 'attackSpeed':
+      return Math.round(110 * Math.pow(1.34, level));
+    case 'range':
+      return Math.round(150 * Math.pow(1.5, level));
+    case 'damagePerMeter':
+      return Math.round(140 * Math.pow(1.32, level));
+    case 'criticalChance':
+      return Math.round(170 * Math.pow(1.36, level));
+    case 'criticalMultiplier':
+      return Math.round(210 * Math.pow(1.34, level));
+    case 'ricochetCount':
+      return Math.round(520 * Math.pow(1.9, level));
+    case 'ricochetChance':
+      return Math.round(260 * Math.pow(1.42, level));
+    case 'superCriticalChance':
+      return Math.round(420 * Math.pow(1.48, level));
+    case 'superCriticalMultiplier':
+      return Math.round(520 * Math.pow(1.46, level));
+    case 'health':
+      return Math.round(95 * Math.pow(1.3, level));
+    case 'healthRegen':
+      return Math.round(180 * Math.pow(1.38, level));
+    case 'resistance':
+      return Math.round(220 * Math.pow(1.42, level));
+    case 'moneyPerEnemy':
+      return Math.round(130 * Math.pow(1.34, level));
+    case 'moneyPerWave':
+      return Math.round(240 * Math.pow(1.38, level));
+  }
+}
+
+export function defenseMaxTowerHealth(state: GameState): number {
+  return 10 + state.defenseSkills.health * 2;
+}
+
+export function defenseTowerHealthRegenPerSecond(state: GameState): number {
+  return state.defenseSkills.healthRegen * 0.08;
+}
+
+export function defenseTowerResistance(state: GameState): number {
+  return Math.min(0.72, state.defenseSkills.resistance * 0.03);
+}
+
+export function defenseTowerRange(state: GameState): number {
+  const rangePercent = defenseTowerRangePercent(state);
+  return DEFENSE_TOWER_DIRT_EDGE_RANGE + (1 - DEFENSE_TOWER_DIRT_EDGE_RANGE) * rangePercent;
+}
+
+export function defenseTowerRangePercent(state: GameState): number {
+  const rangeProgress = state.defenseSkills.range / defenseSkillMaxLevel('range');
+  return Math.min(
+    DEFENSE_TOWER_MAX_RANGE_PERCENT,
+    DEFENSE_TOWER_BASE_RANGE_PERCENT + (DEFENSE_TOWER_MAX_RANGE_PERCENT - DEFENSE_TOWER_BASE_RANGE_PERCENT) * rangeProgress,
+  );
+}
+
+export function defenseCriticalChance(state: GameState): number {
+  return Math.min(0.6, state.defenseSkills.criticalChance * 0.02);
+}
+
+export function defenseCriticalMultiplier(state: GameState): number {
+  return 2 + state.defenseSkills.criticalMultiplier * 0.125;
+}
+
+export function defenseSuperCriticalChance(state: GameState): number {
+  return Math.min(0.25, state.defenseSkills.superCriticalChance * 0.01);
+}
+
+export function defenseSuperCriticalMultiplier(state: GameState): number {
+  return 3 + state.defenseSkills.superCriticalMultiplier * 0.25;
+}
+
+export function defenseRicochetChance(state: GameState): number {
+  return Math.min(0.8, state.defenseSkills.ricochetChance * 0.04);
+}
+
+export function defenseRicochetCount(state: GameState): number {
+  return state.defenseSkills.ricochetCount;
+}
+
+export function defenseEnemyReward(state: GameState): number {
+  return 1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(state.defense.wave / 4) + state.defenseSkills.moneyPerEnemy;
+}
+
+export function defenseMoneyPerWave(state: GameState): number {
+  return state.defenseSkills.moneyPerWave * 3;
+}
+
+export function defenseTowerHitDamage(
+  state: GameState,
+  enemy: Pick<DefenseEnemy, 'distance'>,
+  roll: () => number = Math.random,
+): number {
+  return defenseTowerHitResult(state, enemy, roll).amount;
+}
+
+export function defenseTowerHitResult(
+  state: GameState,
+  enemy: Pick<DefenseEnemy, 'distance'>,
+  roll: () => number = Math.random,
+): { amount: number; kind: DefenseDamagePopupKind } {
+  const baseDamage = defenseTowerDamage(state);
+  const distanceBonus = Math.floor(enemy.distance * state.defenseSkills.damagePerMeter * 0.75);
+  const rawDamage = baseDamage + distanceBonus;
+  const superChance = defenseSuperCriticalChance(state);
+  if (superChance > 0 && roll() < superChance) {
+    return {
+      amount: Math.max(1, Math.round(rawDamage * defenseSuperCriticalMultiplier(state))),
+      kind: 'superCritical',
+    };
+  }
+
+  const criticalChance = defenseCriticalChance(state);
+  if (criticalChance > 0 && roll() < criticalChance) {
+    return {
+      amount: Math.max(1, Math.round(rawDamage * defenseCriticalMultiplier(state))),
+      kind: 'critical',
+    };
+  }
+
+  return {
+    amount: rawDamage,
+    kind: 'normal',
+  };
+}
+
 export function miningSkillMaxLevel(skillId: MiningSkillId): number {
   return DEBUG_MINING_SKILL_MAX_LEVELS[skillId];
 }
@@ -690,6 +888,26 @@ function buyTargetSkill(state: GameState, skillId: TargetSkillId): void {
 
   state.mana -= cost;
   state.targetSkills[skillId] += 1;
+}
+
+function buyDefenseSkill(state: GameState, skillId: DefenseSkillId): void {
+  const maxLevel = defenseSkillMaxLevel(skillId);
+  if (state.defenseSkills[skillId] >= maxLevel) {
+    return;
+  }
+
+  const cost = defenseSkillCost(state, skillId);
+  if (state.mana < cost) {
+    return;
+  }
+
+  const previousMaxHealth = defenseMaxTowerHealth(state);
+  state.mana -= cost;
+  state.defenseSkills[skillId] += 1;
+  if (skillId === 'health') {
+    state.defense.towerHealth += defenseMaxTowerHealth(state) - previousMaxHealth;
+  }
+  state.defense.tower.range = defenseTowerRange(state);
 }
 
 function buyMiningSkill(state: GameState, skillId: MiningSkillId): void {
@@ -962,6 +1180,66 @@ function maxMiningSkills(state: GameState): void {
   state.miningSkills.automationTimer = 0;
 }
 
+function maxTargetSkills(state: GameState): void {
+  state.targetSkills.spawnSpeed = DEBUG_TARGET_SKILL_MAX_LEVELS.spawnSpeed;
+  state.targetSkills.targetCount = DEBUG_TARGET_SKILL_MAX_LEVELS.targetCount;
+  state.targetSkills.damage = DEBUG_TARGET_SKILL_MAX_LEVELS.damage;
+  state.targetSkills.automation = DEBUG_TARGET_SKILL_MAX_LEVELS.automation;
+  state.targets.spawnTimer = 0;
+  state.targets.automationTimer = 0;
+}
+
+function maxDefenseSkills(state: GameState): void {
+  state.defenseSkills.damage = DEBUG_DEFENSE_SKILL_MAX_LEVELS.damage;
+  state.defenseSkills.attackSpeed = DEBUG_DEFENSE_SKILL_MAX_LEVELS.attackSpeed;
+  state.defenseSkills.range = DEBUG_DEFENSE_SKILL_MAX_LEVELS.range;
+  state.defenseSkills.damagePerMeter = DEBUG_DEFENSE_SKILL_MAX_LEVELS.damagePerMeter;
+  state.defenseSkills.criticalChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.criticalChance;
+  state.defenseSkills.criticalMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.criticalMultiplier;
+  state.defenseSkills.ricochetCount = DEBUG_DEFENSE_SKILL_MAX_LEVELS.ricochetCount;
+  state.defenseSkills.ricochetChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.ricochetChance;
+  state.defenseSkills.superCriticalChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.superCriticalChance;
+  state.defenseSkills.superCriticalMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.superCriticalMultiplier;
+  state.defenseSkills.health = DEBUG_DEFENSE_SKILL_MAX_LEVELS.health;
+  state.defenseSkills.healthRegen = DEBUG_DEFENSE_SKILL_MAX_LEVELS.healthRegen;
+  state.defenseSkills.resistance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.resistance;
+  state.defenseSkills.moneyPerEnemy = DEBUG_DEFENSE_SKILL_MAX_LEVELS.moneyPerEnemy;
+  state.defenseSkills.moneyPerWave = DEBUG_DEFENSE_SKILL_MAX_LEVELS.moneyPerWave;
+  state.defense.tower.range = defenseTowerRange(state);
+  state.defense.towerHealth = defenseMaxTowerHealth(state);
+}
+
+function maxBlackjackSkills(state: GameState): void {
+  ensureBlackjackUpgradeCells(state);
+  for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
+    state.blackjack.upgradeCells[cellId] = blackjackUpgradeCellMaxLevel(cellId);
+  }
+  for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
+    applyBlackjackUpgradeCellSideEffects(state, cellId);
+  }
+  state.blackjack.actions.unlocked = true;
+  state.blackjack.actions.level = blackjackActionMaxLevel();
+  state.blackjack.actions.lastOutcome = `Niveau ${state.blackjack.actions.level}`;
+  state.blackjack.pair.unlocked = true;
+  state.blackjack.pair.level = blackjackBonusMaxLevel();
+  state.blackjack.pair.autoEnabled = true;
+  state.blackjack.pair.lastOutcome = 'Pret';
+  state.blackjack.twentyOneThree.unlocked = true;
+  state.blackjack.twentyOneThree.level = blackjackBonusMaxLevel();
+  state.blackjack.twentyOneThree.autoEnabled = true;
+  state.blackjack.twentyOneThree.lastOutcome = 'Pret';
+  state.blackjack.baseBetLevel = blackjackUpgradeCellMaxLevel('wagerBase');
+}
+
+function maxAllSkills(state: GameState): void {
+  maxManaSkills(state);
+  maxSnakeSkills(state);
+  maxTargetSkills(state);
+  maxDefenseSkills(state);
+  maxMiningSkills(state);
+  maxBlackjackSkills(state);
+}
+
 function resizeSnakeGrid(state: GameState): void {
   state.snake.gridSize = snakeGridSize(state);
   resetSnakeRun(state);
@@ -975,6 +1253,72 @@ function resetManaSkills(state: GameState): void {
   state.manaSkills.extraWands = 0;
   state.manaSkills.automationTimer = 0;
   state.manaSkills.autoCastCount = 0;
+}
+
+function resetAllSkills(state: GameState): void {
+  resetManaSkills(state);
+
+  state.snakeSkills.speed = 0;
+  state.snakeSkills.gridSize = 0;
+  state.snakeSkills.automation = 0;
+  state.snakeSkills.automationEnabled = false;
+  state.snakeSkills.baseMultiplier = 0;
+  state.snakeSkills.bonusFruit = 0;
+  state.snakeSkills.extraLife = 0;
+  state.snakeSkills.edgeWrap = 0;
+  state.snake.gridSize = 8;
+  state.snake.body = createStartingSnakeBody(state.snake.gridSize);
+  state.snake.food = randomSnakeFood(state.snake.body, state.snake.gridSize);
+  state.snake.bonusFood = null;
+  state.snake.moveTimer = 0;
+
+  state.targetSkills.spawnSpeed = 0;
+  state.targetSkills.targetCount = 0;
+  state.targetSkills.damage = 0;
+  state.targetSkills.automation = 0;
+  state.targets.spawnTimer = 0;
+  state.targets.automationTimer = 0;
+
+  state.defenseSkills.damage = 0;
+  state.defenseSkills.attackSpeed = 0;
+  state.defenseSkills.range = 0;
+  state.defenseSkills.damagePerMeter = 0;
+  state.defenseSkills.criticalChance = 0;
+  state.defenseSkills.criticalMultiplier = 0;
+  state.defenseSkills.ricochetCount = 0;
+  state.defenseSkills.ricochetChance = 0;
+  state.defenseSkills.superCriticalChance = 0;
+  state.defenseSkills.superCriticalMultiplier = 0;
+  state.defenseSkills.health = 0;
+  state.defenseSkills.healthRegen = 0;
+  state.defenseSkills.resistance = 0;
+  state.defenseSkills.moneyPerEnemy = 0;
+  state.defenseSkills.moneyPerWave = 0;
+  state.defense.tower.range = defenseTowerRange(state);
+  state.defense.towerHealth = defenseMaxTowerHealth(state);
+
+  state.miningSkills.pickaxeForce = 0;
+  state.miningSkills.splashDamage = 0;
+  state.miningSkills.automation = 0;
+  state.miningSkills.automationTimer = 0;
+  state.miningSkills.autoDigCount = 0;
+
+  state.blackjack.actions.unlocked = false;
+  state.blackjack.actions.level = 0;
+  state.blackjack.actions.autoEnabled = false;
+  state.blackjack.actions.xp = 0;
+  state.blackjack.pair.unlocked = false;
+  state.blackjack.pair.level = 0;
+  state.blackjack.pair.autoEnabled = false;
+  state.blackjack.pair.xp = 0;
+  state.blackjack.twentyOneThree.unlocked = false;
+  state.blackjack.twentyOneThree.level = 0;
+  state.blackjack.twentyOneThree.autoEnabled = false;
+  state.blackjack.twentyOneThree.xp = 0;
+  state.blackjack.baseBetLevel = 1;
+  for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
+    state.blackjack.upgradeCells[cellId] = 1;
+  }
 }
 
 function buyUpgrade(state: GameState, bookId: BookId): void {
@@ -1065,6 +1409,7 @@ function unlockBook(state: GameState, bookId: BookId): void {
     state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
     state.forbiddenGrimoire.lastOffered = {};
   }
+  delete state.forbiddenGrimoire.offeringsByBook[bookId];
   state.forbiddenGrimoire.lastUnlockedBookId = bookId;
   state.forbiddenGrimoire.pulse += 1;
 }
@@ -1107,6 +1452,7 @@ export function forbiddenGrimoireRequirementProgress(state: GameState, requireme
 
 function selectForbiddenSealBook(state: GameState, bookId: BookId): void {
   if (bookId === 'mana' || state.books[bookId].unlocked || !getForbiddenGrimoireSealForBook(bookId)) {
+    saveCurrentForbiddenOfferings(state);
     state.forbiddenGrimoire.selectedBookId = null;
     state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
     state.forbiddenGrimoire.lastOffered = {};
@@ -1117,8 +1463,9 @@ function selectForbiddenSealBook(state: GameState, bookId: BookId): void {
     return;
   }
 
+  saveCurrentForbiddenOfferings(state);
   state.forbiddenGrimoire.selectedBookId = bookId;
-  state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
+  state.forbiddenGrimoire.offerings = cloneForbiddenOfferings(state.forbiddenGrimoire.offeringsByBook[bookId] ?? emptyForbiddenOfferings());
   state.forbiddenGrimoire.lastOffered = {};
 }
 
@@ -1150,6 +1497,7 @@ function offerForbiddenGrimoire(state: GameState): void {
 
   state.forbiddenGrimoire.lastOffered = lastOffered;
   if (Object.keys(lastOffered).length > 0) {
+    saveCurrentForbiddenOfferings(state);
     state.forbiddenGrimoire.pulse += 1;
   }
 }
@@ -1165,6 +1513,7 @@ function breakForbiddenSeal(state: GameState): void {
   state.selectedBook = seal.unlocksBookId;
   openBookPanel(state, seal.unlocksBookId);
   state.forbiddenGrimoire.keys -= 1;
+  delete state.forbiddenGrimoire.offeringsByBook[seal.unlocksBookId];
   state.forbiddenGrimoire.selectedBookId = null;
   state.forbiddenGrimoire.offerings = emptyForbiddenOfferings();
   state.forbiddenGrimoire.lastOffered = {};
@@ -1191,6 +1540,18 @@ function spendOfferingResource(state: GameState, id: ForbiddenOfferingResourceId
   state.resources[id] -= amount;
 }
 
+function saveCurrentForbiddenOfferings(state: GameState): void {
+  const bookId = state.forbiddenGrimoire.selectedBookId;
+  if (!bookId) {
+    return;
+  }
+  state.forbiddenGrimoire.offeringsByBook[bookId] = cloneForbiddenOfferings(state.forbiddenGrimoire.offerings);
+}
+
+function cloneForbiddenOfferings(offerings: Record<ForbiddenOfferingResourceId, number>): Record<ForbiddenOfferingResourceId, number> {
+  return { ...offerings };
+}
+
 function emptyForbiddenOfferings(): Record<ForbiddenOfferingResourceId, number> {
   return {
     mana: 0,
@@ -1213,7 +1574,7 @@ function openBookPanel(state: GameState, bookId: BookId): void {
   }
 
   const usedSlots = new Set(state.openBookPanels.map((panel) => panel.slot));
-  const nextSlot = BOOK_PANEL_SLOTS.find((slot) => !usedSlots.has(slot)) ?? BOOK_PANEL_SLOTS[0];
+  const nextSlot = BOOK_PANEL_OPEN_SLOTS.find((slot) => !usedSlots.has(slot)) ?? BOOK_PANEL_OPEN_SLOTS[0];
   if (state.openBookPanels.length < BOOK_PANEL_SLOTS.length) {
     state.openBookPanels.push({ bookId, slot: nextSlot });
     return;
@@ -1456,11 +1817,11 @@ export function defenseWaveEnemyCount(state: GameState): number {
 }
 
 export function defenseTowerDamage(state: GameState): number {
-  return 1 + Math.floor(state.books.defense.level * 0.55);
+  return 1 + state.defenseSkills.damage;
 }
 
 export function defenseTowerAttackInterval(state: GameState): number {
-  return Math.max(0.28, 0.78 - state.books.defense.level * 0.035);
+  return Math.max(0.16, 0.78 - state.defenseSkills.attackSpeed * 0.025);
 }
 
 export function defenseWaveProgress(state: GameState): number {
@@ -1861,8 +2222,14 @@ function tickDefense(state: GameState, deltaSeconds: number): void {
 
   defense.running = true;
   const scaledDeltaSeconds = deltaSeconds * defense.speedMultiplier;
+  defense.tower.range = defenseTowerRange(state);
+  defense.towerHealth = Math.min(
+    defenseMaxTowerHealth(state),
+    defense.towerHealth + defenseTowerHealthRegenPerSecond(state) * scaledDeltaSeconds,
+  );
   defense.tower.cooldown = Math.max(0, defense.tower.cooldown - scaledDeltaSeconds);
-  tickDefenseShot(state, scaledDeltaSeconds);
+  tickDefenseShot(state, deltaSeconds);
+  tickDefenseDamagePopups(state, deltaSeconds);
   spawnDefenseEnemies(state, scaledDeltaSeconds);
   moveDefenseEnemies(state, scaledDeltaSeconds);
   fireDefenseTower(state);
@@ -1914,7 +2281,8 @@ function moveDefenseEnemies(state: GameState, deltaSeconds: number): void {
 
     const nextDistance = enemy.distance - speed * deltaSeconds;
     if (defenseEnemyInTowerHitbox({ ...enemy, distance: nextDistance })) {
-      defense.towerHealth = Math.max(0, defense.towerHealth - 1);
+      const damage = Math.max(0.2, 1 - defenseTowerResistance(state));
+      defense.towerHealth = Math.max(0, defense.towerHealth - damage);
       defense.score = 0;
       continue;
     }
@@ -1929,7 +2297,15 @@ function moveDefenseEnemies(state: GameState, deltaSeconds: number): void {
 
 function fireDefenseTower(state: GameState): void {
   const defense = state.defense;
-  if (defense.tower.cooldown > 0 || defense.enemies.length === 0) {
+  if (defense.shot || defense.enemies.length === 0) {
+    return;
+  }
+
+  if (fireQueuedDefenseShot(state)) {
+    return;
+  }
+
+  if (defense.tower.cooldown > 0) {
     return;
   }
 
@@ -1941,7 +2317,7 @@ function fireDefenseTower(state: GameState): void {
     return;
   }
 
-  target.health -= defenseTowerDamage(state);
+  applyDefenseEnemyHit(state, target);
   defense.tower.cooldown = defenseTowerAttackInterval(state);
   defense.shotPulse += 1;
   defense.shot = {
@@ -1951,16 +2327,94 @@ function fireDefenseTower(state: GameState): void {
     timer: 0.18,
   };
 
-  if (target.health > 0) {
+  collectDefenseEnemyIfDefeated(state, target);
+  queueDefenseRicochets(state, target.id);
+}
+
+function fireQueuedDefenseShot(state: GameState): boolean {
+  const defense = state.defense;
+  while (defense.queuedShots.length > 0) {
+    const queuedShot = defense.queuedShots.shift();
+    if (!queuedShot) {
+      continue;
+    }
+
+    const target = defense.enemies.find((enemy) => enemy.id === queuedShot.enemyId && enemy.state !== 'dying');
+    if (!target || !defenseEnemyInTowerRange(target, defenseTowerRange(state))) {
+      continue;
+    }
+
+    applyDefenseEnemyHit(state, target, queuedShot.damageScale);
+    defense.shotPulse += 1;
+    defense.shot = {
+      id: defense.shotPulse,
+      lane: target.lane,
+      distance: target.distance,
+      timer: 0.18,
+    };
+    collectDefenseEnemyIfDefeated(state, target);
+    return true;
+  }
+
+  return false;
+}
+
+function queueDefenseRicochets(state: GameState, originalTargetId: number): void {
+  const defense = state.defense;
+  const maxRicochets = defenseRicochetCount(state);
+  if (maxRicochets <= 0 || defenseRicochetChance(state) <= 0 || Math.random() >= defenseRicochetChance(state)) {
     return;
   }
 
-  const reward = 1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(defense.wave / 4);
-  target.state = 'dying';
-  target.deathTimer = DEFENSE_ENEMY_DEATH_DURATION;
+  const targets = defense.enemies
+    .filter((enemy) => enemy.id !== originalTargetId && enemy.state !== 'dying')
+    .filter((enemy) => defenseEnemyInTowerRange(enemy, defenseTowerRange(state)))
+    .sort((first, second) => first.distance - second.distance)
+    .slice(0, maxRicochets);
+
+  defense.queuedShots.push(...targets.map((enemy) => ({ enemyId: enemy.id, damageScale: 0.65 })));
+}
+
+function applyDefenseEnemyHit(state: GameState, enemy: DefenseEnemy, damageScale = 1): void {
+  const hit = defenseTowerHitResult(state, enemy);
+  const amount = Math.max(1, Math.round(hit.amount * damageScale));
+  enemy.health -= amount;
+  recordDefenseDamagePopup(state, enemy, amount, hit.kind);
+}
+
+function recordDefenseDamagePopup(
+  state: GameState,
+  enemy: Pick<DefenseEnemy, 'lane' | 'distance'>,
+  amount: number,
+  kind: DefenseDamagePopupKind,
+): void {
+  const defense = state.defense;
+  defense.damagePopups.push({
+    id: defense.nextDamagePopupId,
+    lane: enemy.lane,
+    distance: enemy.distance,
+    amount,
+    kind,
+    timer: DEFENSE_DAMAGE_POPUP_DURATION,
+  });
+  defense.nextDamagePopupId += 1;
+  if (defense.damagePopups.length > 18) {
+    defense.damagePopups.splice(0, defense.damagePopups.length - 18);
+  }
+}
+
+function collectDefenseEnemyIfDefeated(state: GameState, enemy: DefenseEnemy): void {
+  if (enemy.health > 0 || enemy.state === 'dying') {
+    return;
+  }
+
+  const reward = defenseEnemyReward(state);
+  const defense = state.defense;
+  enemy.state = 'dying';
+  enemy.deathTimer = DEFENSE_ENEMY_DEATH_DURATION;
   defense.score += reward;
   defense.best = Math.max(defense.best, defense.score);
-  defense.lastReward = reward;
+  defense.lastReward += reward;
   state.resources.sigils += reward;
   state.mana += 0.5 + state.books.defense.level * 0.2;
 }
@@ -1974,23 +2428,32 @@ function completeDefenseWaveIfReady(state: GameState): void {
   defense.wave += 1;
   defense.spawnedThisWave = 0;
   defense.spawnTimer = -1.1;
-  defense.towerHealth = Math.min(10, defense.towerHealth + 2);
+  const waveMoney = defenseMoneyPerWave(state);
+  if (waveMoney > 0) {
+    defense.lastReward += waveMoney;
+    state.resources.sigils += waveMoney;
+  }
+  defense.towerHealth = Math.min(defenseMaxTowerHealth(state), defense.towerHealth + 2);
 }
 
 function resetDefenseRun(state: GameState): void {
   const defense = state.defense;
   defense.running = false;
   defense.wave = 1;
-  defense.towerHealth = 10;
+  defense.towerHealth = defenseMaxTowerHealth(state);
   defense.score = 0;
   defense.spawnTimer = 0;
   defense.spawnedThisWave = 0;
   defense.nextEnemyId = 1;
+  defense.nextDamagePopupId = 1;
   defense.lastReward = 0;
   defense.shotPulse = 0;
+  defense.tower.range = defenseTowerRange(state);
   defense.tower.cooldown = 0;
   defense.shot = null;
+  defense.queuedShots = [];
   defense.enemies = [];
+  defense.damagePopups = [];
 }
 
 function tickDefenseShot(state: GameState, deltaSeconds: number): void {
@@ -2003,6 +2466,12 @@ function tickDefenseShot(state: GameState, deltaSeconds: number): void {
   if (shot.timer <= 0) {
     state.defense.shot = null;
   }
+}
+
+function tickDefenseDamagePopups(state: GameState, deltaSeconds: number): void {
+  state.defense.damagePopups = state.defense.damagePopups
+    .map((popup) => ({ ...popup, timer: popup.timer - deltaSeconds }))
+    .filter((popup) => popup.timer > 0);
 }
 
 function dealBlackjack(state: GameState): void {
@@ -2762,7 +3231,7 @@ function tickMining(state: GameState, deltaSeconds: number): void {
     if (!target) {
       return;
     }
-    applyMiningHit(state, target, miningPickaxeDamage(state), true);
+    applyMiningHit(state, target, miningPickaxeDamage(state));
   }
   skills.autoDigCount += digs;
 }
@@ -2778,7 +3247,7 @@ function digMiningBlock(state: GameState, blockId: number): void {
   }
 
   state.mining.lastReward = 0;
-  applyMiningHit(state, block, miningPickaxeDamage(state), false);
+  applyMiningHit(state, block, miningPickaxeDamage(state));
 
   const splash = miningSplashDamage(state);
   if (splash <= 0) {
@@ -2786,7 +3255,7 @@ function digMiningBlock(state: GameState, blockId: number): void {
   }
 
   for (const neighbor of miningNeighbors(state, blockId)) {
-    applyMiningHit(state, neighbor, splash, false);
+    applyMiningHit(state, neighbor, splash);
   }
 }
 
@@ -2809,13 +3278,13 @@ function miningNeighbors(state: GameState, blockId: number): MiningBlock[] {
     { x, y: y - 1 },
     { x, y: y + 1 },
   ]
-    .filter((cell) => cell.x >= 0 && cell.x < MINING_GRID_COLUMNS && cell.y >= 0)
+    .filter((cell) => cell.x >= 0 && cell.x < MINING_GRID_COLUMNS && cell.y >= 0 && cell.y < MINING_GRID_ROWS)
     .map((cell) => cell.y * MINING_GRID_COLUMNS + cell.x);
 
   return state.mining.blocks.filter((block) => neighborIds.includes(block.id));
 }
 
-function applyMiningHit(state: GameState, block: MiningBlock, damage: number, isAutomated: boolean): void {
+function applyMiningHit(state: GameState, block: MiningBlock, damage: number): void {
   state.mining.hitPulse += 1;
   block.lastHit = state.mining.hitPulse;
   block.health -= damage;
@@ -2823,21 +3292,23 @@ function applyMiningHit(state: GameState, block: MiningBlock, damage: number, is
     return;
   }
 
-  breakMiningBlock(state, block, isAutomated);
+  breakMiningBlock(state, block);
 }
 
-function breakMiningBlock(state: GameState, block: MiningBlock, isAutomated: boolean): void {
+function breakMiningBlock(state: GameState, block: MiningBlock): void {
   const brokenDepth = block.depth;
   const reward = miningBlockReward(state, block);
-  state.resources.minerals += reward;
-  state.mana += reward * (isAutomated ? 0.28 : 0.42) + state.books.mine.level * 0.12;
+  const material = miningBlockMaterialForDepth(brokenDepth);
+  state.mining.materials[material.resourceId] += reward;
   state.mining.totalMined += 1;
   state.mining.lastReward += reward;
   state.mining.lastBrokenDepth = brokenDepth;
 
   const nextDepth = brokenDepth + 1;
   const nextMaxHealth = miningBlockMaxHealth(nextDepth);
+  const nextMaterial = miningBlockMaterialForDepth(nextDepth);
   block.depth = nextDepth;
+  block.material = nextMaterial.id;
   block.maxHealth = nextMaxHealth;
   block.health = nextMaxHealth;
   state.mining.deepestLayer = Math.max(state.mining.deepestLayer, nextDepth);
@@ -2845,6 +3316,19 @@ function breakMiningBlock(state: GameState, block: MiningBlock, isAutomated: boo
 
 function miningBlockReward(state: GameState, block: MiningBlock): number {
   return 1 + Math.floor(block.depth * 0.45) + Math.floor(state.books.mine.level * 0.3);
+}
+
+function exchangeMiningMaterials(state: GameState): void {
+  let coins = 0;
+  for (const resourceId of MINING_MATERIAL_RESOURCE_IDS) {
+    const amount = Math.floor(state.mining.materials[resourceId]);
+    if (amount <= 0) {
+      continue;
+    }
+    coins += amount * miningMaterialExchangeValue(resourceId);
+    state.mining.materials[resourceId] -= amount;
+  }
+  state.resources.minerals += coins;
 }
 
 function trainSlime(state: GameState, commandId: SlimeTrainerCommandId): void {
@@ -2962,4 +3446,8 @@ function grantDebugResources(state: GameState): void {
   state.resources.marks += 999;
   state.resources.minerals += 999;
   state.resources.gels += 999;
+  state.mining.materials = createInitialMiningMaterials();
+  for (const resourceId of MINING_MATERIAL_RESOURCE_IDS) {
+    state.mining.materials[resourceId as MiningMaterialResourceId] = 999;
+  }
 }

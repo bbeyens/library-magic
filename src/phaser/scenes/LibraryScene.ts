@@ -67,7 +67,7 @@ const resourceDefinitions: ResourceDefinition[] = [
   { id: 'sigils', label: 'Sceaux', color: 0xffc36e, accent: '#ffc36e', bookId: 'defense' },
   { id: 'chips', label: 'Jetons', color: 0x74d88f, accent: '#74d88f', bookId: 'blackjack' },
   { id: 'fragments', label: 'Fragments', color: 0x7ea4ff, accent: '#7ea4ff', bookId: 'hundred' },
-  { id: 'minerals', label: 'Minerais', color: 0xd69a58, accent: '#d69a58', bookId: 'mine' },
+  { id: 'minerals', label: 'Pieces mine', color: 0xd69a58, accent: '#d69a58', bookId: 'mine' },
   { id: 'marks', label: 'Marques', color: 0xff7a80, accent: '#ff7a80', bookId: 'targets' },
   { id: 'gels', label: 'Gels', color: 0x7df0a3, accent: '#7df0a3', bookId: 'slimeTrainer' },
 ];

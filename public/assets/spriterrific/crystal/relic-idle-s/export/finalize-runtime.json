@@ -1,7 +1,7 @@
 {
   "version": 1,
   "kind": "runtime-finalization",
-  "createdAt": "2026-06-26T11:12:02+02:00",
+  "createdAt": "2026-06-27T11:58:50+02:00",
   "animationDir": "public/assets/spriterrific/crystal/relic-idle-s/export",
   "action": "idle",
   "direction": "s",
