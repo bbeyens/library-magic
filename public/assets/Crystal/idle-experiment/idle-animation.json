@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "source": "../Crystal.png",
+  "mode": "preview-only",
+  "action": "idle",
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "frames": 8,
+  "columns": 8,
+  "rows": 1,
+  "fps": 8,
+  "spritesheet": "idle-spritesheet.png",
+  "previewGif": "idle-preview.gif",
+  "notes": [
+    "Not wired into the game.",
+    "Derived deterministically from public/assets/Crystal/Crystal.png.",
+    "Motion: subtle bob, internal pulse, small diagonal glint."
+  ],
+  "frameFiles": [
+    "frames/frame-01.png",
+    "frames/frame-02.png",
+    "frames/frame-03.png",
+    "frames/frame-04.png",
+    "frames/frame-05.png",
+    "frames/frame-06.png",
+    "frames/frame-07.png",
+    "frames/frame-08.png"
+  ]
+}

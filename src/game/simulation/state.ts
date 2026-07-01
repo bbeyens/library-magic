@@ -18,6 +18,9 @@ export interface ManaSkillsState {
   extraWands: number;
   automationTimer: number;
   autoCastCount: number;
+  lastAutoCastGain: number;
+  lastManaGainCritical: boolean;
+  lastAutoCastCritical: boolean;
 }
 
 export interface SnakeSkillsState {
@@ -63,12 +66,18 @@ export interface RuneTypingState {
 
 export interface DefenseEnemy {
   id: number;
+  kind?: 'slime' | 'skeletonMage' | 'bat';
   lane: number;
   distance: number;
   health: number;
   maxHealth: number;
-  state: 'walking' | 'dying';
+  state: 'walking' | 'idle' | 'attacking' | 'dying';
   deathTimer: number;
+  hitStopTimer?: number;
+  attackCooldown?: number;
+  attackAnimationTimer?: number;
+  attackProjectileDelay?: number;
+  attackDamageDelay?: number;
 }
 
 export interface DefenseShot {
@@ -76,6 +85,15 @@ export interface DefenseShot {
   lane: number;
   distance: number;
   timer: number;
+  duration: number;
+}
+
+export interface DefenseEnemyProjectile {
+  id: number;
+  lane: number;
+  distance: number;
+  timer: number;
+  duration: number;
 }
 
 export interface DefenseQueuedShot {
@@ -94,6 +112,14 @@ export interface DefenseDamagePopup {
   timer: number;
 }
 
+export interface DefenseMoneyPopup {
+  id: number;
+  lane: number;
+  distance: number;
+  amount: number;
+  timer: number;
+}
+
 export interface DefenseTowerState {
   id: 'unique';
   range: number;
@@ -104,7 +130,6 @@ export interface DefenseSkillsState {
   damage: number;
   attackSpeed: number;
   range: number;
-  damagePerMeter: number;
   criticalChance: number;
   criticalMultiplier: number;
   ricochetCount: number;
@@ -122,22 +147,29 @@ export type DefenseSpeedMultiplier = 1 | 2 | 4;
 
 export interface DefenseState {
   running: boolean;
+  paused: boolean;
   wave: number;
   speedMultiplier: DefenseSpeedMultiplier;
+  debugTowerHealthEnabled: boolean;
   towerHealth: number;
   score: number;
   best: number;
   spawnTimer: number;
   spawnedThisWave: number;
+  killsThisWave: number;
   nextEnemyId: number;
+  nextEnemyProjectileId: number;
   nextDamagePopupId: number;
+  nextMoneyPopupId: number;
   lastReward: number;
   shotPulse: number;
-  shot: DefenseShot | null;
+  shots: DefenseShot[];
+  enemyProjectiles: DefenseEnemyProjectile[];
   queuedShots: DefenseQueuedShot[];
   tower: DefenseTowerState;
   enemies: DefenseEnemy[];
   damagePopups: DefenseDamagePopup[];
+  moneyPopups: DefenseMoneyPopup[];
 }
 
 export type BlackjackRank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
@@ -680,6 +712,9 @@ export function createInitialState(): GameState {
       extraWands: 0,
       automationTimer: 0,
       autoCastCount: 0,
+      lastAutoCastGain: 0,
+      lastManaGainCritical: false,
+      lastAutoCastCritical: false,
     },
     snakeSkills: {
       speed: 0,
@@ -723,7 +758,6 @@ export function createInitialState(): GameState {
       damage: 0,
       attackSpeed: 0,
       range: 0,
-      damagePerMeter: 0,
       criticalChance: 0,
       criticalMultiplier: 0,
       ricochetCount: 0,
@@ -738,18 +772,24 @@ export function createInitialState(): GameState {
     },
     defense: {
       running: false,
+      paused: false,
       wave: 1,
       speedMultiplier: 1,
+      debugTowerHealthEnabled: false,
       towerHealth: 10,
       score: 0,
       best: 0,
       spawnTimer: 0,
       spawnedThisWave: 0,
+      killsThisWave: 0,
       nextEnemyId: 1,
+      nextEnemyProjectileId: 1,
       nextDamagePopupId: 1,
+      nextMoneyPopupId: 1,
       lastReward: 0,
       shotPulse: 0,
-      shot: null,
+      shots: [],
+      enemyProjectiles: [],
       queuedShots: [],
       tower: {
         id: 'unique',
@@ -758,6 +798,7 @@ export function createInitialState(): GameState {
       },
       enemies: [],
       damagePopups: [],
+      moneyPopups: [],
     },
     blackjack: {
       deck: [],

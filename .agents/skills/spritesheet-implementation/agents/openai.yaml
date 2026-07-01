@@ -1,0 +1,4 @@
+interface:
+  display_name: "Spritesheet Implementation"
+  short_description: "Wire game spritesheets without frame drift"
+  default_prompt: "Use $spritesheet-implementation to implement this spritesheet in the game without frame drift."

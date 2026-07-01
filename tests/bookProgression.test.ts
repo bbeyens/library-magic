@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { books } from '../src/game/content/books.ts';
-import { applyAction } from '../src/game/simulation/actions.ts';
+import { applyAction, tickState } from '../src/game/simulation/actions.ts';
 import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
@@ -102,6 +102,24 @@ import { createInitialState } from '../src/game/simulation/state.ts';
     { bookId: 'typing', slot: 0 },
   ]);
   assert.equal(state.selectedBook, 'typing');
+}
+
+{
+  const state = createInitialState();
+  state.mana = 100;
+  state.lastTick = 0;
+
+  applyAction(state, { type: 'buyUpgrade', bookId: 'mana' });
+
+  assert.equal(state.books.mana.level, 2);
+  assert.equal(state.books.mana.automation, 0);
+  assert.equal(state.manaSkills.automation, 0);
+
+  const manaAfterUpgrade = state.mana;
+  tickState(state, 1000);
+
+  assert.equal(state.mana, manaAfterUpgrade);
+  assert.equal(state.manaSkills.autoCastCount, 0);
 }
 
 console.log('bookProgression ok');

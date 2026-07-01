@@ -76,6 +76,7 @@ export class LibraryScene extends Phaser.Scene {
   private bookViews: BookView[] = [];
   private ritualViews: RitualRequirementView[] = [];
   private hoveredBookId: BookDefinition['id'] | null = null;
+  private displayedResourceStocks = new Map<LibraryResourceId, number>();
   private manaBar?: Phaser.GameObjects.Rectangle;
   private manaLabel?: Phaser.GameObjects.Text;
   private keyLabel?: Phaser.GameObjects.Text;
@@ -953,7 +954,14 @@ export class LibraryScene extends Phaser.Scene {
       view.resourceHud.setScale(hovered ? 1.08 : 1);
       view.resourceHudGlow.setAlpha(hovered ? 0.36 : book.unlocked ? 0.18 : 0.08);
       view.resourceHudBack.setStrokeStyle(1, view.definition.color, hovered ? 0.95 : book.unlocked ? 0.66 : 0.34);
-      view.resourceHudValue.setText(formatBookResourceStock(bookResourceStock(state, view.definition)));
+      const resourceId = bookResourceId(view.definition);
+      const resourceStock = Math.floor(bookResourceStock(state, view.definition));
+      const previousStock = this.displayedResourceStocks.get(resourceId);
+      if (previousStock !== undefined && resourceStock > previousStock) {
+        this.showResourceHudGain(view, resourceStock - previousStock);
+      }
+      this.displayedResourceStocks.set(resourceId, resourceStock);
+      view.resourceHudValue.setText(formatBookResourceStock(resourceStock));
       view.lock.setVisible(!book.unlocked);
       view.lock.setDisplaySize(scaled(18), scaled(22));
       view.lock.setAngle(0);
@@ -963,6 +971,50 @@ export class LibraryScene extends Phaser.Scene {
       view.lockGlow.setAlpha(!book.unlocked && nextSealBook ? (hovered ? 0.34 : 0.18) : 0);
     }
     this.syncForbiddenRitualPanel(state);
+  }
+
+  private showResourceHudGain(view: BookView, amount: number): void {
+    const gain = Math.max(1, Math.floor(amount));
+    const popup = this.add
+      .text(scaled(7), scaled(-15), `+${formatBookResourceStock(gain)}`, {
+        color: '#ffffff',
+        fontSize: `${scaled(15)}px`,
+        fontFamily: 'Georgia, serif',
+        fontStyle: 'bold',
+        stroke: '#271c18',
+        strokeThickness: 3,
+        shadow: {
+          offsetX: 0,
+          offsetY: scaled(2),
+          color: '#000000',
+          blur: scaled(5),
+          fill: true,
+        },
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setScale(0.82);
+
+    view.resourceHud.add(popup);
+    this.tweens.add({
+      targets: popup,
+      y: scaled(-36),
+      alpha: { from: 0, to: 1 },
+      scale: { from: 0.82, to: 1.12 },
+      duration: 180,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: popup,
+          y: scaled(-53),
+          alpha: 0,
+          scale: 0.9,
+          duration: 1320,
+          ease: 'Cubic.easeOut',
+          onComplete: () => popup.destroy(),
+        });
+      },
+    });
   }
 
   private syncForbiddenRitualPanel(state: GameState): void {

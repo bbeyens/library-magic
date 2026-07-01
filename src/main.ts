@@ -23,14 +23,45 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 
 mountHud(document.querySelector<HTMLDivElement>('#hud-root'));
+installFrameCounter();
 installBurstClickHotkey();
 installDebugResourceHotkey();
 installDebugManaSkillHotkeys();
-installFrameCounter();
+installResetMiniGameHotkey();
 
 window.addEventListener('beforeunload', () => {
   game.destroy(true);
 });
+
+function installFrameCounter(): void {
+  const gameShell = document.querySelector<HTMLElement>('#game-shell');
+  if (!gameShell || gameShell.querySelector('#frame-counter')) {
+    return;
+  }
+
+  const frameCounter = document.createElement('div');
+  frameCounter.id = 'frame-counter';
+  frameCounter.textContent = 'FPS --';
+  gameShell.appendChild(frameCounter);
+
+  let frameCount = 0;
+  let lastSampleTime = performance.now();
+
+  const update = (now: number) => {
+    frameCount += 1;
+    const elapsed = now - lastSampleTime;
+    if (elapsed >= 500) {
+      const fps = Math.round((frameCount * 1000) / elapsed);
+      frameCounter.textContent = `FPS ${fps}`;
+      frameCounter.dataset.status = fps < 45 ? 'low' : fps < 55 ? 'warn' : 'ok';
+      frameCount = 0;
+      lastSampleTime = now;
+    }
+    window.requestAnimationFrame(update);
+  };
+
+  window.requestAnimationFrame(update);
+}
 
 function installBurstClickHotkey(): void {
   const gameShell = document.querySelector<HTMLElement>('#game-shell');
@@ -139,50 +170,37 @@ function installDebugManaSkillHotkeys(): void {
       gameStore.dispatch({ type: 'maxAllSkills' });
       return;
     }
+    if (key === 'j') {
+      event.preventDefault();
+      gameStore.dispatch({ type: 'setDefenseDebugTowerHealth', enabled: true });
+      return;
+    }
     if (key === 'u') {
+      if (gameStore.snapshot.defense.debugTowerHealthEnabled) {
+        event.preventDefault();
+        gameStore.dispatch({ type: 'setDefenseDebugTowerHealth', enabled: false });
+        return;
+      }
       event.preventDefault();
       gameStore.dispatch({ type: 'resetAllSkills' });
     }
   });
 }
 
-function installFrameCounter(): void {
-  const counter = document.querySelector<HTMLElement>('#frame-counter');
-  if (!counter) {
-    return;
-  }
+function installResetMiniGameHotkey(): void {
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key.toLowerCase() !== 'r' || event.repeat || isTypingTarget(event.target)) {
+        return;
+      }
 
-  let animationFrame = 0;
-  let totalFrames = 0;
-  let sampleFrames = 0;
-  let sampleStart = performance.now();
-  let lastFrameTime = sampleStart;
-  let worstFrameMs = 0;
-
-  const tick = (now: number): void => {
-    totalFrames += 1;
-    sampleFrames += 1;
-
-    const frameMs = now - lastFrameTime;
-    lastFrameTime = now;
-    worstFrameMs = Math.max(worstFrameMs, frameMs);
-
-    const sampleMs = now - sampleStart;
-    if (sampleMs >= 500) {
-      const fps = Math.round((sampleFrames * 1000) / sampleMs);
-      const averageMs = sampleMs / sampleFrames;
-      counter.textContent = `${fps} FPS · ${averageMs.toFixed(1)} ms · max ${worstFrameMs.toFixed(1)} · F${totalFrames}`;
-      counter.dataset.status = fps < 45 ? 'low' : fps < 55 ? 'warn' : 'ok';
-      sampleFrames = 0;
-      sampleStart = now;
-      worstFrameMs = 0;
-    }
-
-    animationFrame = window.requestAnimationFrame(tick);
-  };
-
-  animationFrame = window.requestAnimationFrame(tick);
-  window.addEventListener('beforeunload', () => window.cancelAnimationFrame(animationFrame), { once: true });
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      gameStore.dispatch({ type: 'resetSelectedMiniGame' });
+    },
+    true,
+  );
 }
 
 function isTypingTarget(target: EventTarget | null): boolean {

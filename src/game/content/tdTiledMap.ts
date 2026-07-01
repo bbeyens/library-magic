@@ -71,6 +71,8 @@ type TilesetAnimation = {
 
 const DEFENSE_MAP_URL = '/assets/td/tiled/exports/bastion.json';
 const DEFENSE_MAP_BACKGROUND_URL = '/assets/td/tiled/reference/bastion.png';
+const DEFENSE_MAP_BACKGROUND_WIDTH = 320;
+const DEFENSE_MAP_BACKGROUND_HEIGHT = 320;
 const GID_FLIP_HORIZONTAL = 0x80000000;
 const GID_FLIP_VERTICAL = 0x40000000;
 const GID_FLIP_DIAGONAL = 0x20000000;
@@ -78,7 +80,9 @@ const GID_MASK = 0x1fffffff;
 const DEFENSE_ANIMATION_REST_MS = 500;
 const DEFENSE_FOREGROUND_LAYER_NAMES = new Set([
   'Rock',
+  'Rock/terre contour/bois caisse',
   'Mousse arbre/ tente/ fleur',
+  'Camp',
   'Flag/camp',
   'Forest',
   'Forest 2 ombre',
@@ -259,7 +263,7 @@ function renderTiledMap(map: TiledMapFile): { terrain: string; foreground: strin
   const foregroundLayers = map.layers
     .filter((layer) => layer.type === 'tilelayer' && layer.visible !== false)
     .filter((layer) => DEFENSE_FOREGROUND_LAYER_NAMES.has(layer.name))
-    .map((layer, index) => renderLayer(layer, index, tilesets, 'all'))
+    .map((layer, index) => renderLayer(layer, index, tilesets, 'animated-only'))
     .join('');
 
   return {
@@ -267,7 +271,7 @@ function renderTiledMap(map: TiledMapFile): { terrain: string; foreground: strin
     <div
       class="defense-tiled-map"
       data-map-source="${DEFENSE_MAP_URL}"
-      style="--td-map-width:${map.width}; --td-map-height:${map.height}; background-image:url('${DEFENSE_MAP_BACKGROUND_URL}');"
+      style="--td-map-width:${map.width}; --td-map-height:${map.height}; --td-map-background-width:${DEFENSE_MAP_BACKGROUND_WIDTH}; --td-map-background-height:${DEFENSE_MAP_BACKGROUND_HEIGHT}; background-image:url('${DEFENSE_MAP_BACKGROUND_URL}');"
     >
       ${layers}
     </div>
@@ -277,7 +281,7 @@ function renderTiledMap(map: TiledMapFile): { terrain: string; foreground: strin
     <div
       class="defense-tiled-foreground"
       data-map-source="${DEFENSE_MAP_URL}"
-      style="--td-map-width:${map.width}; --td-map-height:${map.height};"
+      style="--td-map-width:${map.width}; --td-map-height:${map.height}; --td-map-background-width:${DEFENSE_MAP_BACKGROUND_WIDTH}; --td-map-background-height:${DEFENSE_MAP_BACKGROUND_HEIGHT};"
     >
       ${foregroundLayers}
     </div>
@@ -530,17 +534,33 @@ function findTileset(gid: number, tilesets: TilesetDefinition[]): TilesetDefinit
 }
 
 function tiledTransform(unsignedGid: number): string {
-  const transforms: string[] = [];
-  if ((unsignedGid & GID_FLIP_DIAGONAL) !== 0) {
-    transforms.push('rotate(90deg)');
+  const horizontal = (unsignedGid & GID_FLIP_HORIZONTAL) !== 0;
+  const vertical = (unsignedGid & GID_FLIP_VERTICAL) !== 0;
+  const diagonal = (unsignedGid & GID_FLIP_DIAGONAL) !== 0;
+
+  if (!diagonal) {
+    if (horizontal && vertical) {
+      return 'scale(-1, -1)';
+    }
+    if (horizontal) {
+      return 'scaleX(-1)';
+    }
+    if (vertical) {
+      return 'scaleY(-1)';
+    }
+    return 'none';
   }
-  if ((unsignedGid & GID_FLIP_HORIZONTAL) !== 0) {
-    transforms.push('scaleX(-1)');
+
+  if (horizontal && vertical) {
+    return 'matrix(0, 1, 1, 0, 0, 0)';
   }
-  if ((unsignedGid & GID_FLIP_VERTICAL) !== 0) {
-    transforms.push('scaleY(-1)');
+  if (horizontal) {
+    return 'matrix(0, -1, 1, 0, 0, 0)';
   }
-  return transforms.length > 0 ? transforms.join(' ') : 'none';
+  if (vertical) {
+    return 'matrix(0, 1, -1, 0, 0, 0)';
+  }
+  return 'matrix(0, -1, -1, 0, 0, 0)';
 }
 
 function basename(source: string): string {

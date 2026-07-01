@@ -49,7 +49,6 @@ const defenseSkillIds: DefenseSkillId[] = [
   'damage',
   'attackSpeed',
   'range',
-  'damagePerMeter',
   'criticalChance',
   'criticalMultiplier',
   'ricochetCount',

@@ -5,7 +5,7 @@ import {
   renderDefenseTiledForeground,
   renderDefenseTiledTerrain,
 } from '../game/content/tdTiledMap';
-import { defenseEnemyPosition } from '../game/simulation/defenseRules';
+import { defenseEnemyPosition, type DefensePoint } from '../game/simulation/defenseRules';
 import { gameStore } from '../game/store';
 import {
   blackjackCardLabel,
@@ -111,12 +111,14 @@ import {
 let rootElement: HTMLDivElement | null = null;
 let openUpgradePanel: BookId | null = null;
 let upgradePanelMode: 'detail' | 'compact' = 'detail';
+let defenseSkillShopTab: DefenseSkillShopTabId = 'attack';
 let lastRenderSignature = '';
 let lastOpenPanelsSignature = '';
 let lastOpenUpgradePanel: BookId | null = null;
 let lastUpgradePanelMode: 'detail' | 'compact' = 'detail';
 let lastSnakeRewardMarker = '';
 let lastRuneTypingRewardMarker = '';
+let lastRenderStableSignature = '';
 let lastBlackjackRewardMarker = '';
 let lastHundredRewardMarker = '';
 let lastTargetRewardMarker = '';
@@ -142,11 +144,23 @@ let lastHundredProgressAnimationMarker = '';
 let pendingHundredProgressAnimationMarker = '';
 let hundredProgressSettleTimeout: number | null = null;
 let activeHundredProgressTarget: number | null = null;
+let lastDefenseDisplayedHealth: number | null = null;
+let lastDefenseDisplayedSigils: number | null = null;
+let lastDefenseSkillDockSignature = '';
+const dynamicResourceGainSnapshots = new Map<string, number>();
+const DEFENSE_SLIME_WALK_CYCLE_MS = 1586;
+const DEFENSE_SLIME_MOVEMENT_HOLD_MS = 234;
+const defenseSlimeVisualPositions = new Map<
+  string,
+  { cycleIndex: number; x: number; y: number; createdAt: number }
+>();
 let snakeControlsInstalled = false;
 let typingControlsInstalled = false;
 let blackjackControlsInstalled = false;
+let defenseControlsInstalled = false;
 let escapeControlsInstalled = false;
 let suppressClickListenerInstalled = false;
+let oneShotHoverListenerInstalled = false;
 let suppressNextPanelClickUntil = 0;
 let activePanelInteractionCount = 0;
 const FLOATING_GAIN_MAX_VISIBLE = 18;
@@ -158,8 +172,10 @@ const CRYSTAL_CLICK_SCALE_CLICKS_FOR_MAX = 100;
 const BLACKJACK_CARD_RECEIVE_MS = 760;
 const BLACKJACK_CARD_STAGGER_MS = 150;
 const BLACKJACK_SCORE_REVEAL_BUFFER_MS = 180;
-const pendingFloatingGains = new Map<string, { amount: number }>();
+const pendingFloatingGains = new Map<string, { amount: number; className?: string }>();
 let floatingGainFlushHandle: number | null = null;
+const activeOneShotHoverKeys = new Set<string>();
+const activeOneShotHoverElements = new Set<HTMLElement>();
 const BOOK_PANEL_ASPECT_RATIO = 210 / 297;
 const BOOK_PANEL_MIN_HORIZONTAL_TRAVEL = 96;
 const BOOK_PANEL_SIZE_PRESETS = [
@@ -167,7 +183,8 @@ const BOOK_PANEL_SIZE_PRESETS = [
   { id: 'medium', label: 'M', width: 370 },
   { id: 'large', label: 'L', width: 496 },
 ] as const;
-const DEFENSE_LARGE_PANEL_SCALE = 1.3;
+const DEFENSE_MEDIUM_PANEL_SCALE = 0.8;
+const DEFENSE_LARGE_PANEL_SCALE = 0.9;
 type BookPanelSizePreset = (typeof BOOK_PANEL_SIZE_PRESETS)[number];
 type BookPanelSizePresetId = BookPanelSizePreset['id'];
 interface BlackjackDisplayState {
@@ -197,11 +214,13 @@ export function mountHud(root: HTMLDivElement | null): void {
   installSnakeControls();
   installTypingControls();
   installBlackjackControls();
+  installDefenseControls();
   installEscapeControls();
   gameStore.subscribe(renderHud);
   void loadDefenseTiledMap().then(() => {
     lastRenderSignature = '';
-    renderHud(gameStore.snapshot);
+    lastRenderStableSignature = '';
+    renderHud(gameStore.snapshot, { forceFull: true });
   });
 }
 
@@ -231,7 +250,7 @@ function preloadSnakeAtlasTiles(): void {
   }
 }
 
-function renderHud(state: GameState): void {
+function renderHud(state: GameState, options: { forceFull?: boolean } = {}): void {
   if (!rootElement) {
     return;
   }
@@ -242,6 +261,14 @@ function renderHud(state: GameState): void {
   }
 
   const signature = createHudSignature(state);
+  const stableSignature = createHudSignature(state, { includeDefenseVolatile: false });
+  pruneOneShotHoverState();
+  if (!options.forceFull && activeOneShotHoverKeys.size > 0 && stableSignature === lastRenderStableSignature) {
+    updateDynamicHudValues(state);
+    runHudTransientEffects(state);
+    scheduleBlackjackAutoDeal(state);
+    return;
+  }
   if (signature === lastRenderSignature) {
     updateDynamicHudValues(state);
     runHudTransientEffects(state);
@@ -259,6 +286,7 @@ function renderHud(state: GameState): void {
   const shouldAnimateUpgradePanel =
     openUpgradePanel !== null && (lastOpenUpgradePanel !== openUpgradePanel || lastUpgradePanelMode !== upgradePanelMode);
   lastRenderSignature = signature;
+  lastRenderStableSignature = stableSignature;
   lastOpenPanelsSignature = openPanelsSignature;
   lastOpenUpgradePanel = openUpgradePanel;
   lastUpgradePanelMode = upgradePanelMode;
@@ -267,7 +295,16 @@ function renderHud(state: GameState): void {
     <div class="screen-vignette"></div>
     <button class="unlock-all-grimoires-button" data-action="unlockAllBooks" title="Debloquer tous les grimoires" aria-label="Debloquer tous les grimoires">-</button>
     ${state.openBookPanels
-      .map((panel) => bookOverlay(panel.bookId, panel.slot, state, !previousOpenBookIds.has(panel.bookId), shouldAnimateUpgradePanel))
+      .map((panel) =>
+        bookOverlay(
+          panel.bookId,
+          panel.slot,
+          state,
+          !previousOpenBookIds.has(panel.bookId),
+          shouldAnimateUpgradePanel,
+          state.openBookPanels.length === 1,
+        ),
+      )
       .join('')}
   `;
 
@@ -275,6 +312,7 @@ function renderHud(state: GameState): void {
     suppressClickListenerInstalled = true;
     rootElement.addEventListener('click', suppressPanelClickAfterDrag, true);
   }
+  installOneShotHoverAnimations();
 
   rootElement.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
     button.addEventListener('click', () => {
@@ -320,6 +358,14 @@ function renderHud(state: GameState): void {
         const skillId = button.dataset.skillId as DefenseSkillId | undefined;
         if (skillId) {
           gameStore.dispatch({ type: 'buyDefenseSkill', skillId });
+          refreshDefenseSkillDock(gameStore.snapshot, { force: true });
+        }
+      }
+      if (action === 'setDefenseSkillShopTab') {
+        const tabId = button.dataset.skillShopTab;
+        if (isDefenseSkillShopTabId(tabId)) {
+          defenseSkillShopTab = tabId;
+          refreshDefenseSkillDock(gameStore.snapshot, { force: true });
         }
       }
       if (action === 'buyTargetSkill') {
@@ -476,6 +522,12 @@ function renderHud(state: GameState): void {
       if (action === 'cycleDefenseSpeed') {
         gameStore.dispatch({ type: 'cycleDefenseSpeed' });
       }
+      if (action === 'setDefenseWaveDelta') {
+        const delta = Number(button.dataset.waveDelta || 0);
+        if (Number.isFinite(delta)) {
+          gameStore.dispatch({ type: 'setDefenseWave', wave: gameStore.snapshot.defense.wave + delta });
+        }
+      }
       if (action === 'toggleUpgradePanel' && bookId) {
         const isSamePanel = openUpgradePanel === bookId && upgradePanelMode === 'detail';
         openUpgradePanel = isSamePanel ? null : bookId;
@@ -507,6 +559,20 @@ function renderHud(state: GameState): void {
     });
   });
 
+  rootElement.querySelectorAll<HTMLInputElement>('[data-defense-wave-input]').forEach((input) => {
+    input.addEventListener('change', () => {
+      setDefenseWaveFromInput(input);
+    });
+    input.addEventListener('keydown', (event) => {
+      event.stopPropagation();
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        setDefenseWaveFromInput(input);
+        input.blur();
+      }
+    });
+  });
+
   rootElement.querySelectorAll<HTMLElement>('.book-overlay, .mini-skill-popover, .upgrade-panel').forEach((panel) => {
     panel.addEventListener('pointerdown', stopHudPointerEvent);
     panel.addEventListener('pointerup', stopHudPointerEvent);
@@ -519,6 +585,15 @@ function renderHud(state: GameState): void {
   runHudTransientEffects(state);
   scheduleBlackjackAutoDeal(state);
   scheduleBlackjackDealerStep(state);
+}
+
+function setDefenseWaveFromInput(input: HTMLInputElement): void {
+  const wave = Number(input.value);
+  if (!Number.isFinite(wave)) {
+    input.value = String(gameStore.snapshot.defense.wave);
+    return;
+  }
+  gameStore.dispatch({ type: 'setDefenseWave', wave });
 }
 
 function runHudTransientEffects(state: GameState): void {
@@ -673,20 +748,24 @@ function clearBlackjackDealerStep(): void {
 }
 
 function updateDynamicHudValues(state: GameState): void {
-  setDynamicText('mana', Math.floor(state.mana));
-  setDynamicText('scales', Math.floor(state.resources.scales));
-  setDynamicText('runes', Math.floor(state.resources.runes));
-  setDynamicText('spores', Math.floor(state.resources.spores));
-  setDynamicText('sigils', Math.floor(state.resources.sigils));
+  const currentMana = Math.floor(state.mana);
+  setDynamicText('mana', currentMana);
+  setDynamicText('mana-panel-total', compactHudNumber(state.mana));
+  setDynamicText('mana-panel-rate', formatManaPerSecond(manaPerSecond(state)));
+  trackDynamicResourceGain('mana-panel-total', currentMana);
+  setDynamicResourceText('scales', Math.floor(state.resources.scales));
+  setDynamicResourceText('runes', Math.floor(state.resources.runes));
+  setDynamicResourceText('spores', Math.floor(state.resources.spores));
+  setDynamicResourceText('sigils', Math.floor(state.resources.sigils));
   const displayedChips =
     isBookPanelOpen(state, 'blackjack') && blackjackMotionIsSettling() && lastBlackjackSettledDisplay
       ? lastBlackjackSettledDisplay.chips
       : Math.floor(state.resources.chips);
-  setDynamicText('chips', displayedChips);
-  setDynamicText('fragments', Math.floor(state.resources.fragments));
-  setDynamicText('marks', Math.floor(state.resources.marks));
-  setDynamicText('minerals', Math.floor(state.resources.minerals));
-  setDynamicText('gels', Math.floor(state.resources.gels));
+  setDynamicResourceText('chips', displayedChips);
+  setDynamicResourceText('fragments', Math.floor(state.resources.fragments));
+  setDynamicResourceText('marks', Math.floor(state.resources.marks));
+  setDynamicResourceText('minerals', Math.floor(state.resources.minerals));
+  setDynamicResourceText('gels', Math.floor(state.resources.gels));
   setDynamicText('snake-score', state.snake.score);
   setDynamicText('snake-best', state.snake.best);
   setDynamicText('target-score', state.targets.score);
@@ -702,14 +781,105 @@ function defenseHealthPercent(state: GameState): number {
   return Math.max(0, Math.min(100, (state.defense.towerHealth / defenseMaxTowerHealth(state)) * 100));
 }
 
+function defenseHpSpriteFrame(healthPercent: number): number {
+  if (healthPercent >= 100) {
+    return 0;
+  }
+  if (healthPercent <= 0) {
+    return 69;
+  }
+  return Math.max(0, Math.min(69, Math.round((1 - healthPercent / 100) * 69)));
+}
+
+function defenseHpSpriteStyle(healthPercent: number): string {
+  return `--defense-hp-offset:${defenseHpSpriteFrame(healthPercent) * -71}px`;
+}
+
+function defenseHealthToneClass(healthPercent: number): string {
+  if (healthPercent <= 30) {
+    return 'is-danger';
+  }
+  if (healthPercent <= 60) {
+    return 'is-warn';
+  }
+  return '';
+}
+
+function compactHudNumber(value: number): string {
+  const absolute = Math.abs(value);
+  if (absolute >= 1_000_000) {
+    return `${Math.floor(value / 100_000) / 10}M`;
+  }
+  if (absolute >= 10_000) {
+    return `${Math.floor(value / 100) / 10}k`;
+  }
+  return String(Math.floor(value));
+}
+
+function defenseWaveRailProgress(state: GameState, wave: number): number {
+  const progress = wave >= 100 ? 0 : Math.min(1, Math.max(0, defenseWaveProgress(state)));
+  return wave === 1 ? Math.min(0.92, progress) : progress;
+}
+
 function updateDynamicDefensePanel(state: GameState): void {
   if (!rootElement || !isBookPanelOpen(state, 'defense')) {
+    lastDefenseDisplayedHealth = null;
+    lastDefenseDisplayedSigils = null;
     return;
   }
 
   const healthPercent = defenseHealthPercent(state);
+  const maxHealth = defenseMaxTowerHealth(state);
+  const currentHealth = Math.ceil(state.defense.towerHealth);
+  const currentSigils = Math.floor(state.resources.sigils);
+  const currentWave = Math.min(100, Math.max(1, state.defense.wave));
+  const healthToneClass = defenseHealthToneClass(healthPercent);
+  const defensePanelElement = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-panel');
+  const healthHud = rootElement.querySelector<HTMLElement>('.defense-hud-health');
+  const moneyHud = rootElement.querySelector<HTMLElement>('.defense-hud-money');
+  const moneyValue = rootElement.querySelector<HTMLElement>('[data-dynamic-value="defense-money"]');
+  let waveRail = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-wave');
+  if (defensePanelElement && lastDefenseDisplayedHealth !== null && currentHealth < lastDefenseDisplayedHealth) {
+    restartOneShotClass(defensePanelElement, 'is-damage-shaking');
+  }
+  defensePanelElement?.classList.toggle('is-paused', state.defense.paused);
+  const speedToggle = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-speed-toggle');
+  if (speedToggle) {
+    speedToggle.classList.toggle('is-paused', state.defense.paused);
+    speedToggle.textContent = `x${state.defense.speedMultiplier}`;
+  }
+  if (lastDefenseDisplayedSigils !== null && currentSigils > lastDefenseDisplayedSigils) {
+    if (moneyHud && moneyValue) {
+      playDefenseMoneyCounterPulse(moneyHud, moneyValue);
+    }
+  }
+  lastDefenseDisplayedHealth = currentHealth;
+  lastDefenseDisplayedSigils = currentSigils;
+  updateDynamicDefenseSkillCards(state);
+  refreshDefenseSkillDock(state);
+  if (healthHud) {
+    healthHud.classList.toggle('is-warn', healthToneClass === 'is-warn');
+    healthHud.classList.toggle('is-danger', healthToneClass === 'is-danger');
+    healthHud.setAttribute('aria-label', `HP ${currentHealth}/${maxHealth}`);
+    healthHud.setAttribute('title', `HP ${currentHealth}/${maxHealth}`);
+    healthHud.querySelector<HTMLElement>('[data-defense-hp-sprite]')?.style.setProperty(
+      '--defense-hp-offset',
+      `${defenseHpSpriteFrame(healthPercent) * -71}px`,
+    );
+  }
+  setDynamicText('defense-health-value', currentHealth);
+  setDynamicText('defense-wave', state.defense.wave);
+  setDynamicText('defense-money', compactHudNumber(currentSigils));
+  trackDynamicResourceGain('defense-money', currentSigils);
+  const waveInput = rootElement.querySelector<HTMLInputElement>('[data-defense-wave-input]');
+  if (waveInput && document.activeElement !== waveInput) {
+    waveInput.value = String(currentWave);
+  }
+
   const healthBar = rootElement.querySelector<HTMLElement>('.defense-health');
   const healthFill = rootElement.querySelector<HTMLElement>('.defense-health i');
+  const rangeElement = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-range');
+  rangeElement?.style.setProperty('--defense-range-scale', defenseTowerRange(state).toFixed(3));
   if (healthBar) {
     healthBar.classList.toggle('is-full', healthPercent >= 100);
   }
@@ -717,9 +887,21 @@ function updateDynamicDefensePanel(state: GameState): void {
     healthFill.style.width = `${healthPercent}%`;
   }
 
-  const waveFill = rootElement.querySelector<HTMLElement>('.defense-wave-fill');
-  if (waveFill) {
-    waveFill.style.width = `${Math.round(defenseWaveProgress(state) * 25)}%`;
+  if (waveRail?.dataset.defenseWave !== String(currentWave)) {
+    waveRail?.insertAdjacentHTML('afterend', defenseWaveRail(state));
+    waveRail?.remove();
+    waveRail = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-wave');
+  }
+
+  if (waveRail) {
+    const waveProgress = defenseWaveRailProgress(state, currentWave);
+    const waveSlide = waveProgress * (100 / 3);
+    const waveFillLeft = currentWave === 1 ? 50 - waveSlide : 100 / 6;
+    const waveFillWidth = currentWave === 1 ? waveSlide : 100 / 3;
+    waveRail.style.setProperty('--wave-slide', `${waveSlide.toFixed(3)}%`);
+    waveRail.style.setProperty('--wave-fill-left', `${waveFillLeft.toFixed(3)}%`);
+    waveRail.style.setProperty('--wave-fill-width', `${waveFillWidth.toFixed(3)}%`);
+    waveRail.style.setProperty('--wave-fill-opacity', currentWave === 1 && waveProgress <= 0.001 ? '0' : '1');
   }
 
   const actorsLayer = rootElement.querySelector<HTMLElement>('.defense-actors');
@@ -728,21 +910,31 @@ function updateDynamicDefensePanel(state: GameState): void {
   }
 
   const liveEnemyIds = new Set<string>();
+  const nowMs = Date.now();
   for (const enemy of state.defense.enemies) {
     const enemyId = String(enemy.id);
     liveEnemyIds.add(enemyId);
     let enemyElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy[data-enemy-id="${enemyId}"]`);
     if (!enemyElement) {
+      defenseSlimeVisualPositions.delete(enemyId);
       actorsLayer.insertAdjacentHTML('beforeend', defenseEnemyMarkup(enemy));
       enemyElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy[data-enemy-id="${enemyId}"]`);
     }
 
     if (enemyElement) {
       const position = defenseEnemyPosition(enemy);
+      const visualPosition = defenseEnemyVisualPosition(enemy, position, nowMs);
       const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
-      enemyElement.style.setProperty('--enemy-x', `${position.x}%`);
-      enemyElement.style.setProperty('--enemy-y', `${position.y}%`);
+      const facingScale = defenseEnemyFacingScale(visualPosition);
+      enemyElement.style.setProperty('--enemy-x', `${visualPosition.x}%`);
+      enemyElement.style.setProperty('--enemy-y', `${visualPosition.y}%`);
+      enemyElement.style.setProperty('--enemy-facing-scale', String(facingScale));
       enemyElement.style.setProperty('--enemy-health', `${health}%`);
+      enemyElement.style.setProperty('--enemy-health-value', String(health));
+      enemyElement.classList.toggle('is-skeleton-mage', enemy.kind === 'skeletonMage');
+      enemyElement.classList.toggle('is-bat', enemy.kind === 'bat');
+      enemyElement.classList.toggle('is-idle', enemy.state === 'idle');
+      enemyElement.classList.toggle('is-attacking', enemy.state === 'attacking');
       enemyElement.classList.toggle('is-dying', enemy.state === 'dying');
     }
   }
@@ -750,17 +942,50 @@ function updateDynamicDefensePanel(state: GameState): void {
   actorsLayer.querySelectorAll<HTMLElement>('.defense-enemy').forEach((enemyElement) => {
     const enemyId = enemyElement.dataset.enemyId;
     if (!enemyId || !liveEnemyIds.has(enemyId)) {
+      if (enemyId) {
+        defenseSlimeVisualPositions.delete(enemyId);
+      }
       enemyElement.remove();
     }
   });
 
-  const currentShot = actorsLayer.querySelector<SVGSVGElement>('.defense-shot');
-  if (!state.defense.shot) {
-    currentShot?.remove();
-  } else if (currentShot?.dataset.shotId !== String(state.defense.shot.id)) {
-    currentShot?.remove();
-    actorsLayer.insertAdjacentHTML('afterbegin', defenseShotMarkup(state.defense));
+  for (const enemyId of defenseSlimeVisualPositions.keys()) {
+    if (!liveEnemyIds.has(enemyId)) {
+      defenseSlimeVisualPositions.delete(enemyId);
+    }
   }
+
+  const liveShotIds = new Set<string>();
+  for (const shot of state.defense.shots) {
+    const shotId = String(shot.id);
+    liveShotIds.add(shotId);
+    if (!actorsLayer.querySelector<HTMLElement>(`.defense-shot[data-shot-id="${shotId}"]`)) {
+      actorsLayer.insertAdjacentHTML('afterbegin', defenseShotMarkup(shot));
+    }
+  }
+
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-shot').forEach((shotElement) => {
+    const shotId = shotElement.dataset.shotId;
+    if (!shotId || !liveShotIds.has(shotId)) {
+      shotElement.remove();
+    }
+  });
+
+  const liveEnemyProjectileIds = new Set<string>();
+  for (const projectile of state.defense.enemyProjectiles) {
+    const projectileId = String(projectile.id);
+    liveEnemyProjectileIds.add(projectileId);
+    if (!actorsLayer.querySelector<HTMLElement>(`.defense-enemy-projectile[data-enemy-projectile-id="${projectileId}"]`)) {
+      actorsLayer.insertAdjacentHTML('beforeend', defenseEnemyProjectileMarkup(projectile));
+    }
+  }
+
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-enemy-projectile').forEach((projectileElement) => {
+    const projectileId = projectileElement.dataset.enemyProjectileId;
+    if (!projectileId || !liveEnemyProjectileIds.has(projectileId)) {
+      projectileElement.remove();
+    }
+  });
 
   const livePopupIds = new Set<string>();
   for (const popup of state.defense.damagePopups) {
@@ -777,6 +1002,193 @@ function updateDynamicDefensePanel(state: GameState): void {
       popupElement.remove();
     }
   });
+
+  const liveMoneyPopupIds = new Set<string>();
+  for (const popup of state.defense.moneyPopups) {
+    const popupId = String(popup.id);
+    liveMoneyPopupIds.add(popupId);
+    const existingPopup = actorsLayer.querySelector<HTMLElement>(`.defense-money-popup[data-money-popup-id="${popupId}"]`);
+    if (!existingPopup) {
+      actorsLayer.insertAdjacentHTML('beforeend', defenseMoneyPopupMarkup(popup));
+    } else {
+      const amountElement = existingPopup.querySelector<HTMLElement>('b');
+      const nextAmount = `+${popup.amount}`;
+      if (amountElement && amountElement.textContent !== nextAmount) {
+        amountElement.textContent = nextAmount;
+      }
+    }
+  }
+
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-money-popup').forEach((popupElement) => {
+    const popupId = popupElement.dataset.moneyPopupId;
+    if (!popupId || !liveMoneyPopupIds.has(popupId)) {
+      popupElement.remove();
+    }
+  });
+}
+
+function defenseEnemyVisualPosition(
+  enemy: GameState['defense']['enemies'][number],
+  position: DefensePoint,
+  nowMs: number,
+): DefensePoint {
+  const enemyId = String(enemy.id);
+  if ((enemy.kind ?? 'slime') !== 'slime' || enemy.state !== 'walking') {
+    defenseSlimeVisualPositions.delete(enemyId);
+    return position;
+  }
+
+  const existing = defenseSlimeVisualPositions.get(enemyId);
+  const createdAt = existing?.createdAt ?? nowMs;
+  const elapsedMs = Math.max(0, nowMs - createdAt);
+  const cycleIndex = Math.floor(elapsedMs / DEFENSE_SLIME_WALK_CYCLE_MS);
+  const phaseMs = elapsedMs % DEFENSE_SLIME_WALK_CYCLE_MS;
+
+  if (!existing || existing.cycleIndex !== cycleIndex) {
+    defenseSlimeVisualPositions.set(enemyId, { cycleIndex, x: position.x, y: position.y, createdAt });
+  }
+
+  const visualPosition = defenseSlimeVisualPositions.get(enemyId);
+  if (visualPosition && phaseMs < DEFENSE_SLIME_MOVEMENT_HOLD_MS) {
+    return { x: visualPosition.x, y: visualPosition.y };
+  }
+
+  return position;
+}
+
+function defenseEnemyFacingScale(position: DefensePoint): number {
+  return position.x <= 50 ? 1 : -1;
+}
+
+function updateDynamicDefenseSkillCards(state: GameState): void {
+  const currentSigils = Math.floor(state.resources.sigils);
+  rootElement?.querySelectorAll<HTMLButtonElement>('.defense-skill-dock .skill-shop-card[data-skill-id]').forEach((card) => {
+    const skillId = card.dataset.skillId;
+    if (!isDefenseSkillId(skillId)) {
+      return;
+    }
+    if (!card.dataset.action && card.dataset.defenseDynamicClickBound !== '1') {
+      card.dataset.defenseDynamicClickBound = '1';
+      card.addEventListener('click', () => {
+        const clickedSkillId = card.dataset.skillId;
+        if (card.disabled || !isDefenseSkillId(clickedSkillId)) {
+          return;
+        }
+
+        gameStore.dispatch({ type: 'buyDefenseSkill', skillId: clickedSkillId });
+        refreshDefenseSkillDock(gameStore.snapshot, { force: true });
+      });
+    }
+
+    const isMaxed = state.defenseSkills[skillId] >= defenseSkillMaxLevel(skillId);
+    const isUnaffordable = !isMaxed && currentSigils < defenseSkillCost(state, skillId);
+    const canBuy = !isMaxed && !isUnaffordable;
+    card.classList.toggle('is-unaffordable', isUnaffordable);
+    card.classList.toggle('is-maxed', isMaxed);
+    card.disabled = !canBuy;
+    if (canBuy) {
+      card.dataset.action = 'buyDefenseSkill';
+    } else {
+      delete card.dataset.action;
+    }
+  });
+}
+
+function refreshDefenseSkillDock(state: GameState, options: { force?: boolean } = {}): void {
+  if (!rootElement || !isBookPanelOpen(state, 'defense')) {
+    lastDefenseSkillDockSignature = '';
+    return;
+  }
+
+  const dock = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-skill-dock');
+  if (!dock) {
+    lastDefenseSkillDockSignature = '';
+    return;
+  }
+
+  const signature = defenseSkillDockSignature(state);
+  if (!options.force && signature === lastDefenseSkillDockSignature) {
+    return;
+  }
+
+  dock.innerHTML = defenseSkillShop(state, false, { docked: true, showCompactButton: false });
+  lastDefenseSkillDockSignature = signature;
+  bindDefenseSkillDockControls(dock);
+  installOneShotHoverAnimations();
+}
+
+function defenseSkillDockSignature(state: GameState): string {
+  const skills = state.defenseSkills;
+  return [
+    defenseSkillShopTab,
+    Math.ceil(state.defense.towerHealth),
+    defenseMaxTowerHealth(state),
+    defenseTowerDamage(state),
+    defenseTowerAttackInterval(state).toFixed(3),
+    defenseTowerRangePercent(state).toFixed(3),
+    defenseEnemyReward(state),
+    defenseMoneyPerWave(state),
+    skills.damage,
+    skills.attackSpeed,
+    skills.range,
+    skills.criticalChance,
+    skills.criticalMultiplier,
+    skills.ricochetCount,
+    skills.ricochetChance,
+    skills.superCriticalChance,
+    skills.superCriticalMultiplier,
+    skills.health,
+    skills.healthRegen,
+    skills.resistance,
+    skills.moneyPerEnemy,
+    skills.moneyPerWave,
+  ].join('/');
+}
+
+function bindDefenseSkillDockControls(dock: HTMLElement): void {
+  dock.querySelectorAll<HTMLButtonElement>('[data-action="buyDefenseSkill"][data-skill-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const skillId = button.dataset.skillId;
+      if (button.disabled || !isDefenseSkillId(skillId)) {
+        return;
+      }
+      gameStore.dispatch({ type: 'buyDefenseSkill', skillId });
+      refreshDefenseSkillDock(gameStore.snapshot, { force: true });
+    });
+  });
+
+  dock.querySelectorAll<HTMLButtonElement>('[data-action="setDefenseSkillShopTab"]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const tabId = button.dataset.skillShopTab;
+      if (!isDefenseSkillShopTabId(tabId)) {
+        return;
+      }
+      defenseSkillShopTab = tabId;
+      refreshDefenseSkillDock(gameStore.snapshot, { force: true });
+    });
+  });
+}
+
+function isDefenseSkillId(value: string | undefined): value is DefenseSkillId {
+  switch (value) {
+    case 'damage':
+    case 'attackSpeed':
+    case 'range':
+    case 'criticalChance':
+    case 'criticalMultiplier':
+    case 'ricochetCount':
+    case 'ricochetChance':
+    case 'superCriticalChance':
+    case 'superCriticalMultiplier':
+    case 'health':
+    case 'healthRegen':
+    case 'resistance':
+    case 'moneyPerEnemy':
+    case 'moneyPerWave':
+      return true;
+    default:
+      return false;
+  }
 }
 
 function animateHundredProgress(state: GameState): void {
@@ -881,7 +1293,7 @@ function settleHundredProgressAnimation(progressMarker: string, targetProgress: 
   }, chargeDuration);
 }
 
-function setDynamicText(id: string, value: number): void {
+function setDynamicText(id: string, value: number | string): void {
   rootElement?.querySelectorAll<HTMLElement>(`[data-dynamic-value="${id}"]`).forEach((element) => {
     const next = String(value);
     if (element.textContent !== next) {
@@ -890,8 +1302,149 @@ function setDynamicText(id: string, value: number): void {
   });
 }
 
+function setDynamicResourceText(id: string, value: number): void {
+  setDynamicText(id, value);
+  trackDynamicResourceGain(id, value);
+}
+
+function trackDynamicResourceGain(id: string, value: number): void {
+  const current = Math.floor(value);
+  const previous = dynamicResourceGainSnapshots.get(id);
+  dynamicResourceGainSnapshots.set(id, current);
+  if (previous === undefined || current <= previous) {
+    return;
+  }
+
+  appendFloatingGain(current - previous, `[data-dynamic-value="${id}"]`, 'is-resource-counter');
+}
+
+function restartOneShotClass(element: HTMLElement, className: string): void {
+  element.classList.remove(className);
+  void element.offsetWidth;
+  element.classList.add(className);
+}
+
+function playDefenseMoneyCounterPulse(moneyHud: HTMLElement, moneyValue: HTMLElement): void {
+  moneyHud.animate(
+    [
+      { transform: 'translate3d(0, 0, 0) scale(1)' },
+      { transform: 'translate3d(-2px, 0, 0) scale(1.04)' },
+      { transform: 'translate3d(2px, 0, 0) scale(1.04)' },
+      { transform: 'translate3d(-1px, 0, 0) scale(1.02)' },
+      { transform: 'translate3d(0, 0, 0) scale(1)' },
+    ],
+    {
+      duration: 300,
+      easing: 'cubic-bezier(0.18, 0.84, 0.3, 1)',
+      composite: 'add',
+    },
+  );
+
+  const pulse = document.createElement('strong');
+  pulse.className = 'defense-money-pulse';
+  pulse.textContent = moneyValue.textContent;
+  pulse.style.left = `${moneyValue.offsetLeft}px`;
+  pulse.style.top = `${moneyValue.offsetTop}px`;
+  pulse.style.width = `${moneyValue.offsetWidth}px`;
+  moneyHud.append(pulse);
+  window.setTimeout(() => pulse.remove(), 460);
+}
+
 function stopHudPointerEvent(event: Event): void {
   event.stopPropagation();
+}
+
+function installOneShotHoverAnimations(): void {
+  if (!rootElement || oneShotHoverListenerInstalled) {
+    return;
+  }
+
+  oneShotHoverListenerInstalled = true;
+  rootElement.addEventListener('pointerover', handleOneShotHoverPointerOver, true);
+  rootElement.addEventListener('pointerout', handleOneShotHoverPointerOut, true);
+}
+
+function pruneOneShotHoverState(): void {
+  activeOneShotHoverElements.forEach((element) => {
+    if (!element.isConnected || !element.matches(':hover')) {
+      element.classList.remove('is-hover-bouncing');
+      activeOneShotHoverElements.delete(element);
+    }
+  });
+}
+
+function handleOneShotHoverPointerOver(event: PointerEvent): void {
+  const hoverTarget = resolveOneShotHoverTarget(event.target);
+  if (!hoverTarget || isRelatedTargetInside(event.relatedTarget, hoverTarget.element)) {
+    return;
+  }
+  if (activeOneShotHoverKeys.has(hoverTarget.key)) {
+    activeOneShotHoverElements.add(hoverTarget.element);
+    return;
+  }
+  if (activeOneShotHoverElements.has(hoverTarget.element)) {
+    return;
+  }
+
+  activeOneShotHoverElements.add(hoverTarget.element);
+  activeOneShotHoverKeys.add(hoverTarget.key);
+  hoverTarget.element.classList.add('is-hover-bouncing');
+  hoverTarget.element.addEventListener(
+    'animationend',
+    () => {
+      hoverTarget.element.classList.remove('is-hover-bouncing');
+    },
+    { once: true },
+  );
+}
+
+function handleOneShotHoverPointerOut(event: PointerEvent): void {
+  const hoverTarget = resolveOneShotHoverTarget(event.target);
+  if (!hoverTarget || isRelatedTargetInside(event.relatedTarget, hoverTarget.element)) {
+    return;
+  }
+  activeOneShotHoverElements.delete(hoverTarget.element);
+  hoverTarget.element.classList.remove('is-hover-bouncing');
+  window.setTimeout(() => {
+    const elementUnderPointer = document.elementFromPoint(event.clientX, event.clientY);
+    const nextHoverTarget = resolveOneShotHoverTarget(elementUnderPointer);
+    if (nextHoverTarget?.key === hoverTarget.key) {
+      activeOneShotHoverElements.add(nextHoverTarget.element);
+      return;
+    }
+
+    activeOneShotHoverKeys.delete(hoverTarget.key);
+    if (activeOneShotHoverKeys.size === 0 && createHudSignature(gameStore.snapshot) !== lastRenderSignature) {
+      renderHud(gameStore.snapshot, { forceFull: true });
+    }
+  }, 0);
+}
+
+function resolveOneShotHoverTarget(target: EventTarget | null): { element: HTMLElement; key: string } | null {
+  if (!(target instanceof HTMLElement)) {
+    return null;
+  }
+
+  const manaOrb = target.closest<HTMLElement>('.mana-orb');
+  if (manaOrb) {
+    return { element: manaOrb, key: 'mana-orb' };
+  }
+
+  const defenseSkillCard = target.closest<HTMLElement>('.defense-skill-dock .skill-shop-card:not(:disabled):not(.is-unaffordable)');
+  if (defenseSkillCard) {
+    return { element: defenseSkillCard, key: `defense-skill-card:${defenseSkillCard.dataset.skillId ?? defenseSkillCard.textContent ?? ''}` };
+  }
+
+  const defenseSkillTab = target.closest<HTMLElement>('.defense-skill-dock .skill-shop-tab');
+  if (defenseSkillTab) {
+    return { element: defenseSkillTab, key: `defense-skill-tab:${defenseSkillTab.dataset.skillShopTab ?? defenseSkillTab.textContent ?? ''}` };
+  }
+
+  return null;
+}
+
+function isRelatedTargetInside(relatedTarget: EventTarget | null, element: HTMLElement): boolean {
+  return relatedTarget instanceof Node && element.contains(relatedTarget);
 }
 
 function installBookPanelFocus(): void {
@@ -1114,7 +1667,8 @@ function cycleBookPanelSize(bookId: BookId, panel: HTMLElement): void {
   setBookPanelSize(bookId, panel, getBookPanelPresetWidth(bookId, nextPreset));
   setBookPanelPosition(bookId, panel, currentLeft, currentTop);
   lastRenderSignature = '';
-  renderHud(gameStore.snapshot);
+  lastRenderStableSignature = '';
+  renderHud(gameStore.snapshot, { forceFull: true });
 }
 
 function getBookPanelPreset(bookId: BookId): BookPanelSizePreset {
@@ -1131,6 +1685,9 @@ function bookPanelSizeFromPreset(bookId: BookId, preset: BookPanelSizePreset): {
 }
 
 function getBookPanelPresetWidth(bookId: BookId, preset: BookPanelSizePreset): number {
+  if (bookId === 'defense' && preset.id === 'medium') {
+    return Math.round(preset.width * DEFENSE_MEDIUM_PANEL_SCALE);
+  }
   if (bookId === 'defense' && preset.id === 'large') {
     return Math.round(preset.width * DEFENSE_LARGE_PANEL_SCALE);
   }
@@ -1138,6 +1695,9 @@ function getBookPanelPresetWidth(bookId: BookId, preset: BookPanelSizePreset): n
 }
 
 function getBookPanelSize(bookId: BookId): { width: number; height: number } {
+  if (bookId === 'defense' && getBookPanelPreset(bookId).id === 'large') {
+    return bookPanelSizeFromPreset(bookId, getBookPanelPreset(bookId));
+  }
   return bookPanelSizes.get(bookId) ?? bookPanelSizeFromPreset(bookId, getBookPanelPreset(bookId));
 }
 
@@ -1184,6 +1744,7 @@ function bookOverlay(
   state: GameState,
   shouldAnimatePage: boolean,
   shouldAnimateUpgradePanel: boolean,
+  isSingleOpenPanel: boolean,
 ): string {
   const selectedBook = getBook(bookId);
   const isFocused = state.selectedBook === bookId;
@@ -1206,11 +1767,11 @@ function bookOverlay(
     selectedBook.id === 'targets' ||
     selectedBook.id === 'mine' ||
     selectedBook.id === 'slimeTrainer';
-  const hasUpgradeControls = selectedBook.id !== 'typing';
+  const hasUpgradeControls = selectedBook.id !== 'typing' && selectedBook.id !== 'defense';
   const isCompactUpgradeOpen = openUpgradePanel === selectedBook.id && upgradePanelMode === 'compact';
   const miniSkillClass = isCompactUpgradeOpen ? ' has-mini-skills' : '';
   return `
-    <section class="book-overlay panel-slot-${slot} ${isFocused ? 'is-focused' : ''} ${shouldAnimatePage ? 'is-entering' : ''}${miniSkillClass}${dragClass}"${dragStyle} data-book-id="${selectedBook.id}" aria-label="${selectedBook.name}">
+    <section class="book-overlay panel-slot-${slot}${isSingleOpenPanel ? ' is-single-open-panel' : ''} ${isFocused ? 'is-focused' : ''} ${shouldAnimatePage ? 'is-entering' : ''}${miniSkillClass}${dragClass}"${dragStyle} data-book-id="${selectedBook.id}" aria-label="${selectedBook.name}">
       <button class="book-panel-close" data-action="closeBookPanel" data-book-id="${selectedBook.id}" title="Fermer le panneau">×</button>
       <header class="book-page-header ${isMinimalPage ? 'is-minimal' : ''}${miniSkillClass}">
         ${hasUpgradeControls ? `<button class="book-upgrade-tile ${openUpgradePanel === selectedBook.id ? 'is-open' : ''}" data-action="toggleUpgradePanel" data-book-id="${selectedBook.id}" title="Upgrade">
@@ -1259,7 +1820,8 @@ function bookOverlay(
   `;
 }
 
-function createHudSignature(state: GameState): string {
+function createHudSignature(state: GameState, options: { includeDefenseVolatile?: boolean } = {}): string {
+  const includeDefenseVolatile = options.includeDefenseVolatile ?? false;
   const bookState = books
     .map((book) => {
       const current = state.books[book.id];
@@ -1281,7 +1843,6 @@ function createHudSignature(state: GameState): string {
   const targetSkills = state.targetSkills;
   const mining = state.mining;
   const miningSkills = state.miningSkills;
-  const defenseSkills = state.defenseSkills;
   const slimeTrainer = state.slimeTrainer;
 
   return [
@@ -1302,11 +1863,9 @@ function createHudSignature(state: GameState): string {
     state.snake.extraLivesUsed,
     state.snake.invincibleTimer.toFixed(1),
     state.snake.body.map((cell) => `${cell.x},${cell.y}`).join(';'),
-    state.defense.wave,
-    Math.ceil(state.defense.towerHealth),
-    state.defense.score,
-    state.defense.best,
-    state.defense.lastReward,
+    ...(includeDefenseVolatile
+      ? [Math.ceil(state.defense.towerHealth), state.defense.score, state.defense.best, state.defense.lastReward]
+      : ['defense-volatile']),
     state.defense.speedMultiplier,
     blackjack.phase,
     blackjack.round,
@@ -1399,21 +1958,7 @@ function createHudSignature(state: GameState): string {
     snakeSkills.bonusFruit,
     snakeSkills.extraLife,
     snakeSkills.edgeWrap,
-    defenseSkills.damage,
-    defenseSkills.attackSpeed,
-    defenseSkills.range,
-    defenseSkills.damagePerMeter,
-    defenseSkills.criticalChance,
-    defenseSkills.criticalMultiplier,
-    defenseSkills.ricochetCount,
-    defenseSkills.ricochetChance,
-    defenseSkills.superCriticalChance,
-    defenseSkills.superCriticalMultiplier,
-    defenseSkills.health,
-    defenseSkills.healthRegen,
-    defenseSkills.resistance,
-    defenseSkills.moneyPerEnemy,
-    defenseSkills.moneyPerWave,
+    'defense-skills-dynamic',
     targetSkills.spawnSpeed,
     targetSkills.targetCount,
     targetSkills.damage,
@@ -1694,6 +2239,126 @@ function standardManaCostHtml(cost: number, extraCost = ''): string {
   return `${blackjackResourceCost('mana', String(cost))}${extraCost ? `<span class="standard-upgrade-extra-cost">${extraCost}</span>` : ''}`;
 }
 
+type SkillShopTheme = 'attack' | 'defense' | 'utility';
+type DefenseSkillShopTabId = SkillShopTheme;
+
+interface SkillShopCard {
+  action: string;
+  skillId: string;
+  title: string;
+  value: string;
+  delta: string;
+  detail: string;
+  level: number;
+  maxLevel: number;
+  costHtml: string;
+  costText: string;
+  isMaxed: boolean;
+  isDisabled?: boolean;
+  isUnaffordable?: boolean;
+}
+
+interface SkillShopTab<T extends string = string> {
+  id: T;
+  label: string;
+  icon: string;
+  theme: SkillShopTheme;
+  cards: SkillShopCard[];
+}
+
+interface SkillShopPanelOptions {
+  docked?: boolean;
+  showCompactButton?: boolean;
+}
+
+function isDefenseSkillShopTabId(value: string | undefined): value is DefenseSkillShopTabId {
+  return value === 'attack' || value === 'defense' || value === 'utility';
+}
+
+function skillShopPanel<T extends string>(
+  bookId: BookId,
+  shouldAnimate: boolean,
+  title: string,
+  subtitle: string,
+  activeTabId: T,
+  tabs: Array<SkillShopTab<T>>,
+  tabAction: string,
+  options: SkillShopPanelOptions = {},
+): string {
+  const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? tabs[0];
+  return `
+    <section class="upgrade-panel is-skill-shop is-skill-shop-${activeTab.theme} ${options.docked ? 'is-docked' : ''} ${shouldAnimate ? 'is-entering' : ''}" aria-label="${title}">
+      ${options.docked ? '' : `<button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="${bookId}" title="Fermer">×</button>`}
+      <div class="skill-shop-frame">
+        <header class="skill-shop-header">
+          <div>
+            <strong>${title}</strong>
+            <span>${subtitle}</span>
+          </div>
+          ${
+            options.showCompactButton === false
+              ? ''
+              : `<button class="skill-shop-compact" data-action="toggleCompactUpgradePanel" data-book-id="${bookId}" title="Mode compact">Compact</button>`
+          }
+        </header>
+        <div class="skill-shop-card-grid" aria-label="${activeTab.label}">
+          ${activeTab.cards.map((card) => skillShopCard(card, activeTab.theme)).join('')}
+        </div>
+        <nav class="skill-shop-tabs" aria-label="Categories">
+          ${tabs.map((tab) => skillShopTabButton(tab, activeTab.id, tabAction)).join('')}
+        </nav>
+      </div>
+    </section>
+  `;
+}
+
+function skillShopTabButton<T extends string>(tab: SkillShopTab<T>, activeTabId: T, tabAction: string): string {
+  const selected = tab.id === activeTabId;
+  return `
+    <button
+      class="skill-shop-tab is-${tab.theme} ${selected ? 'is-selected' : ''}"
+      type="button"
+      data-action="${tabAction}"
+      data-skill-shop-tab="${tab.id}"
+      aria-pressed="${selected ? 'true' : 'false'}"
+      title="${tab.label}"
+    >
+      <strong>${tab.label}</strong>
+    </button>
+  `;
+}
+
+function skillShopCard(card: SkillShopCard, theme: SkillShopTheme): string {
+  const canBuy = !card.isMaxed && !card.isDisabled;
+  const compactTitle = compactSkillShopTitle(card.title);
+  return `
+    <button
+      class="skill-shop-card is-${theme} ${card.isMaxed ? 'is-maxed' : ''} ${card.isUnaffordable ? 'is-unaffordable' : ''}"
+      type="button"
+      data-skill-id="${card.skillId}"
+      ${canBuy ? `data-action="${card.action}"` : 'disabled'}
+      aria-label="${card.title}: ${card.value}. ${card.detail}. ${card.costText}."
+      title="${card.title} - ${card.value} - ${card.costText}"
+    >
+      <span class="skill-shop-card-topline">
+        <strong data-compact-title="${compactTitle}">${card.title}</strong>
+      </span>
+      <span class="skill-shop-card-value">
+        <strong>${card.value}</strong>
+        ${card.delta ? `<small>${card.delta}</small>` : ''}
+      </span>
+      <span class="skill-shop-card-detail">${card.detail}</span>
+      <span class="skill-shop-buy">
+        ${card.isMaxed ? '<b>Max</b>' : card.costHtml}
+      </span>
+    </button>
+  `;
+}
+
+function compactSkillShopTitle(title: string): string {
+  return title.replace(/\bSuper\b/g, 'S.').replace(/\bCritical\b|\bCrit\b/g, 'C.');
+}
+
 function defenseUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
   if (mode === 'compact') {
     return `
@@ -1714,112 +2379,129 @@ function defenseUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'de
     `;
   }
 
-  return `
-    <section class="upgrade-panel is-mana-skills is-blackjack-upgrades is-standard-upgrades ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences du bastion">
-      <button class="upgrade-panel-close" data-action="toggleUpgradePanel" data-book-id="defense" title="Fermer">×</button>
-      <div class="blackjack-upgrade-panel-header">
-        <div>
-          <strong>Table des upgrades</strong>
-          <span>Bastion</span>
-        </div>
-        <button class="blackjack-upgrade-hide" data-action="toggleCompactUpgradePanel" data-book-id="defense" title="Masquer le panneau complet">
-          Compact
-        </button>
-      </div>
-      <div class="blackjack-upgrade-board defense-upgrade-board" aria-label="Upgrades bastion">
-        ${defenseUpgradeRow('Attaque', 'Degats, cadence et critiques', [
-          defenseSkillTrack(state, 'damage', '▲', 'Damage', `${defenseTowerDamage(state)} degats`, '+1 degat par niveau'),
-          defenseSkillTrack(state, 'attackSpeed', '⌁', 'Attack speed', `${defenseTowerAttackInterval(state).toFixed(2)}s`, 'Reduit le cooldown de tir'),
-          defenseSkillTrack(state, 'damagePerMeter', '⇢', 'Damage / metre', `+${(state.defenseSkills.damagePerMeter * 0.75).toFixed(1)}/m`, 'Plus un ennemi est loin, plus il prend cher'),
-          defenseSkillTrack(state, 'criticalChance', '◇', 'Critical chance', `${Math.round(Math.min(60, state.defenseSkills.criticalChance * 2))}%`, 'Chance de coup critique'),
-          defenseSkillTrack(state, 'criticalMultiplier', '✦', 'Critical multiplier', `x${(2 + state.defenseSkills.criticalMultiplier * 0.125).toFixed(2)}`, 'Multiplicateur des critiques'),
-          defenseSkillTrack(state, 'superCriticalChance', '✹', 'Super critic chance', `${Math.round(Math.min(25, state.defenseSkills.superCriticalChance))}%`, 'Chance de super critique'),
-          defenseSkillTrack(state, 'superCriticalMultiplier', '✷', 'Super critical multiplier', `x${(3 + state.defenseSkills.superCriticalMultiplier * 0.25).toFixed(2)}`, 'Multiplicateur du super critique'),
-        ])}
-        ${defenseUpgradeRow('Défense', 'Vie, soin et mitigation', [
-          defenseSkillTrack(state, 'health', '♥', 'Vie', `${Math.round(state.defense.towerHealth)}/${defenseMaxTowerHealth(state)}`, '+2 PV max par niveau'),
-          defenseSkillTrack(state, 'healthRegen', '+', 'Regen de vie', `${defenseTowerHealthRegenPerSecond(state).toFixed(2)}/s`, 'Regeneration continue'),
-          defenseSkillTrack(state, 'resistance', '▣', 'Resistance', `${Math.round(defenseTowerResistance(state) * 100)}%`, 'Reduit les degats entrants'),
-        ])}
-        ${defenseUpgradeRow('Utility', 'Portee, ricochets et gains', [
-          defenseSkillTrack(state, 'range', '◎', 'Range', `${Math.round(defenseTowerRangePercent(state) * 100)}%`, 'Agrandit le cercle de portee'),
-          defenseSkillTrack(state, 'ricochetCount', '↷', 'Ricochet count', `${state.defenseSkills.ricochetCount}`, 'Nombre de rebonds possibles'),
-          defenseSkillTrack(state, 'ricochetChance', '⤷', 'Ricochet chance', `${Math.round(Math.min(80, state.defenseSkills.ricochetChance * 4))}%`, 'Chance de declencher un ricochet'),
-          defenseSkillTrack(state, 'moneyPerEnemy', '◆', 'Monnaie / ennemi', `${defenseEnemyReward(state)} sceaux`, '+1 sceau par ennemi'),
-          defenseSkillTrack(state, 'moneyPerWave', '◈', 'Monnaie / vague', `${defenseMoneyPerWave(state)} sceaux`, '+3 sceaux par vague'),
-        ])}
-      </div>
-    </section>
-  `;
+  return defenseSkillShop(state, shouldAnimate);
 }
 
-function defenseUpgradeRow(title: string, subtitle: string, tracks: StandardUpgradeTrack[]): string {
-  return `
-    <article class="blackjack-upgrade-track defense-upgrade-row">
-      <div class="blackjack-upgrade-track-main defense-upgrade-row-main">
-        <header>
-          <strong>${title}</strong>
-          <span>${subtitle}</span>
-        </header>
-      </div>
-      <div class="defense-upgrade-nodes">
-        ${tracks.map(defenseUpgradeNode).join('')}
-      </div>
-    </article>
-  `;
+function defenseSkillShop(state: GameState, shouldAnimate = false, options: SkillShopPanelOptions = {}): string {
+  return skillShopPanel(
+    'defense',
+    shouldAnimate,
+    'Bastion Skills',
+    'Tower defense upgrades',
+    defenseSkillShopTab,
+    defenseSkillShopTabs(state),
+    'setDefenseSkillShopTab',
+    options,
+  );
 }
 
-function defenseUpgradeNode(track: StandardUpgradeTrack): string {
-  const actionAttributes = track.action && track.skillId ? `data-action="${track.action}" data-skill-id="${track.skillId}"` : '';
-  const disabled = track.isMaxed ? 'disabled' : '';
-  const title = `${track.title} - ${track.subtitle} - ${track.levelLabel} - ${track.costText}`;
-  return `
-    <button
-      class="blackjack-upgrade-node defense-upgrade-node ${track.isMaxed ? 'is-owned is-maxed' : ''}"
-      ${actionAttributes}
-      ${disabled}
-      title="${title}"
-      aria-label="${title}"
-    >
-      <b>${track.icon}</b>
-      <span>${track.levelLabel.replace('Lv ', '')}</span>
-      <i class="blackjack-upgrade-tooltip" role="tooltip">
-        <strong>${track.title}</strong>
-        <small>${track.subtitle}</small>
-        <small>${track.detail}</small>
-        <em class="blackjack-tooltip-cost">
-          <span>Cout</span>
-          <b>${track.costHtml}</b>
-        </em>
-      </i>
-    </button>
-  `;
+function defenseSkillShopTabs(state: GameState): Array<SkillShopTab<DefenseSkillShopTabId>> {
+  return [
+    {
+      id: 'attack',
+      label: 'Attack',
+      icon: '⚔',
+      theme: 'attack',
+      cards: [
+        defenseSkillShopCard(state, 'damage', 'Damage', `${defenseTowerDamage(state)} dmg`, '+1 per level'),
+        defenseSkillShopCard(state, 'attackSpeed', 'Attack Speed', `${defenseTowerAttackInterval(state).toFixed(2)}s`, 'shorter cooldown'),
+        defenseSkillShopCard(state, 'criticalChance', 'Critical Chance', `${Math.round(Math.min(60, state.defenseSkills.criticalChance * 2))}%`, 'chance to crit'),
+        defenseSkillShopCard(state, 'criticalMultiplier', 'Critical Multiplier', `x${(2 + state.defenseSkills.criticalMultiplier * 0.125).toFixed(2)}`, 'bigger crits'),
+        defenseSkillShopCard(state, 'ricochetCount', 'Ricochet Count', `${state.defenseSkills.ricochetCount}`, 'extra bounces'),
+        defenseSkillShopCard(state, 'ricochetChance', 'Ricochet Chance', `${Math.round(Math.min(80, state.defenseSkills.ricochetChance * 4))}%`, 'bounce chance'),
+        defenseSkillShopCard(state, 'superCriticalChance', 'Super Crit Chance', `${Math.round(Math.min(25, state.defenseSkills.superCriticalChance))}%`, 'chance to super crit'),
+        defenseSkillShopCard(state, 'superCriticalMultiplier', 'Super Crit Multiplier', `x${(3 + state.defenseSkills.superCriticalMultiplier * 0.25).toFixed(2)}`, 'huge crits'),
+      ],
+    },
+    {
+      id: 'defense',
+      label: 'Defense',
+      icon: '♛',
+      theme: 'defense',
+      cards: [
+        defenseSkillShopCard(state, 'health', 'Health', `${Math.round(state.defense.towerHealth)}/${defenseMaxTowerHealth(state)}`, '+2 max hp'),
+        defenseSkillShopCard(state, 'healthRegen', 'Health Regen', `${defenseTowerHealthRegenPerSecond(state).toFixed(2)}/s`, 'passive healing'),
+        defenseSkillShopCard(state, 'resistance', 'Resistance', `${Math.round(defenseTowerResistance(state) * 100)}%`, 'less incoming damage'),
+      ],
+    },
+    {
+      id: 'utility',
+      label: 'Loot',
+      icon: '▰',
+      theme: 'utility',
+      cards: [
+        defenseSkillShopCard(state, 'range', 'Range', `${Math.round(defenseTowerRangePercent(state) * 100)}%`, 'larger attack circle'),
+        defenseSkillShopCard(state, 'moneyPerEnemy', 'Gold / Enemy', `${defenseEnemyReward(state)}`, '+1 seal per enemy'),
+        defenseSkillShopCard(state, 'moneyPerWave', 'Gold / Wave', `${defenseMoneyPerWave(state)}`, '+3 seals per wave'),
+      ],
+    },
+  ];
 }
 
-function defenseSkillTrack(
+function defenseSkillShopCard(
   state: GameState,
   skillId: DefenseSkillId,
-  icon: string,
-  label: string,
+  title: string,
   value: string,
   detail: string,
-): StandardUpgradeTrack {
+): SkillShopCard {
   const level = state.defenseSkills[skillId];
   const maxLevel = defenseSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = defenseSkillCost(state, skillId);
+  const isUnaffordable = !isMaxed && state.resources.sigils < cost;
   return {
     action: 'buyDefenseSkill',
     skillId,
-    icon,
-    title: label,
-    subtitle: value,
-    levelLabel: `Lv ${level}/${maxLevel}`,
+    title,
+    value,
+    delta: isMaxed ? '' : defenseSkillDeltaLabel(skillId),
     detail,
-    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
-    costText: isMaxed ? 'MAX' : `${cost} Mana`,
+    level,
+    maxLevel,
+    costHtml: isMaxed ? 'Max' : defenseSkillCostHtml(cost),
+    costText: isMaxed ? 'Max' : `${cost} Sceaux`,
     isMaxed,
+    isDisabled: isUnaffordable,
+    isUnaffordable,
   };
+}
+
+function defenseSkillCostHtml(cost: number): string {
+  return `<span class="blackjack-cost-resource"><img class="blackjack-upgrade-icon is-cost-icon" src="/assets/library/resources/sigils.svg" alt="Sceaux" loading="lazy" decoding="async"><b>${cost}</b></span>`;
+}
+
+function defenseSkillDeltaLabel(skillId: DefenseSkillId): string {
+  switch (skillId) {
+    case 'damage':
+      return '(+1)';
+    case 'attackSpeed':
+      return '(-0.03s)';
+    case 'criticalChance':
+      return '(+2%)';
+    case 'criticalMultiplier':
+      return '(+0.13x)';
+    case 'ricochetCount':
+      return '(+1)';
+    case 'ricochetChance':
+      return '(+4%)';
+    case 'superCriticalChance':
+      return '(+1%)';
+    case 'superCriticalMultiplier':
+      return '(+0.25x)';
+    case 'health':
+      return '(+2)';
+    case 'healthRegen':
+      return '(+0.08/s)';
+    case 'resistance':
+      return '(+3%)';
+    case 'range':
+      return '(+2%)';
+    case 'moneyPerEnemy':
+      return '(+1)';
+    case 'moneyPerWave':
+      return '(+3)';
+  }
 }
 
 function defenseSkillCompactButton(state: GameState, skillId: DefenseSkillId, icon: string): string {
@@ -2374,15 +3056,48 @@ function manaPanel(state: GameState): string {
   const wandIndexes = Array.from({ length: wandCount }, (_, index) => index);
   return `
     <div class="mana-panel">
+      <div class="mana-counter-box" aria-label="Mana actuelle">
+        <strong data-dynamic-value="mana-panel-total">${compactHudNumber(state.mana)}</strong>
+        <span>per second: <b data-dynamic-value="mana-panel-rate">${formatManaPerSecond(manaPerSecond(state))}</b></span>
+      </div>
+      <div class="mana-fall-layer" aria-hidden="true"></div>
       <div class="magic-wands" aria-hidden="true">
         ${wandIndexes.map((index) => `<span class="magic-wand wand-${index + 1}"><i></i></span>`).join('')}
       </div>
       <button class="mana-orb" data-action="chargeMana" data-book-id="mana" title="Concentrer la Mana" aria-label="Concentrer la Mana">
+        <span class="mana-crystal-light"></span>
         <span class="mana-orb-aura"></span>
         <span class="mana-sprite" aria-hidden="true"></span>
       </button>
     </div>
   `;
+}
+
+function manaPerSecond(state: GameState): number {
+  const interval = manaAutomationInterval(state.manaSkills.automation);
+  if (interval <= 0) {
+    return 0;
+  }
+  return manaExpectedCastGain(state) * manaWandCount(state) * (1 / interval);
+}
+
+function manaExpectedCastGain(state: GameState): number {
+  const baseGain = 1 + state.manaSkills.power;
+  const criticalChance = Math.min(20, state.manaSkills.criticalHit) / 100;
+  return baseGain * (1 + criticalChance * (manaCriticalMultiplier(state) - 1));
+}
+
+function formatManaPerSecond(value: number): string {
+  if (value <= 0) {
+    return '0/s';
+  }
+  if (value < 10) {
+    return `${value.toFixed(2)}/s`;
+  }
+  if (value < 100) {
+    return `${value.toFixed(1)}/s`;
+  }
+  return `${compactHudNumber(value)}/s`;
 }
 
 function typingPanel(state: GameState): string {
@@ -2470,13 +3185,21 @@ function showCrystalClickEffect(amount: number): void {
     }
   }, 1000);
 
+  showManaClickParticles(manaOrb, amount);
+
   const sparkCount = manaSparkCount(amount);
+  const gain = normalizedManaGain(amount);
   for (let index = 0; index < sparkCount; index += 1) {
     const shard = document.createElement('i');
+    const sparkValue = manaParticleUnitValue(gain, sparkCount, index);
     const angle = (index / sparkCount) * 360 + (index % 2) * 12;
-    const distance = 34 + Math.min(78, amount * 2.2) + (index % 4) * 8;
-    const size = Math.min(13, 4 + amount * 0.22 + (index % 3) * 2);
+    const distance = 30 + Math.min(74, Math.sqrt(gain) * 13) + (index % 4) * 7;
+    const size = Math.min(24, 10 + Math.min(5, sparkValue) * 2.6 + (index % 3) * 2);
     shard.className = 'mana-spark';
+    shard.dataset.gainValue = String(sparkValue);
+    if (sparkValue >= 4) {
+      shard.classList.add('is-critical');
+    }
     shard.style.setProperty('--spark-x', `${Math.cos((angle * Math.PI) / 180) * distance}px`);
     shard.style.setProperty('--spark-y', `${Math.sin((angle * Math.PI) / 180) * distance}px`);
     shard.style.setProperty('--spark-size', `${size}px`);
@@ -2486,9 +3209,77 @@ function showCrystalClickEffect(amount: number): void {
   }
 }
 
+function normalizedManaGain(amount: number): number {
+  return Math.max(1, Math.round(amount));
+}
+
+function manaParticleVisualCount(amount: number): number {
+  const gain = normalizedManaGain(amount);
+  if (gain <= 12) {
+    return gain;
+  }
+  return Math.min(32, 12 + Math.ceil((gain - 12) / 4));
+}
+
+function manaParticleUnitValue(gain: number, particleCount: number, index: number): number {
+  const baseValue = Math.floor(gain / particleCount);
+  const remainder = gain % particleCount;
+  return baseValue + (index < remainder ? 1 : 0);
+}
+
 function manaSparkCount(amount: number): number {
-  const gain = Math.max(1, Math.round(amount));
-  return Math.min(18, Math.max(2, Math.ceil(Math.sqrt(gain) * 1.35)));
+  return manaParticleVisualCount(amount);
+}
+
+function showManaClickParticles(manaOrb: HTMLElement, amount: number): void {
+  const layer = rootElement?.querySelector<HTMLElement>('.mana-fall-layer');
+  const counter = rootElement?.querySelector<HTMLElement>('.mana-counter-box');
+  if (!layer || !counter) {
+    return;
+  }
+
+  const layerRect = layer.getBoundingClientRect();
+  const orbRect = manaOrb.getBoundingClientRect();
+  const counterRect = counter.getBoundingClientRect();
+  const startX = orbRect.left - layerRect.left + orbRect.width * 0.5;
+  const startY = orbRect.top - layerRect.top + orbRect.height * 0.45;
+  const endX = counterRect.left - layerRect.left + counterRect.width * 0.5 - startX;
+  const endY = counterRect.top - layerRect.top + counterRect.height * 0.5 - startY;
+  const gain = normalizedManaGain(amount);
+  const particleCount = manaParticleVisualCount(gain);
+
+  for (let index = 0; index < particleCount; index += 1) {
+    const particle = document.createElement('i');
+    const unitValue = manaParticleUnitValue(gain, particleCount, index);
+    const isCrystal = unitValue > 1 || index % 4 === 0;
+    const spreadX = (Math.random() - 0.5) * Math.min(160, orbRect.width * 0.52);
+    const spreadY = (Math.random() - 0.5) * Math.min(110, orbRect.height * 0.34);
+    const endJitterX = (Math.random() - 0.5) * 30;
+    const endJitterY = (Math.random() - 0.5) * 16;
+    const valueScale = Math.min(5, unitValue);
+    const size = Math.min(34, 15 + valueScale * 3.6 + (index % 3) * 2);
+    particle.className = isCrystal ? `mana-falling-crystal mana-crystal-tier-${index % 2 === 0 ? 'b' : 'a'}` : 'mana-falling-orb';
+    particle.dataset.gainValue = String(unitValue);
+    if (unitValue >= 4) {
+      particle.classList.add('is-critical');
+    }
+    if (unitValue >= 2) {
+      particle.classList.add('is-bundled');
+    }
+    particle.style.setProperty('--particle-start-x', `${startX + spreadX}px`);
+    particle.style.setProperty('--particle-start-y', `${startY + spreadY}px`);
+    particle.style.setProperty('--particle-early-x', `${spreadX * -0.15}px`);
+    particle.style.setProperty('--particle-early-y', `${-12 - Math.random() * 18}px`);
+    particle.style.setProperty('--particle-mid-x', `${endX * 0.45 + spreadX * 0.4}px`);
+    particle.style.setProperty('--particle-mid-y', `${endY * 0.45 - 44 - Math.random() * 32}px`);
+    particle.style.setProperty('--particle-end-x', `${endX + endJitterX}px`);
+    particle.style.setProperty('--particle-end-y', `${endY + endJitterY}px`);
+    particle.style.setProperty('--particle-size', `${size}px`);
+    particle.style.setProperty('--fall-delay', `${index * 24}ms`);
+    particle.style.setProperty('--fall-duration', `${1040 + (index % 5) * 56}ms`);
+    layer.appendChild(particle);
+    particle.addEventListener('animationend', () => particle.remove(), { once: true });
+  }
 }
 
 function showWandCastEffect(): void {
@@ -2515,11 +3306,12 @@ function showWandCastEffect(): void {
   }, 660);
 }
 
-function showFloatingGain(amount: number, targetSelector = '.mana-orb'): void {
+function showFloatingGain(amount: number, targetSelector = '.mana-orb', className?: string): void {
   const gain = Math.max(1, Math.round(amount));
   const pending = pendingFloatingGains.get(targetSelector);
   pendingFloatingGains.set(targetSelector, {
     amount: (pending?.amount ?? 0) + gain,
+    className: className ?? pending?.className,
   });
 
   if (floatingGainFlushHandle !== null) {
@@ -2534,11 +3326,11 @@ function flushFloatingGains(): void {
 
   for (const [targetSelector, pending] of pendingFloatingGains) {
     pendingFloatingGains.delete(targetSelector);
-    appendFloatingGain(pending.amount, targetSelector);
+    appendFloatingGain(pending.amount, targetSelector, pending.className);
   }
 }
 
-function appendFloatingGain(amount: number, targetSelector: string): void {
+function appendFloatingGain(amount: number, targetSelector: string, className?: string): void {
   const target = rootElement?.querySelector<HTMLElement>(targetSelector);
   if (!target) {
     return;
@@ -2549,7 +3341,7 @@ function appendFloatingGain(amount: number, targetSelector: string): void {
   const hostRect = host.getBoundingClientRect();
   const { x, y } = floatingGainOffset(rect);
   const pop = document.createElement('span');
-  pop.className = 'floating-gain';
+  pop.className = className ? `floating-gain ${className}` : 'floating-gain';
   pop.textContent = `+${amount}`;
   pop.style.left = `${rect.left - hostRect.left + rect.width * 0.5 + x}px`;
   pop.style.top = `${rect.top - hostRect.top + rect.height * 0.48 + y}px`;
@@ -3142,7 +3934,8 @@ function scheduleBlackjackScoreReveal(): void {
   blackjackScoreRevealTimeout = window.setTimeout(() => {
     blackjackScoreRevealTimeout = null;
     lastRenderSignature = '';
-    renderHud(gameStore.snapshot);
+    lastRenderStableSignature = '';
+    renderHud(gameStore.snapshot, { forceFull: true });
   }, delay);
 }
 
@@ -3705,16 +4498,28 @@ function targetPanel(state: GameState): string {
 function defensePanel(state: GameState): string {
   const defense = state.defense;
   const hasTiledTerrain = hasDefenseTiledMap();
-  const attackInterval = defenseTowerAttackInterval(state).toFixed(2);
   const rangeScale = defenseTowerRange(state);
+  const healthPercent = defenseHealthPercent(state);
+  const maxHealth = defenseMaxTowerHealth(state);
+  const currentHealth = Math.ceil(defense.towerHealth);
+  const healthToneClass = defenseHealthToneClass(healthPercent);
 
   return `
-    <div class="defense-panel">
+    <div class="defense-panel ${defense.paused ? 'is-paused' : ''}">
       <div class="defense-arena ${hasTiledTerrain ? 'has-tiled-map' : ''}" style="--defense-shot:${defense.shotPulse % 2}" role="img" aria-label="Mini jeu Bastion Arcanique">
         <div class="defense-terrain ${hasTiledTerrain ? 'is-tiled' : 'is-fallback'}" aria-hidden="true">
           ${renderDefenseTiledTerrain()}
         </div>
+        ${defenseWaveChooser(defense.wave)}
         <div class="defense-range" style="--defense-range-scale:${rangeScale.toFixed(3)}" aria-hidden="true"></div>
+        <div class="defense-status-hud" aria-label="Etat du bastion">
+          <span class="defense-hud-health ${healthToneClass}" title="HP ${currentHealth}/${maxHealth}" aria-label="HP ${currentHealth}/${maxHealth}">
+            <i class="defense-hp-sprite" data-defense-hp-sprite style="${defenseHpSpriteStyle(healthPercent)}" aria-hidden="true"></i>
+            <strong class="defense-hp-value" data-dynamic-value="defense-health-value">${currentHealth}</strong>
+          </span>
+          <span class="defense-hud-wave" title="Vague"><strong data-dynamic-value="defense-wave">${defense.wave}</strong></span>
+          <span class="defense-hud-money" title="Sceaux">◆ <strong data-dynamic-value="defense-money">${compactHudNumber(state.resources.sigils)}</strong></span>
+        </div>
         ${defenseWaveRail(state)}
         <div class="defense-lanes" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
@@ -3730,60 +4535,114 @@ function defensePanel(state: GameState): string {
                 <span></span>
               </div>`
         }
-        <div class="defense-mini-stats" aria-label="Bastion">
-          <span>▲ <strong>${defenseTowerDamage(state)}</strong></span>
-          <span>⌁ <strong>${attackInterval}s</strong></span>
-          <span>◎ <strong>${Math.round(defenseTowerRangePercent(state) * 100)}%</strong></span>
-        </div>
-        <button class="defense-speed-toggle" data-action="cycleDefenseSpeed" data-book-id="defense" title="Vitesse du jeu TD" aria-label="Changer la vitesse du tower defense">x${defense.speedMultiplier}</button>
+        <button class="defense-speed-toggle ${defense.paused ? 'is-paused' : ''}" data-action="cycleDefenseSpeed" data-book-id="defense" title="Vitesse du jeu TD" aria-label="Changer la vitesse du tower defense">x${defense.speedMultiplier}</button>
+      </div>
+      <div class="defense-skill-dock">
+        ${defenseSkillShop(state, false, { docked: true, showCompactButton: false })}
       </div>
     </div>
   `;
 }
 
+function defenseWaveChooser(wave: number): string {
+  const currentWave = Math.min(100, Math.max(1, Math.floor(wave)));
+
+  return `
+    <div class="defense-wave-chooser" aria-label="Choisir la vague TD">
+      <button type="button" data-action="setDefenseWaveDelta" data-book-id="defense" data-wave-delta="-1" aria-label="Vague precedente">-</button>
+      <label>
+        <span>Wave</span>
+        <input data-defense-wave-input type="number" min="1" max="100" step="1" value="${currentWave}" inputmode="numeric" aria-label="Vague TD" />
+      </label>
+      <button type="button" data-action="setDefenseWaveDelta" data-book-id="defense" data-wave-delta="1" aria-label="Vague suivante">+</button>
+    </div>
+  `;
+}
+
 function defenseActorsMarkup(defense: GameState['defense']): string {
-  return `${defenseShotMarkup(defense)}${defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join('')}${defense.damagePopups.map((popup) => defenseDamagePopupMarkup(popup)).join('')}`;
+  return `${defense.shots.map((shot) => defenseShotMarkup(shot)).join('')}${defense.enemyProjectiles.map((projectile) => defenseEnemyProjectileMarkup(projectile)).join('')}${defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join('')}${defense.damagePopups.map((popup) => defenseDamagePopupMarkup(popup)).join('')}${defense.moneyPopups.map((popup) => defenseMoneyPopupMarkup(popup)).join('')}`;
 }
 
 function defenseEnemyMarkup(enemy: GameState['defense']['enemies'][number]): string {
   const position = defenseEnemyPosition(enemy);
   const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
+  const facingScale = defenseEnemyFacingScale(position);
+  const kindClass = enemy.kind === 'skeletonMage' ? ' is-skeleton-mage' : enemy.kind === 'bat' ? ' is-bat' : '';
+  const stateClass =
+    enemy.state === 'dying'
+      ? ' is-dying'
+      : enemy.state === 'attacking'
+        ? ' is-attacking'
+        : enemy.state === 'idle'
+          ? ' is-idle'
+          : '';
 
   return `
     <i
-      class="defense-enemy ${enemy.state === 'dying' ? 'is-dying' : ''}"
+      class="defense-enemy${kindClass}${stateClass}"
       data-enemy-id="${enemy.id}"
-      style="--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-health:${health}%"
+      style="--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-facing-scale:${facingScale}; --enemy-health:${health}%; --enemy-health-value:${health}"
       aria-hidden="true"
     ></i>
   `;
 }
 
-function defenseShotMarkup(defense: GameState['defense']): string {
-  if (!defense.shot) {
-    return '';
-  }
-
-  const shotTarget = defenseEnemyPosition(defense.shot);
+function defenseEnemyProjectileMarkup(projectile: GameState['defense']['enemyProjectiles'][number]): string {
+  const source = defenseEnemyPosition(projectile);
+  const projectileAngle = Math.atan2(50 - source.y, 50 - source.x) * (180 / Math.PI) - 90;
+  const projectileDurationMs = Math.max(1, Math.round(projectile.duration * 1000));
   return `
-    <svg class="defense-shot" data-shot-id="${defense.shot.id}" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
-      <line x1="50" y1="50" x2="${shotTarget.x}" y2="${shotTarget.y}"></line>
-    </svg>
+    <i
+      class="defense-enemy-projectile"
+      data-enemy-projectile-id="${projectile.id}"
+      style="--enemy-shot-x:${source.x.toFixed(3)}%; --enemy-shot-y:${source.y.toFixed(3)}%; --enemy-shot-angle:${projectileAngle.toFixed(2)}deg; --enemy-shot-duration:${projectileDurationMs}ms"
+      aria-hidden="true"
+    ></i>
+  `;
+}
+
+function defenseShotMarkup(shot: GameState['defense']['shots'][number]): string {
+  const shotTarget = defenseEnemyPosition(shot);
+  const shotAngle = Math.atan2(shotTarget.y - 50, shotTarget.x - 50) * (180 / Math.PI) - 90;
+  const shotDurationMs = Math.max(1, Math.round(shot.duration * 1000));
+  return `
+    <i
+      class="defense-shot"
+      data-shot-id="${shot.id}"
+      style="--shot-target-x:${shotTarget.x.toFixed(3)}%; --shot-target-y:${shotTarget.y.toFixed(3)}%; --shot-angle:${shotAngle.toFixed(2)}deg; --shot-duration:${shotDurationMs}ms"
+      aria-hidden="true"
+    ></i>
   `;
 }
 
 function defenseWaveRail(state: GameState): string {
-  const wave = state.defense.wave;
-  const progress = Math.round(defenseWaveProgress(state) * 100);
-  const markerValues = wave === 1 ? [1, 2, 3, 4] : [wave - 1, wave, wave + 1, wave + 2];
-  const currentIndex = markerValues.indexOf(wave);
-  const segmentStart = 12.5 + currentIndex * 25;
-  const segmentWidth = progress * 0.25;
+  const finalWave = 100;
+  const wave = Math.min(finalWave, Math.max(1, state.defense.wave));
+  const progress = defenseWaveRailProgress(state, wave);
+  const segment = 100 / 3;
+  const slide = progress * segment;
+  const fillLeft = wave === 1 ? segment * 1.5 - slide : segment * 0.5;
+  const fillWidth = wave === 1 ? slide : segment;
+  const fillOpacity = wave === 1 && progress <= 0.001 ? 0 : 1;
+  const markerValues = [
+    wave > 1 ? { value: wave - 1, slot: 'previous', baseX: segment * 0.5 } : null,
+    { value: wave, slot: 'current', baseX: segment * 1.5 },
+    wave < finalWave ? { value: wave + 1, slot: 'next', baseX: segment * 2.5 } : null,
+    wave + 2 <= finalWave ? { value: wave + 2, slot: 'after-next', baseX: segment * 3.5 } : null,
+  ].filter((marker): marker is { value: number; slot: string; baseX: number } => Boolean(marker));
+  const markers = markerValues
+    .map((marker) => {
+      const stateClass = marker.value < wave ? ' is-past' : marker.value === wave ? ' is-current' : '';
+      const finalClass = marker.value === finalWave ? ' is-final' : '';
+      return `<span class="${`${stateClass}${finalClass} is-${marker.slot}`.trim()}" style="--wave-marker-base-x:${marker.baseX.toFixed(3)}%">${marker.value}</span>`;
+    })
+    .join('');
 
   return `
-    <div class="defense-wave" aria-label="Vague ${wave}">
+    <div class="defense-wave" data-defense-wave="${wave}" aria-label="Vague ${wave}" style="--wave-slide:${slide.toFixed(3)}%; --wave-fill-left:${fillLeft.toFixed(3)}%; --wave-fill-width:${fillWidth.toFixed(3)}%; --wave-fill-opacity:${fillOpacity}">
       <div class="defense-wave-track">
-        <i class="defense-wave-fill" style="left:${segmentStart}%; width:${segmentWidth}%"></i>
+        <i class="defense-wave-fill" aria-hidden="true"></i>
+        <i class="defense-wave-markers">${markers}</i>
       </div>
     </div>
   `;
@@ -3798,6 +4657,18 @@ function defenseDamagePopupMarkup(popup: GameState['defense']['damagePopups'][nu
       style="--damage-x:${position.x}%; --damage-y:${position.y}%"
       aria-hidden="true"
     >${popup.amount}</span>
+  `;
+}
+
+function defenseMoneyPopupMarkup(popup: GameState['defense']['moneyPopups'][number]): string {
+  const position = defenseEnemyPosition(popup);
+  return `
+    <span
+      class="defense-money-popup"
+      data-money-popup-id="${popup.id}"
+      style="--money-x:${position.x}%; --money-y:${position.y}%"
+      aria-hidden="true"
+    ><i></i><b>+${popup.amount}</b></span>
   `;
 }
 
@@ -3909,6 +4780,26 @@ function installBlackjackControls(): void {
     if (state.blackjack.phase === 'player') {
       gameStore.dispatch({ type: 'standBlackjack' });
     }
+  });
+}
+
+function installDefenseControls(): void {
+  if (defenseControlsInstalled) {
+    return;
+  }
+  defenseControlsInstalled = true;
+  window.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() !== 'l' || event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+
+    const state = gameStore.snapshot;
+    if (state.selectedBook !== 'defense' || !isBookPanelOpen(state, 'defense') || !state.books.defense.unlocked) {
+      return;
+    }
+
+    event.preventDefault();
+    gameStore.dispatch({ type: 'toggleDefensePause' });
   });
 }
 

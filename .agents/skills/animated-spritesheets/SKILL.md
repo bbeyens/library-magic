@@ -31,6 +31,7 @@ Typical outputs:
 - normalized runtime frames
 - labeled contact sheet
 - selected-sequence GIF
+- chat-visible frame contact sheet preview, shown automatically in the final response
 
 ## Philosophy: Treat Spritesheets As Two Problems
 
@@ -181,6 +182,22 @@ Review at least:
 - the normalized contact sheet
 - the selected-sequence GIF
 
+### 7b. Always show the sheets in chat
+
+Whenever this skill is used and any sheet or animation frames are available, automatically show a contact-sheet preview in the final response. Do not wait for the user to ask.
+
+The preview should be like a production review board:
+- crop the relevant animation row or selected frames
+- arrange frames in a readable grid instead of one huge strip when there are many frames
+- upscale with nearest-neighbor so the pixels are inspectable
+- label frames with simple numbers such as `frame 1`, `frame 2`, etc.
+- use a neutral dark background and enough spacing between cells
+- include the selected-sequence GIF too when it exists
+
+If a spritesheet has multiple animations, show each relevant action sheet separately. If the user asks about one action, show only that action's frames.
+
+When scripts do not already produce a contact sheet in this format, create one from the runtime frames or sheet cells before replying. A local temporary PNG is fine for quick review, but durable work should save the contact sheet next to the run artifacts.
+
 ## Anti-Patterns To Avoid
 
 ❌ **Anti-pattern: trusting the invisible grid**
@@ -293,3 +310,5 @@ The hard part of AI spritesheets is rarely “make the model draw a character”
 The hard part is getting from a promising sheet to stable, readable, engine-style frames.
 
 Recover the silhouette first. Clean the edges second. Normalize third. Curate the motion last.
+
+Always show the user the resulting sheets/frames as contact-sheet previews in chat. A spritesheet task is not finished until the user can visually inspect the frames without opening files manually.
