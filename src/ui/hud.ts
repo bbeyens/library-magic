@@ -5,7 +5,7 @@ import {
   renderDefenseTiledForeground,
   renderDefenseTiledTerrain,
 } from '../game/content/tdTiledMap';
-import { defenseEnemyPosition, type DefensePoint } from '../game/simulation/defenseRules';
+import { defenseEnemyPosition, defenseEnemyVisibleCenter, type DefensePoint } from '../game/simulation/defenseRules';
 import { gameStore } from '../game/store';
 import {
   blackjackCardLabel,
@@ -32,6 +32,7 @@ import {
   blackjackResultSummary,
   blackjackUpgradeCellLevel,
   blackjackVisibleDealerValue,
+  defenseDamageMultiplier,
   manaAutomationInterval,
   manaCriticalMultiplier,
   manaSkillCost,
@@ -40,14 +41,23 @@ import {
   defenseTowerAttackInterval,
   defenseTowerDamage,
   defenseEnemyReward,
+  defenseGoldMultiplier,
+  defenseIceActive,
+  defenseIceAttackInterval,
+  defenseIceDamage,
+  defenseIceRange,
+  defenseIceRangePercent,
+  defenseIceSlow,
+  defenseLightningAttackInterval,
+  defenseLightningDamage,
+  defenseLightningTargetCount,
   defenseMaxTowerHealth,
-  defenseMoneyPerWave,
   defenseSkillCost,
+  defenseSkillLocked,
   defenseSkillMaxLevel,
   defenseTowerHealthRegenPerSecond,
   defenseTowerRange,
   defenseTowerRangePercent,
-  defenseTowerResistance,
   defenseWaveProgress,
   hundredOptionRange,
   hundredTargetMax,
@@ -109,6 +119,8 @@ import {
 } from '../game/simulation/state';
 
 let rootElement: HTMLDivElement | null = null;
+const DEFENSE_WAVE_MARKER_STEP_PERCENT = 24;
+const DEFENSE_WAVE_RAIL_STEP_PERCENT = 33;
 let openUpgradePanel: BookId | null = null;
 let upgradePanelMode: 'detail' | 'compact' = 'detail';
 let defenseSkillShopTab: DefenseSkillShopTabId = 'attack';
@@ -116,6 +128,7 @@ let lastRenderSignature = '';
 let lastOpenPanelsSignature = '';
 let lastOpenUpgradePanel: BookId | null = null;
 let lastUpgradePanelMode: 'detail' | 'compact' = 'detail';
+let lastRenderStructureSignature = '';
 let lastSnakeRewardMarker = '';
 let lastRuneTypingRewardMarker = '';
 let lastRenderStableSignature = '';
@@ -147,17 +160,14 @@ let activeHundredProgressTarget: number | null = null;
 let lastDefenseDisplayedHealth: number | null = null;
 let lastDefenseDisplayedSigils: number | null = null;
 let lastDefenseSkillDockSignature = '';
+const defenseEnemyHealthSnapshots = new Map<string, number>();
 const dynamicResourceGainSnapshots = new Map<string, number>();
 const DEFENSE_SLIME_WALK_CYCLE_MS = 1586;
-const DEFENSE_SLIME_MOVEMENT_HOLD_MS = 234;
-const defenseSlimeVisualPositions = new Map<
-  string,
-  { cycleIndex: number; x: number; y: number; createdAt: number }
->();
 let snakeControlsInstalled = false;
 let typingControlsInstalled = false;
 let blackjackControlsInstalled = false;
 let defenseControlsInstalled = false;
+let panelSizeControlsInstalled = false;
 let escapeControlsInstalled = false;
 let suppressClickListenerInstalled = false;
 let oneShotHoverListenerInstalled = false;
@@ -215,11 +225,13 @@ export function mountHud(root: HTMLDivElement | null): void {
   installTypingControls();
   installBlackjackControls();
   installDefenseControls();
+  installPanelSizeControls();
   installEscapeControls();
   gameStore.subscribe(renderHud);
   void loadDefenseTiledMap().then(() => {
     lastRenderSignature = '';
     lastRenderStableSignature = '';
+    lastRenderStructureSignature = '';
     renderHud(gameStore.snapshot, { forceFull: true });
   });
 }
@@ -262,7 +274,16 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
 
   const signature = createHudSignature(state);
   const stableSignature = createHudSignature(state, { includeDefenseVolatile: false });
+  const structureSignature = createHudStructureSignature(state);
   pruneOneShotHoverState();
+  if (!options.forceFull && shouldPatchOpenDefensePanel(state, structureSignature)) {
+    lastRenderSignature = signature;
+    lastRenderStableSignature = stableSignature;
+    updateDynamicHudValues(state);
+    runHudTransientEffects(state);
+    scheduleBlackjackAutoDeal(state);
+    return;
+  }
   if (!options.forceFull && activeOneShotHoverKeys.size > 0 && stableSignature === lastRenderStableSignature) {
     updateDynamicHudValues(state);
     runHudTransientEffects(state);
@@ -287,6 +308,7 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
     openUpgradePanel !== null && (lastOpenUpgradePanel !== openUpgradePanel || lastUpgradePanelMode !== upgradePanelMode);
   lastRenderSignature = signature;
   lastRenderStableSignature = stableSignature;
+  lastRenderStructureSignature = structureSignature;
   lastOpenPanelsSignature = openPanelsSignature;
   lastOpenUpgradePanel = openUpgradePanel;
   lastUpgradePanelMode = upgradePanelMode;
@@ -825,6 +847,7 @@ function updateDynamicDefensePanel(state: GameState): void {
   if (!rootElement || !isBookPanelOpen(state, 'defense')) {
     lastDefenseDisplayedHealth = null;
     lastDefenseDisplayedSigils = null;
+    defenseEnemyHealthSnapshots.clear();
     return;
   }
 
@@ -841,8 +864,12 @@ function updateDynamicDefensePanel(state: GameState): void {
   let waveRail = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-wave');
   if (defensePanelElement && lastDefenseDisplayedHealth !== null && currentHealth < lastDefenseDisplayedHealth) {
     restartOneShotClass(defensePanelElement, 'is-damage-shaking');
+    if (healthHud) {
+      restartOneShotClass(healthHud, 'is-damage-shaking');
+    }
   }
   defensePanelElement?.classList.toggle('is-paused', state.defense.paused);
+  defensePanelElement?.style.setProperty('--defense-time-scale', defenseTimeScale(state.defense.speedMultiplier));
   const speedToggle = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-speed-toggle');
   if (speedToggle) {
     speedToggle.classList.toggle('is-paused', state.defense.paused);
@@ -870,7 +897,6 @@ function updateDynamicDefensePanel(state: GameState): void {
   setDynamicText('defense-health-value', currentHealth);
   setDynamicText('defense-wave', state.defense.wave);
   setDynamicText('defense-money', compactHudNumber(currentSigils));
-  trackDynamicResourceGain('defense-money', currentSigils);
   const waveInput = rootElement.querySelector<HTMLInputElement>('[data-defense-wave-input]');
   if (waveInput && document.activeElement !== waveInput) {
     waveInput.value = String(currentWave);
@@ -880,6 +906,7 @@ function updateDynamicDefensePanel(state: GameState): void {
   const healthFill = rootElement.querySelector<HTMLElement>('.defense-health i');
   const rangeElement = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-range');
   rangeElement?.style.setProperty('--defense-range-scale', defenseTowerRange(state).toFixed(3));
+  syncDefenseIceAura(state);
   if (healthBar) {
     healthBar.classList.toggle('is-full', healthPercent >= 100);
   }
@@ -895,10 +922,12 @@ function updateDynamicDefensePanel(state: GameState): void {
 
   if (waveRail) {
     const waveProgress = defenseWaveRailProgress(state, currentWave);
-    const waveSlide = waveProgress * (100 / 3);
-    const waveFillLeft = currentWave === 1 ? 50 - waveSlide : 100 / 6;
-    const waveFillWidth = currentWave === 1 ? waveSlide : 100 / 3;
+    const waveSlide = waveProgress * DEFENSE_WAVE_MARKER_STEP_PERCENT;
+    const waveFillProgress = waveProgress * DEFENSE_WAVE_RAIL_STEP_PERCENT;
+    const waveFillLeft = currentWave === 1 ? 50 - waveFillProgress : 50 - DEFENSE_WAVE_RAIL_STEP_PERCENT;
+    const waveFillWidth = currentWave === 1 ? waveFillProgress : DEFENSE_WAVE_RAIL_STEP_PERCENT;
     waveRail.style.setProperty('--wave-slide', `${waveSlide.toFixed(3)}%`);
+    waveRail.style.setProperty('--wave-rail-step', `${DEFENSE_WAVE_RAIL_STEP_PERCENT.toFixed(3)}%`);
     waveRail.style.setProperty('--wave-fill-left', `${waveFillLeft.toFixed(3)}%`);
     waveRail.style.setProperty('--wave-fill-width', `${waveFillWidth.toFixed(3)}%`);
     waveRail.style.setProperty('--wave-fill-opacity', currentWave === 1 && waveProgress <= 0.001 ? '0' : '1');
@@ -910,50 +939,89 @@ function updateDynamicDefensePanel(state: GameState): void {
   }
 
   const liveEnemyIds = new Set<string>();
-  const nowMs = Date.now();
+  const sortableEnemyIds = new Set<string>();
+  const visualEnemyPositions = new Map<number, DefensePoint>();
+  const enemyLayerOrder: Array<{ id: string; y: number }> = [];
   for (const enemy of state.defense.enemies) {
     const enemyId = String(enemy.id);
     liveEnemyIds.add(enemyId);
+    let healthBarElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy-health-bar[data-enemy-id="${enemyId}"]`);
     let enemyElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy[data-enemy-id="${enemyId}"]`);
+    if (!healthBarElement) {
+      actorsLayer.insertAdjacentHTML('beforeend', defenseEnemyHealthBarMarkup(enemy));
+      healthBarElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy-health-bar[data-enemy-id="${enemyId}"]`);
+    }
     if (!enemyElement) {
-      defenseSlimeVisualPositions.delete(enemyId);
       actorsLayer.insertAdjacentHTML('beforeend', defenseEnemyMarkup(enemy));
       enemyElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy[data-enemy-id="${enemyId}"]`);
     }
 
+    const position = defenseEnemyPosition(enemy);
+    visualEnemyPositions.set(enemy.id, position);
+    const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
+    if (enemy.state !== 'dying') {
+      sortableEnemyIds.add(enemyId);
+      enemyLayerOrder.push({ id: enemyId, y: position.y });
+    }
+
+    if (healthBarElement) {
+      healthBarElement.style.setProperty('--enemy-x', `${position.x}%`);
+      healthBarElement.style.setProperty('--enemy-y', `${position.y}%`);
+      healthBarElement.style.setProperty('--enemy-health-value', String(health));
+      healthBarElement.className = defenseEnemyHealthBarClass(enemy);
+    }
+
     if (enemyElement) {
-      const position = defenseEnemyPosition(enemy);
-      const visualPosition = defenseEnemyVisualPosition(enemy, position, nowMs);
-      const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
-      const facingScale = defenseEnemyFacingScale(visualPosition);
-      enemyElement.style.setProperty('--enemy-x', `${visualPosition.x}%`);
-      enemyElement.style.setProperty('--enemy-y', `${visualPosition.y}%`);
+      const previousHealth = defenseEnemyHealthSnapshots.get(enemyId);
+      const facingScale = defenseEnemyFacingScale(position);
+      enemyElement.style.setProperty('--enemy-x', `${position.x}%`);
+      enemyElement.style.setProperty('--enemy-y', `${position.y}%`);
       enemyElement.style.setProperty('--enemy-facing-scale', String(facingScale));
-      enemyElement.style.setProperty('--enemy-health', `${health}%`);
-      enemyElement.style.setProperty('--enemy-health-value', String(health));
       enemyElement.classList.toggle('is-skeleton-mage', enemy.kind === 'skeletonMage');
       enemyElement.classList.toggle('is-bat', enemy.kind === 'bat');
+      enemyElement.classList.toggle('is-goblin-king', enemy.kind === 'goblinKing');
       enemyElement.classList.toggle('is-idle', enemy.state === 'idle');
       enemyElement.classList.toggle('is-attacking', enemy.state === 'attacking');
       enemyElement.classList.toggle('is-dying', enemy.state === 'dying');
+      if (previousHealth !== undefined && enemy.health < previousHealth) {
+        playDefenseEnemyHitFeedback(enemyElement);
+      }
+      defenseEnemyHealthSnapshots.set(enemyId, enemy.health);
     }
   }
+
+  const sortedEnemyLayerOrder = enemyLayerOrder
+    .sort((left, right) => left.y - right.y || Number(left.id) - Number(right.id))
+    .map(({ id }) => id);
+  const currentEnemyLayerOrder = Array.from(actorsLayer.querySelectorAll<HTMLElement>('.defense-enemy'))
+    .map((enemyElement) => enemyElement.dataset.enemyId)
+    .filter((enemyId): enemyId is string => typeof enemyId === 'string' && sortableEnemyIds.has(enemyId));
+
+  if (currentEnemyLayerOrder.join('|') !== sortedEnemyLayerOrder.join('|')) {
+    sortedEnemyLayerOrder.forEach((id) => {
+      const enemyElement = actorsLayer.querySelector<HTMLElement>(`.defense-enemy[data-enemy-id="${id}"]`);
+      if (enemyElement) {
+        actorsLayer.appendChild(enemyElement);
+      }
+    });
+  }
+
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-enemy-health-bar').forEach((healthBarElement) => {
+    const enemyId = healthBarElement.dataset.enemyId;
+    if (!enemyId || !liveEnemyIds.has(enemyId)) {
+      healthBarElement.remove();
+    }
+  });
 
   actorsLayer.querySelectorAll<HTMLElement>('.defense-enemy').forEach((enemyElement) => {
     const enemyId = enemyElement.dataset.enemyId;
     if (!enemyId || !liveEnemyIds.has(enemyId)) {
       if (enemyId) {
-        defenseSlimeVisualPositions.delete(enemyId);
+        defenseEnemyHealthSnapshots.delete(enemyId);
       }
       enemyElement.remove();
     }
   });
-
-  for (const enemyId of defenseSlimeVisualPositions.keys()) {
-    if (!liveEnemyIds.has(enemyId)) {
-      defenseSlimeVisualPositions.delete(enemyId);
-    }
-  }
 
   const liveShotIds = new Set<string>();
   for (const shot of state.defense.shots) {
@@ -987,6 +1055,26 @@ function updateDynamicDefensePanel(state: GameState): void {
     }
   });
 
+  const liveLightningStrikeIds = new Set<string>();
+  for (const strike of state.defense.lightningStrikes) {
+    const strikeId = String(strike.id);
+    liveLightningStrikeIds.add(strikeId);
+    if (!actorsLayer.querySelector<HTMLElement>(`.defense-lightning-strike[data-lightning-strike-id="${strikeId}"]`)) {
+      const targetEnemy = state.defense.enemies.find((enemy) => enemy.id === strike.targetEnemyId);
+      actorsLayer.insertAdjacentHTML(
+        'beforeend',
+        defenseLightningStrikeMarkup(strike, visualEnemyPositions.get(strike.targetEnemyId), targetEnemy),
+      );
+    }
+  }
+
+  actorsLayer.querySelectorAll<HTMLElement>('.defense-lightning-strike').forEach((strikeElement) => {
+    const strikeId = strikeElement.dataset.lightningStrikeId;
+    if (!strikeId || !liveLightningStrikeIds.has(strikeId)) {
+      strikeElement.remove();
+    }
+  });
+
   const livePopupIds = new Set<string>();
   for (const popup of state.defense.damagePopups) {
     const popupId = String(popup.id);
@@ -1016,6 +1104,8 @@ function updateDynamicDefensePanel(state: GameState): void {
       if (amountElement && amountElement.textContent !== nextAmount) {
         amountElement.textContent = nextAmount;
       }
+      existingPopup.style.setProperty('--money-heat', defenseMoneyPopupHeat(popup.combo).toFixed(3));
+      existingPopup.style.setProperty('--money-stack', String(defenseMoneyPopupStack(popup.combo)));
     }
   }
 
@@ -1027,33 +1117,31 @@ function updateDynamicDefensePanel(state: GameState): void {
   });
 }
 
-function defenseEnemyVisualPosition(
-  enemy: GameState['defense']['enemies'][number],
-  position: DefensePoint,
-  nowMs: number,
-): DefensePoint {
-  const enemyId = String(enemy.id);
-  if ((enemy.kind ?? 'slime') !== 'slime' || enemy.state !== 'walking') {
-    defenseSlimeVisualPositions.delete(enemyId);
-    return position;
+function syncDefenseIceAura(state: GameState): void {
+  const arena = rootElement?.querySelector<HTMLElement>('.book-overlay[data-book-id="defense"] .defense-arena');
+  if (!arena) {
+    return;
   }
 
-  const existing = defenseSlimeVisualPositions.get(enemyId);
-  const createdAt = existing?.createdAt ?? nowMs;
-  const elapsedMs = Math.max(0, nowMs - createdAt);
-  const cycleIndex = Math.floor(elapsedMs / DEFENSE_SLIME_WALK_CYCLE_MS);
-  const phaseMs = elapsedMs % DEFENSE_SLIME_WALK_CYCLE_MS;
-
-  if (!existing || existing.cycleIndex !== cycleIndex) {
-    defenseSlimeVisualPositions.set(enemyId, { cycleIndex, x: position.x, y: position.y, createdAt });
+  let aura = arena.querySelector<HTMLElement>('.defense-ice-aura');
+  let range = arena.querySelector<HTMLElement>('.defense-ice-range');
+  if (!defenseIceActive(state)) {
+    aura?.remove();
+    range?.remove();
+    return;
   }
 
-  const visualPosition = defenseSlimeVisualPositions.get(enemyId);
-  if (visualPosition && phaseMs < DEFENSE_SLIME_MOVEMENT_HOLD_MS) {
-    return { x: visualPosition.x, y: visualPosition.y };
+  if (!aura || !range) {
+    aura?.remove();
+    range?.remove();
+    const rangeElement = arena.querySelector<HTMLElement>('.defense-range');
+    rangeElement?.insertAdjacentHTML('afterend', defenseIceAuraMarkup(state));
+    aura = arena.querySelector<HTMLElement>('.defense-ice-aura');
+    range = arena.querySelector<HTMLElement>('.defense-ice-range');
   }
 
-  return position;
+  aura?.style.setProperty('--defense-ice-range-scale', defenseIceRange(state).toFixed(3));
+  range?.style.setProperty('--defense-ice-range-scale', defenseIceRange(state).toFixed(3));
 }
 
 function defenseEnemyFacingScale(position: DefensePoint): number {
@@ -1067,6 +1155,7 @@ function updateDynamicDefenseSkillCards(state: GameState): void {
     if (!isDefenseSkillId(skillId)) {
       return;
     }
+    const snapshot = defenseSkillShopCardSnapshot(state, skillId);
     if (!card.dataset.action && card.dataset.defenseDynamicClickBound !== '1') {
       card.dataset.defenseDynamicClickBound = '1';
       card.addEventListener('click', () => {
@@ -1081,8 +1170,10 @@ function updateDynamicDefenseSkillCards(state: GameState): void {
     }
 
     const isMaxed = state.defenseSkills[skillId] >= defenseSkillMaxLevel(skillId);
-    const isUnaffordable = !isMaxed && currentSigils < defenseSkillCost(state, skillId);
-    const canBuy = !isMaxed && !isUnaffordable;
+    const isLocked = defenseSkillLocked(state, skillId);
+    const isUnaffordable = !isMaxed && !isLocked && currentSigils < defenseSkillCost(state, skillId);
+    const canBuy = !isMaxed && !isLocked && !isUnaffordable;
+    card.classList.toggle('is-locked', isLocked);
     card.classList.toggle('is-unaffordable', isUnaffordable);
     card.classList.toggle('is-maxed', isMaxed);
     card.disabled = !canBuy;
@@ -1090,6 +1181,21 @@ function updateDynamicDefenseSkillCards(state: GameState): void {
       card.dataset.action = 'buyDefenseSkill';
     } else {
       delete card.dataset.action;
+    }
+
+    if (snapshot) {
+      card.setAttribute('aria-label', `${snapshot.title}: ${snapshot.value}. ${snapshot.detail}. ${snapshot.costText}.`);
+      card.setAttribute('title', `${snapshot.title} - ${snapshot.value} - ${snapshot.costText}`);
+      card.querySelector<HTMLElement>('[data-skill-card-value]')?.replaceChildren(document.createTextNode(snapshot.value));
+      const deltaElement = card.querySelector<HTMLElement>('[data-skill-card-delta]');
+      if (deltaElement) {
+        deltaElement.textContent = snapshot.delta;
+        deltaElement.toggleAttribute('hidden', snapshot.isLocked || snapshot.delta.length === 0);
+      }
+      const buyElement = card.querySelector<HTMLElement>('[data-skill-card-buy]');
+      if (buyElement) {
+        buyElement.innerHTML = snapshot.isLocked ? '' : snapshot.isMaxed ? '<b>Max</b>' : snapshot.costHtml;
+      }
     }
   });
 }
@@ -1121,28 +1227,30 @@ function defenseSkillDockSignature(state: GameState): string {
   const skills = state.defenseSkills;
   return [
     defenseSkillShopTab,
-    Math.ceil(state.defense.towerHealth),
-    defenseMaxTowerHealth(state),
-    defenseTowerDamage(state),
-    defenseTowerAttackInterval(state).toFixed(3),
-    defenseTowerRangePercent(state).toFixed(3),
-    defenseEnemyReward(state),
-    defenseMoneyPerWave(state),
     skills.damage,
+    skills.damageMultiplier,
     skills.attackSpeed,
     skills.range,
     skills.criticalChance,
     skills.criticalMultiplier,
-    skills.ricochetCount,
-    skills.ricochetChance,
     skills.superCriticalChance,
     skills.superCriticalMultiplier,
+    skills.lightningDamage,
+    skills.lightningSpeed,
+    skills.lightningCount,
+    skills.iceDamage,
+    skills.iceSpeed,
+    skills.iceRange,
+    skills.iceSlow,
     skills.health,
     skills.healthRegen,
-    skills.resistance,
     skills.moneyPerEnemy,
-    skills.moneyPerWave,
+    skills.goldMultiplier,
   ].join('/');
+}
+
+function defenseSkillShopCardSnapshot(state: GameState, skillId: DefenseSkillId): SkillShopCard | undefined {
+  return defenseSkillShopTabs(state).flatMap((tab) => tab.cards).find((card) => card.skillId === skillId);
 }
 
 function bindDefenseSkillDockControls(dock: HTMLElement): void {
@@ -1172,19 +1280,24 @@ function bindDefenseSkillDockControls(dock: HTMLElement): void {
 function isDefenseSkillId(value: string | undefined): value is DefenseSkillId {
   switch (value) {
     case 'damage':
+    case 'damageMultiplier':
     case 'attackSpeed':
     case 'range':
     case 'criticalChance':
     case 'criticalMultiplier':
-    case 'ricochetCount':
-    case 'ricochetChance':
     case 'superCriticalChance':
     case 'superCriticalMultiplier':
+    case 'lightningDamage':
+    case 'lightningSpeed':
+    case 'lightningCount':
+    case 'iceDamage':
+    case 'iceSpeed':
+    case 'iceRange':
+    case 'iceSlow':
     case 'health':
     case 'healthRegen':
-    case 'resistance':
     case 'moneyPerEnemy':
-    case 'moneyPerWave':
+    case 'goldMultiplier':
       return true;
     default:
       return false;
@@ -1324,6 +1437,38 @@ function restartOneShotClass(element: HTMLElement, className: string): void {
   element.classList.add(className);
 }
 
+function playDefenseEnemyHitFeedback(enemyElement: HTMLElement): void {
+  enemyElement
+    .getAnimations()
+    .filter((animation) => animation.id === 'defense-enemy-hit-feedback')
+    .forEach((animation) => animation.cancel());
+
+  const animation = enemyElement.animate(
+    [
+      {
+        filter: 'brightness(1.35) sepia(1) saturate(9) hue-rotate(-44deg) drop-shadow(0 0 4px rgba(255, 34, 30, 0.72))',
+        opacity: '0.5',
+        offset: 0,
+      },
+      {
+        filter: 'brightness(1.35) sepia(1) saturate(9) hue-rotate(-44deg) drop-shadow(0 0 4px rgba(255, 34, 30, 0.72))',
+        opacity: '0.5',
+        offset: 0.22,
+      },
+      {
+        filter: 'none',
+        opacity: '1',
+        offset: 1,
+      },
+    ],
+    {
+      duration: 280,
+      easing: 'cubic-bezier(0.16, 0.86, 0.3, 1)',
+    },
+  );
+  animation.id = 'defense-enemy-hit-feedback';
+}
+
 function playDefenseMoneyCounterPulse(moneyHud: HTMLElement, moneyValue: HTMLElement): void {
   moneyHud.animate(
     [
@@ -1415,7 +1560,7 @@ function handleOneShotHoverPointerOut(event: PointerEvent): void {
 
     activeOneShotHoverKeys.delete(hoverTarget.key);
     if (activeOneShotHoverKeys.size === 0 && createHudSignature(gameStore.snapshot) !== lastRenderSignature) {
-      renderHud(gameStore.snapshot, { forceFull: true });
+      renderHud(gameStore.snapshot);
     }
   }, 0);
 }
@@ -1668,6 +1813,7 @@ function cycleBookPanelSize(bookId: BookId, panel: HTMLElement): void {
   setBookPanelPosition(bookId, panel, currentLeft, currentTop);
   lastRenderSignature = '';
   lastRenderStableSignature = '';
+  lastRenderStructureSignature = '';
   renderHud(gameStore.snapshot, { forceFull: true });
 }
 
@@ -1971,6 +2117,40 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
   ].join('/');
 }
 
+function createHudStructureSignature(state: GameState): string {
+  const bookState = books
+    .map((book) => {
+      const current = state.books[book.id];
+      return [
+        book.id,
+        current.level,
+        current.automation.toFixed(2),
+        current.pinned ? 1 : 0,
+        current.unlocked ? 1 : 0,
+      ].join(':');
+    })
+    .join('|');
+  return [
+    state.selectedBook,
+    state.openBookPanels.map((panel) => `${panel.bookId}:${panel.slot}`).join('|'),
+    openUpgradePanel ?? 'none',
+    upgradePanelMode,
+    defenseSkillShopTab,
+    state.defense.speedMultiplier,
+    bookState,
+  ].join('/');
+}
+
+function shouldPatchOpenDefensePanel(state: GameState, structureSignature: string): boolean {
+  if (!rootElement || structureSignature !== lastRenderStructureSignature) {
+    return false;
+  }
+  if (state.openBookPanels.length !== 1 || state.openBookPanels[0]?.bookId !== 'defense') {
+    return false;
+  }
+  return Boolean(rootElement.querySelector('.book-overlay[data-book-id="defense"] .defense-panel'));
+}
+
 function upgradePanel(bookId: BookId, state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
   if (bookId === 'mana') {
     return manaUpgradePanel(state, shouldAnimate, mode);
@@ -2086,11 +2266,9 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
           ${defenseSkillCompactButton(state, 'attackSpeed', '⌁')}
           ${defenseSkillCompactButton(state, 'range', '◎')}
           ${defenseSkillCompactButton(state, 'criticalChance', '◇')}
-          ${defenseSkillCompactButton(state, 'ricochetCount', '↷')}
           ${defenseSkillCompactButton(state, 'health', '♥')}
-          ${defenseSkillCompactButton(state, 'resistance', '▣')}
           ${defenseSkillCompactButton(state, 'moneyPerEnemy', '◆')}
-          ${defenseSkillCompactButton(state, 'moneyPerWave', '◈')}
+          ${defenseSkillCompactButton(state, 'goldMultiplier', '×')}
         </div>
       </div>
     `;
@@ -2255,6 +2433,7 @@ interface SkillShopCard {
   costText: string;
   isMaxed: boolean;
   isDisabled?: boolean;
+  isLocked?: boolean;
   isUnaffordable?: boolean;
 }
 
@@ -2333,7 +2512,7 @@ function skillShopCard(card: SkillShopCard, theme: SkillShopTheme): string {
   const compactTitle = compactSkillShopTitle(card.title);
   return `
     <button
-      class="skill-shop-card is-${theme} ${card.isMaxed ? 'is-maxed' : ''} ${card.isUnaffordable ? 'is-unaffordable' : ''}"
+      class="skill-shop-card is-${theme} ${card.isMaxed ? 'is-maxed' : ''} ${card.isLocked ? 'is-locked' : ''} ${card.isUnaffordable ? 'is-unaffordable' : ''}"
       type="button"
       data-skill-id="${card.skillId}"
       ${canBuy ? `data-action="${card.action}"` : 'disabled'}
@@ -2344,12 +2523,12 @@ function skillShopCard(card: SkillShopCard, theme: SkillShopTheme): string {
         <strong data-compact-title="${compactTitle}">${card.title}</strong>
       </span>
       <span class="skill-shop-card-value">
-        <strong>${card.value}</strong>
-        ${card.delta ? `<small>${card.delta}</small>` : ''}
+        <strong data-skill-card-value>${card.value}</strong>
+        <small data-skill-card-delta ${!card.isLocked && card.delta ? '' : 'hidden'}>${card.delta}</small>
       </span>
       <span class="skill-shop-card-detail">${card.detail}</span>
-      <span class="skill-shop-buy">
-        ${card.isMaxed ? '<b>Max</b>' : card.costHtml}
+      <span class="skill-shop-buy" data-skill-card-buy>
+        ${card.isLocked ? '' : card.isMaxed ? '<b>Max</b>' : card.costHtml}
       </span>
     </button>
   `;
@@ -2369,11 +2548,9 @@ function defenseUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'de
           ${defenseSkillCompactButton(state, 'attackSpeed', '⌁')}
           ${defenseSkillCompactButton(state, 'range', '◎')}
           ${defenseSkillCompactButton(state, 'criticalChance', '◇')}
-          ${defenseSkillCompactButton(state, 'ricochetCount', '↷')}
           ${defenseSkillCompactButton(state, 'health', '♥')}
-          ${defenseSkillCompactButton(state, 'resistance', '▣')}
           ${defenseSkillCompactButton(state, 'moneyPerEnemy', '◆')}
-          ${defenseSkillCompactButton(state, 'moneyPerWave', '◈')}
+          ${defenseSkillCompactButton(state, 'goldMultiplier', '×')}
         </div>
       </section>
     `;
@@ -2403,36 +2580,41 @@ function defenseSkillShopTabs(state: GameState): Array<SkillShopTab<DefenseSkill
       icon: '⚔',
       theme: 'attack',
       cards: [
-        defenseSkillShopCard(state, 'damage', 'Damage', `${defenseTowerDamage(state)} dmg`, '+1 per level'),
+        defenseSkillShopCard(state, 'damage', 'Damage +', `${defenseTowerDamage(state)} dmg`, '+1 per level'),
         defenseSkillShopCard(state, 'attackSpeed', 'Attack Speed', `${defenseTowerAttackInterval(state).toFixed(2)}s`, 'shorter cooldown'),
+        defenseSkillShopCard(state, 'range', 'Range', `${Math.round(defenseTowerRangePercent(state) * 100)}%`, 'larger attack circle'),
+        defenseSkillShopCard(state, 'damageMultiplier', 'Damage all x', `x${defenseDamageMultiplier(state).toFixed(2)}`, 'all base damage'),
         defenseSkillShopCard(state, 'criticalChance', 'Critical Chance', `${Math.round(Math.min(60, state.defenseSkills.criticalChance * 2))}%`, 'chance to crit'),
         defenseSkillShopCard(state, 'criticalMultiplier', 'Critical Multiplier', `x${(2 + state.defenseSkills.criticalMultiplier * 0.125).toFixed(2)}`, 'bigger crits'),
-        defenseSkillShopCard(state, 'ricochetCount', 'Ricochet Count', `${state.defenseSkills.ricochetCount}`, 'extra bounces'),
-        defenseSkillShopCard(state, 'ricochetChance', 'Ricochet Chance', `${Math.round(Math.min(80, state.defenseSkills.ricochetChance * 4))}%`, 'bounce chance'),
         defenseSkillShopCard(state, 'superCriticalChance', 'Super Crit Chance', `${Math.round(Math.min(25, state.defenseSkills.superCriticalChance))}%`, 'chance to super crit'),
         defenseSkillShopCard(state, 'superCriticalMultiplier', 'Super Crit Multiplier', `x${(3 + state.defenseSkills.superCriticalMultiplier * 0.25).toFixed(2)}`, 'huge crits'),
       ],
     },
     {
       id: 'defense',
-      label: 'Defense',
+      label: 'Element',
       icon: '♛',
       theme: 'defense',
       cards: [
-        defenseSkillShopCard(state, 'health', 'Health', `${Math.round(state.defense.towerHealth)}/${defenseMaxTowerHealth(state)}`, '+2 max hp'),
-        defenseSkillShopCard(state, 'healthRegen', 'Health Regen', `${defenseTowerHealthRegenPerSecond(state).toFixed(2)}/s`, 'passive healing'),
-        defenseSkillShopCard(state, 'resistance', 'Resistance', `${Math.round(defenseTowerResistance(state) * 100)}%`, 'less incoming damage'),
+        defenseSkillShopCard(state, 'lightningCount', 'Lightning', `${defenseLightningTargetCount(state)}`, 'targets per strike'),
+        defenseSkillShopCard(state, 'lightningDamage', 'Lightning Damage', `${defenseLightningDamage(state)} dmg`, 'random map strike'),
+        defenseSkillShopCard(state, 'lightningSpeed', 'Lightning Speed', `${defenseLightningAttackInterval(state).toFixed(2)}s`, 'faster lightning'),
+        defenseSkillShopCard(state, 'iceDamage', 'Ice Damage', `${defenseIceDamage(state)} dmg`, 'aura damage tick'),
+        defenseSkillShopCard(state, 'iceSpeed', 'Ice Speed', `${defenseIceAttackInterval(state).toFixed(2)}s`, 'faster aura ticks'),
+        defenseSkillShopCard(state, 'iceRange', 'Ice Range', `${Math.round(defenseIceRangePercent(state) * 100)}%`, 'larger frozen aura'),
+        defenseSkillShopCard(state, 'iceSlow', 'Ice Slow', `${Math.round(defenseIceSlow(state) * 100)}%`, 'slower enemies'),
       ],
     },
     {
       id: 'utility',
-      label: 'Loot',
+      label: 'Other',
       icon: '▰',
       theme: 'utility',
       cards: [
-        defenseSkillShopCard(state, 'range', 'Range', `${Math.round(defenseTowerRangePercent(state) * 100)}%`, 'larger attack circle'),
-        defenseSkillShopCard(state, 'moneyPerEnemy', 'Gold / Enemy', `${defenseEnemyReward(state)}`, '+1 seal per enemy'),
-        defenseSkillShopCard(state, 'moneyPerWave', 'Gold / Wave', `${defenseMoneyPerWave(state)}`, '+3 seals per wave'),
+        defenseSkillShopCard(state, 'health', 'Health +', `${Math.round(state.defense.towerHealth)}/${defenseMaxTowerHealth(state)}`, '+2 max hp'),
+        defenseSkillShopCard(state, 'healthRegen', 'Health Regen', `${defenseTowerHealthRegenPerSecond(state).toFixed(2)}/s`, 'passive healing'),
+        defenseSkillShopCard(state, 'moneyPerEnemy', 'Gold +', `${defenseEnemyReward(state)}`, '+1 seal per enemy'),
+        defenseSkillShopCard(state, 'goldMultiplier', 'Gold x', `x${defenseGoldMultiplier(state).toFixed(1)}`, '+10% gold per level'),
       ],
     },
   ];
@@ -2448,8 +2630,9 @@ function defenseSkillShopCard(
   const level = state.defenseSkills[skillId];
   const maxLevel = defenseSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
+  const isLocked = defenseSkillLocked(state, skillId);
   const cost = defenseSkillCost(state, skillId);
-  const isUnaffordable = !isMaxed && state.resources.sigils < cost;
+  const isUnaffordable = !isMaxed && !isLocked && state.resources.sigils < cost;
   return {
     action: 'buyDefenseSkill',
     skillId,
@@ -2459,10 +2642,11 @@ function defenseSkillShopCard(
     detail,
     level,
     maxLevel,
-    costHtml: isMaxed ? 'Max' : defenseSkillCostHtml(cost),
-    costText: isMaxed ? 'Max' : `${cost} Sceaux`,
+    costHtml: isLocked ? '' : isMaxed ? 'Max' : defenseSkillCostHtml(cost),
+    costText: isLocked ? '' : isMaxed ? 'Max' : `${cost} Sceaux`,
     isMaxed,
-    isDisabled: isUnaffordable,
+    isDisabled: isLocked || isUnaffordable,
+    isLocked,
     isUnaffordable,
   };
 }
@@ -2475,33 +2659,44 @@ function defenseSkillDeltaLabel(skillId: DefenseSkillId): string {
   switch (skillId) {
     case 'damage':
       return '(+1)';
+    case 'damageMultiplier':
+      return '(+0.05x)';
     case 'attackSpeed':
       return '(-0.03s)';
     case 'criticalChance':
       return '(+2%)';
     case 'criticalMultiplier':
       return '(+0.13x)';
-    case 'ricochetCount':
-      return '(+1)';
-    case 'ricochetChance':
-      return '(+4%)';
     case 'superCriticalChance':
       return '(+1%)';
     case 'superCriticalMultiplier':
       return '(+0.25x)';
+    case 'lightningDamage':
+      return '(+1)';
+    case 'lightningSpeed':
+      return '(-0.08s)';
+    case 'lightningCount':
+      return '(+1 count)';
+    case 'iceDamage':
+      return '(+1)';
+    case 'iceSpeed':
+      return '(-0.05s)';
+    case 'iceRange':
+      return '(+1%)';
+    case 'iceSlow':
+      return '(+2%)';
     case 'health':
       return '(+2)';
     case 'healthRegen':
       return '(+0.08/s)';
-    case 'resistance':
-      return '(+3%)';
     case 'range':
       return '(+2%)';
     case 'moneyPerEnemy':
       return '(+1)';
-    case 'moneyPerWave':
-      return '(+3)';
+    case 'goldMultiplier':
+      return '(+10%)';
   }
+  return '';
 }
 
 function defenseSkillCompactButton(state: GameState, skillId: DefenseSkillId, icon: string): string {
@@ -3935,6 +4130,7 @@ function scheduleBlackjackScoreReveal(): void {
     blackjackScoreRevealTimeout = null;
     lastRenderSignature = '';
     lastRenderStableSignature = '';
+    lastRenderStructureSignature = '';
     renderHud(gameStore.snapshot, { forceFull: true });
   }, delay);
 }
@@ -4505,13 +4701,14 @@ function defensePanel(state: GameState): string {
   const healthToneClass = defenseHealthToneClass(healthPercent);
 
   return `
-    <div class="defense-panel ${defense.paused ? 'is-paused' : ''}">
+    <div class="defense-panel ${defense.paused ? 'is-paused' : ''}" style="--defense-time-scale:${defenseTimeScale(defense.speedMultiplier)}">
       <div class="defense-arena ${hasTiledTerrain ? 'has-tiled-map' : ''}" style="--defense-shot:${defense.shotPulse % 2}" role="img" aria-label="Mini jeu Bastion Arcanique">
         <div class="defense-terrain ${hasTiledTerrain ? 'is-tiled' : 'is-fallback'}" aria-hidden="true">
           ${renderDefenseTiledTerrain()}
         </div>
         ${defenseWaveChooser(defense.wave)}
         <div class="defense-range" style="--defense-range-scale:${rangeScale.toFixed(3)}" aria-hidden="true"></div>
+        ${defenseIceActive(state) ? defenseIceAuraMarkup(state) : ''}
         <div class="defense-status-hud" aria-label="Etat du bastion">
           <span class="defense-hud-health ${healthToneClass}" title="HP ${currentHealth}/${maxHealth}" aria-label="HP ${currentHealth}/${maxHealth}">
             <i class="defense-hp-sprite" data-defense-hp-sprite style="${defenseHpSpriteStyle(healthPercent)}" aria-hidden="true"></i>
@@ -4524,6 +4721,7 @@ function defensePanel(state: GameState): string {
         <div class="defense-lanes" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
         </div>
+        <i class="defense-orb" aria-hidden="true"></i>
         <div class="defense-actors" aria-hidden="true">
           ${defenseActorsMarkup(defense)}
         </div>
@@ -4544,6 +4742,18 @@ function defensePanel(state: GameState): string {
   `;
 }
 
+function defenseIceAuraMarkup(state: GameState): string {
+  const rangeScale = defenseIceRange(state).toFixed(3);
+  return `
+    <i class="defense-ice-range" style="--defense-ice-range-scale:${rangeScale}" aria-hidden="true"></i>
+    <i class="defense-ice-aura" style="--defense-ice-range-scale:${rangeScale}" aria-hidden="true"></i>
+  `;
+}
+
+function defenseTimeScale(speedMultiplier: number): string {
+  return (1 / Math.max(1, speedMultiplier)).toFixed(3);
+}
+
 function defenseWaveChooser(wave: number): string {
   const currentWave = Math.min(100, Math.max(1, Math.floor(wave)));
 
@@ -4560,14 +4770,56 @@ function defenseWaveChooser(wave: number): string {
 }
 
 function defenseActorsMarkup(defense: GameState['defense']): string {
-  return `${defense.shots.map((shot) => defenseShotMarkup(shot)).join('')}${defense.enemyProjectiles.map((projectile) => defenseEnemyProjectileMarkup(projectile)).join('')}${defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join('')}${defense.damagePopups.map((popup) => defenseDamagePopupMarkup(popup)).join('')}${defense.moneyPopups.map((popup) => defenseMoneyPopupMarkup(popup)).join('')}`;
+  return [
+    defense.shots.map((shot) => defenseShotMarkup(shot)).join(''),
+    defense.enemyProjectiles.map((projectile) => defenseEnemyProjectileMarkup(projectile)).join(''),
+    defense.lightningStrikes
+      .map((strike) => defenseLightningStrikeMarkup(
+        strike,
+        undefined,
+        defense.enemies.find((enemy) => enemy.id === strike.targetEnemyId),
+      ))
+      .join(''),
+    defense.enemies.map((enemy) => defenseEnemyHealthBarMarkup(enemy)).join(''),
+    defense.enemies.map((enemy) => defenseEnemyMarkup(enemy)).join(''),
+    defense.damagePopups.map((popup) => defenseDamagePopupMarkup(popup)).join(''),
+    defense.moneyPopups.map((popup) => defenseMoneyPopupMarkup(popup)).join(''),
+  ].join('');
+}
+
+function defenseEnemyKindClass(enemy: GameState['defense']['enemies'][number]): string {
+  return enemy.kind === 'skeletonMage'
+    ? ' is-skeleton-mage'
+    : enemy.kind === 'bat'
+      ? ' is-bat'
+      : enemy.kind === 'goblinKing'
+        ? ' is-goblin-king'
+        : '';
+}
+
+function defenseEnemyHealthBarClass(enemy: GameState['defense']['enemies'][number]): string {
+  return `defense-enemy-health-bar${defenseEnemyKindClass(enemy)}${enemy.state === 'dying' ? ' is-dying' : ''}`;
+}
+
+function defenseEnemyHealthBarMarkup(enemy: GameState['defense']['enemies'][number]): string {
+  const position = defenseEnemyPosition(enemy);
+  const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
+
+  return `
+    <i
+      class="${defenseEnemyHealthBarClass(enemy)}"
+      data-enemy-id="${enemy.id}"
+      style="--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-health-value:${health}"
+      aria-hidden="true"
+    ><b></b></i>
+  `;
 }
 
 function defenseEnemyMarkup(enemy: GameState['defense']['enemies'][number]): string {
   const position = defenseEnemyPosition(enemy);
-  const health = Math.max(0, Math.round((enemy.health / enemy.maxHealth) * 100));
   const facingScale = defenseEnemyFacingScale(position);
-  const kindClass = enemy.kind === 'skeletonMage' ? ' is-skeleton-mage' : enemy.kind === 'bat' ? ' is-bat' : '';
+  const walkOffset = defenseEnemyWalkOffset(enemy);
+  const kindClass = defenseEnemyKindClass(enemy);
   const stateClass =
     enemy.state === 'dying'
       ? ' is-dying'
@@ -4581,10 +4833,19 @@ function defenseEnemyMarkup(enemy: GameState['defense']['enemies'][number]): str
     <i
       class="defense-enemy${kindClass}${stateClass}"
       data-enemy-id="${enemy.id}"
-      style="--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-facing-scale:${facingScale}; --enemy-health:${health}%; --enemy-health-value:${health}"
+      style="${walkOffset}--enemy-x:${position.x}%; --enemy-y:${position.y}%; --enemy-facing-scale:${facingScale}"
       aria-hidden="true"
     ></i>
   `;
+}
+
+function defenseEnemyWalkOffset(enemy: GameState['defense']['enemies'][number]): string {
+  if ((enemy.kind ?? 'slime') !== 'slime' || enemy.state === 'dying') {
+    return '';
+  }
+
+  const offset = -(Date.now() % DEFENSE_SLIME_WALK_CYCLE_MS);
+  return `--enemy-walk-offset:${offset}ms; `;
 }
 
 function defenseEnemyProjectileMarkup(projectile: GameState['defense']['enemyProjectiles'][number]): string {
@@ -4601,10 +4862,39 @@ function defenseEnemyProjectileMarkup(projectile: GameState['defense']['enemyPro
   `;
 }
 
+function defenseLightningStrikeMarkup(
+  strike: GameState['defense']['lightningStrikes'][number],
+  visualPosition?: DefensePoint,
+  targetEnemy?: GameState['defense']['enemies'][number],
+): string {
+  const position = visualPosition ?? defenseEnemyPosition(strike);
+  const durationMs = Math.max(1, Math.round(strike.duration * 1000));
+  const targetClass = targetEnemy ? defenseLightningTargetClass(targetEnemy) : '';
+  return `
+    <i
+      class="defense-lightning-strike${targetClass}"
+      data-lightning-strike-id="${strike.id}"
+      style="--lightning-x:${position.x.toFixed(3)}%; --lightning-y:${position.y.toFixed(3)}%; --lightning-duration:${durationMs}ms"
+      aria-hidden="true"
+    ></i>
+  `;
+}
+
+function defenseLightningTargetClass(enemy: GameState['defense']['enemies'][number]): string {
+  const kind = enemy.kind ?? 'slime';
+  return kind === 'skeletonMage'
+    ? ' is-target-skeleton-mage'
+    : kind === 'bat'
+      ? ' is-target-bat'
+      : kind === 'goblinKing'
+        ? ' is-target-goblin-king'
+        : ' is-target-slime';
+}
+
 function defenseShotMarkup(shot: GameState['defense']['shots'][number]): string {
-  const shotTarget = defenseEnemyPosition(shot);
+  const shotTarget = defenseEnemyVisibleCenter({ lane: shot.lane, distance: shot.distance, kind: shot.targetKind });
   const shotAngle = Math.atan2(shotTarget.y - 50, shotTarget.x - 50) * (180 / Math.PI) - 90;
-  const shotDurationMs = Math.max(1, Math.round(shot.duration * 1000));
+  const shotDurationMs = Math.max(1, Math.round((shot.duration * 1000) / 0.85));
   return `
     <i
       class="defense-shot"
@@ -4619,16 +4909,18 @@ function defenseWaveRail(state: GameState): string {
   const finalWave = 100;
   const wave = Math.min(finalWave, Math.max(1, state.defense.wave));
   const progress = defenseWaveRailProgress(state, wave);
-  const segment = 100 / 3;
+  const segment = DEFENSE_WAVE_MARKER_STEP_PERCENT;
+  const railSegment = DEFENSE_WAVE_RAIL_STEP_PERCENT;
   const slide = progress * segment;
-  const fillLeft = wave === 1 ? segment * 1.5 - slide : segment * 0.5;
-  const fillWidth = wave === 1 ? slide : segment;
+  const fillProgress = progress * railSegment;
+  const fillLeft = wave === 1 ? 50 - fillProgress : 50 - railSegment;
+  const fillWidth = wave === 1 ? fillProgress : railSegment;
   const fillOpacity = wave === 1 && progress <= 0.001 ? 0 : 1;
   const markerValues = [
-    wave > 1 ? { value: wave - 1, slot: 'previous', baseX: segment * 0.5 } : null,
-    { value: wave, slot: 'current', baseX: segment * 1.5 },
-    wave < finalWave ? { value: wave + 1, slot: 'next', baseX: segment * 2.5 } : null,
-    wave + 2 <= finalWave ? { value: wave + 2, slot: 'after-next', baseX: segment * 3.5 } : null,
+    wave > 1 ? { value: wave - 1, slot: 'previous', baseX: 50 - segment } : null,
+    { value: wave, slot: 'current', baseX: 50 },
+    wave < finalWave ? { value: wave + 1, slot: 'next', baseX: 50 + segment } : null,
+    wave + 2 <= finalWave ? { value: wave + 2, slot: 'after-next', baseX: 50 + segment * 2 } : null,
   ].filter((marker): marker is { value: number; slot: string; baseX: number } => Boolean(marker));
   const markers = markerValues
     .map((marker) => {
@@ -4639,7 +4931,7 @@ function defenseWaveRail(state: GameState): string {
     .join('');
 
   return `
-    <div class="defense-wave" data-defense-wave="${wave}" aria-label="Vague ${wave}" style="--wave-slide:${slide.toFixed(3)}%; --wave-fill-left:${fillLeft.toFixed(3)}%; --wave-fill-width:${fillWidth.toFixed(3)}%; --wave-fill-opacity:${fillOpacity}">
+    <div class="defense-wave" data-defense-wave="${wave}" aria-label="Vague ${wave}" style="--wave-marker-step:${segment.toFixed(3)}%; --wave-rail-step:${railSegment.toFixed(3)}%; --wave-slide:${slide.toFixed(3)}%; --wave-fill-left:${fillLeft.toFixed(3)}%; --wave-fill-width:${fillWidth.toFixed(3)}%; --wave-fill-opacity:${fillOpacity}">
       <div class="defense-wave-track">
         <i class="defense-wave-fill" aria-hidden="true"></i>
         <i class="defense-wave-markers">${markers}</i>
@@ -4650,26 +4942,71 @@ function defenseWaveRail(state: GameState): string {
 
 function defenseDamagePopupMarkup(popup: GameState['defense']['damagePopups'][number]): string {
   const position = defenseEnemyPosition(popup);
+  const motion = defenseDamagePopupMotion(popup);
   return `
     <span
       class="defense-damage-popup is-${popup.kind}"
       data-popup-id="${popup.id}"
-      style="--damage-x:${position.x}%; --damage-y:${position.y}%"
+      style="--damage-x:${position.x}%; --damage-y:${position.y}%; ${motion}"
       aria-hidden="true"
     >${popup.amount}</span>
   `;
 }
 
+function defenseDamagePopupMotion(popup: GameState['defense']['damagePopups'][number]): string {
+  const kindSeed = popup.kind === 'superCritical' ? 29 : popup.kind === 'critical' ? 17 : 5;
+  const seed = popup.id * 53 + popup.amount * 17 + kindSeed;
+  const offsetX = ((seed % 7) - 3) * 4;
+  const offsetY = -10 - (Math.floor(seed / 7) % 5) * 3;
+  const driftX = ((Math.floor(seed / 31) % 7) - 3) * 2;
+  return [
+    `--damage-offset-x:${offsetX}px`,
+    `--damage-offset-y:${offsetY}px`,
+    `--damage-drift-mid-x:${(driftX * 0.5).toFixed(1)}px`,
+    `--damage-drift-late-x:${(driftX * 0.8).toFixed(1)}px`,
+    `--damage-drift-x:${driftX}px`,
+  ].join('; ');
+}
+
 function defenseMoneyPopupMarkup(popup: GameState['defense']['moneyPopups'][number]): string {
   const position = defenseEnemyPosition(popup);
+  const motion = defenseMoneyPopupMotion(popup);
   return `
     <span
       class="defense-money-popup"
       data-money-popup-id="${popup.id}"
-      style="--money-x:${position.x}%; --money-y:${position.y}%"
+      style="--money-x:${position.x}%; --money-y:${position.y}%; --money-heat:${defenseMoneyPopupHeat(popup.combo).toFixed(3)}; --money-stack:${defenseMoneyPopupStack(popup.combo)}; ${motion}"
       aria-hidden="true"
     ><i></i><b>+${popup.amount}</b></span>
   `;
+}
+
+function defenseMoneyPopupMotion(popup: GameState['defense']['moneyPopups'][number]): string {
+  const seed = popup.id * 97 + popup.amount * 13 + popup.combo * 17;
+  const direction = ((seed % 9) - 4) / 4;
+  const lift = (Math.floor(seed / 9) % 5) - 2;
+  const rotateA = -10 + (seed % 7) * 3;
+  const rotateB = -6 + (Math.floor(seed / 7) % 7) * 2;
+  const rotateC = -9 + (Math.floor(seed / 17) % 7) * 3;
+  const kickX = direction * 9;
+  const driftX = direction * 24;
+  const driftY = -28 + lift * 3;
+  return [
+    `--money-kick-x:${kickX.toFixed(1)}px`,
+    `--money-drift-x:${driftX.toFixed(1)}px`,
+    `--money-drift-y:${driftY.toFixed(1)}px`,
+    `--money-rotate-a:${rotateA}deg`,
+    `--money-rotate-b:${rotateB}deg`,
+    `--money-rotate-c:${rotateC}deg`,
+  ].join('; ');
+}
+
+function defenseMoneyPopupHeat(combo: number): number {
+  return Math.max(0, Math.min(1, (combo - 1) / 9));
+}
+
+function defenseMoneyPopupStack(combo: number): number {
+  return Math.max(0, Math.min(5, combo - 1));
 }
 
 function placeholderPanel(): string {
@@ -4800,6 +5137,36 @@ function installDefenseControls(): void {
 
     event.preventDefault();
     gameStore.dispatch({ type: 'toggleDefensePause' });
+  });
+}
+
+function installPanelSizeControls(): void {
+  if (panelSizeControlsInstalled) {
+    return;
+  }
+  panelSizeControlsInstalled = true;
+  window.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() !== 'h' || event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+
+    const state = gameStore.snapshot;
+    const focusedPanel = state.openBookPanels.find((panel) => panel.bookId === state.selectedBook);
+    const panelToResize = focusedPanel ?? state.openBookPanels[state.openBookPanels.length - 1];
+    if (!panelToResize || !rootElement) {
+      return;
+    }
+
+    const panelElement = rootElement.querySelector<HTMLElement>(
+      `.book-overlay[data-book-id="${panelToResize.bookId}"]`,
+    );
+    if (!panelElement) {
+      return;
+    }
+
+    event.preventDefault();
+    focusBookPanel(panelToResize.bookId);
+    cycleBookPanelSize(panelToResize.bookId, panelElement);
   });
 }
 

@@ -69,6 +69,7 @@ import {
 } from './state';
 import {
   defenseEnemyDistanceFromCenter,
+  defenseEnemyFullyVisible,
   defenseEnemyInTowerHitbox,
   defenseEnemyInTowerRange,
   defenseEnemyPathDistanceForCenterRange,
@@ -118,19 +119,24 @@ export type ManaSkillId = 'power' | 'automation' | 'criticalHit' | 'criticalEffe
 export type SnakeSkillId = 'speed' | 'gridSize' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
 export type DefenseSkillId =
   | 'damage'
+  | 'damageMultiplier'
   | 'attackSpeed'
   | 'range'
   | 'criticalChance'
   | 'criticalMultiplier'
-  | 'ricochetCount'
-  | 'ricochetChance'
   | 'superCriticalChance'
   | 'superCriticalMultiplier'
+  | 'lightningDamage'
+  | 'lightningSpeed'
+  | 'lightningCount'
+  | 'iceDamage'
+  | 'iceSpeed'
+  | 'iceRange'
+  | 'iceSlow'
   | 'health'
   | 'healthRegen'
-  | 'resistance'
   | 'moneyPerEnemy'
-  | 'moneyPerWave';
+  | 'goldMultiplier';
 export type MiningSkillId = 'pickaxeForce' | 'splashDamage' | 'automation';
 export type { TargetSkillId };
 export type { BlackjackSideBonusId };
@@ -166,19 +172,24 @@ const DEBUG_TARGET_SKILL_MAX_LEVELS: Record<TargetSkillId, number> = {
 
 const DEBUG_DEFENSE_SKILL_MAX_LEVELS: Record<DefenseSkillId, number> = {
   damage: 60,
+  damageMultiplier: 40,
   attackSpeed: 30,
   range: 12,
   criticalChance: 30,
   criticalMultiplier: 30,
-  ricochetCount: 5,
-  ricochetChance: 20,
   superCriticalChance: 25,
   superCriticalMultiplier: 25,
+  lightningDamage: 50,
+  lightningSpeed: 24,
+  lightningCount: 10,
+  iceDamage: 50,
+  iceSpeed: 30,
+  iceRange: 35,
+  iceSlow: 30,
   health: 30,
   healthRegen: 30,
-  resistance: 25,
   moneyPerEnemy: 40,
-  moneyPerWave: 40,
+  goldMultiplier: 990,
 };
 
 const DEFENSE_TOWER_BASE_RANGE_PERCENT = 0.3;
@@ -194,25 +205,41 @@ const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
 const BOOK_PANEL_SLOTS: BookPanelSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const BOOK_PANEL_OPEN_SLOTS: BookPanelSlot[] = [3, 0, 1, 2, 7, 4, 5, 6, 8];
 const DEFENSE_ENEMY_DEATH_DURATION = 0.62;
+const DEFENSE_ENEMY_SPAWN_DISTANCE = 1.08;
 const DEFENSE_DAMAGE_POPUP_DURATION = 1.5;
-const DEFENSE_MONEY_POPUP_DURATION = 0.95;
+const DEFENSE_MONEY_POPUP_DURATION = 1.45;
 const DEFENSE_MONEY_POPUP_CLUSTER_SECONDS = 0.24;
 const DEFENSE_MONEY_POPUP_CLUSTER_RADIUS = 4.5;
-const DEFENSE_ENEMY_HIT_STOP_SECONDS = 1 / 20;
+const DEFENSE_MONEY_POPUP_COMBO_SECONDS = 0.2;
+const DEFENSE_MONEY_POPUP_COMBO_MAX = 10;
 const DEFENSE_SKELETON_MAGE_HEALTH_RATIO = 0.6;
-const DEFENSE_SKELETON_MAGE_ATTACK_RANGE = 0.25;
+const DEFENSE_SKELETON_MAGE_ATTACK_RANGE = 0.35;
+const DEFENSE_SKELETON_MAGE_DEATH_DURATION = 0.988;
 const DEFENSE_ENEMY_TOWER_ATTACK_INTERVAL = 2;
-const DEFENSE_SLIME_ATTACK_ANIMATION_DURATION = 0.42;
+const DEFENSE_SLIME_ATTACK_ANIMATION_DURATION = 0.84;
 const DEFENSE_SKELETON_MAGE_ATTACK_INTERVAL = 2;
-const DEFENSE_SKELETON_MAGE_ATTACK_ANIMATION_DURATION = 0.9;
+const DEFENSE_SKELETON_MAGE_ATTACK_ANIMATION_DURATION = 1.08;
 const DEFENSE_SKELETON_MAGE_FIREBALL_DELAY = 0.48;
-const DEFENSE_SKELETON_MAGE_FIREBALL_DURATION = 0.58;
+const DEFENSE_SKELETON_MAGE_FIREBALL_DURATION = 0.85;
 const DEFENSE_BAT_HEALTH_RATIO = 0.4;
 const DEFENSE_BAT_SPEED_MULTIPLIER = 1.5;
 const DEFENSE_BAT_ATTACK_ANIMATION_DURATION = 0.58;
+const DEFENSE_GOBLIN_KING_HEALTH_RATIO = 10;
+const DEFENSE_GOBLIN_KING_SPEED_MULTIPLIER = 0.25;
+const DEFENSE_GOBLIN_KING_ATTACK_ANIMATION_DURATION = 1.04;
+const DEFENSE_GOBLIN_KING_DEATH_DURATION = 0.88;
 const DEFENSE_SHOT_MIN_DURATION = 0.26;
 const DEFENSE_SHOT_MAX_DURATION = 0.72;
 const DEFENSE_SHOT_SECONDS_PER_MAP_PERCENT = 0.0115;
+const DEFENSE_LIGHTNING_STRIKE_DURATION = 0.34;
+const DEFENSE_LIGHTNING_BASE_INTERVAL = 2.6;
+const DEFENSE_LIGHTNING_MIN_INTERVAL = 0.55;
+const DEFENSE_ICE_BASE_INTERVAL = 2;
+const DEFENSE_ICE_MIN_INTERVAL = 0.5;
+const DEFENSE_ICE_BASE_RANGE_PERCENT = 0.3;
+const DEFENSE_ICE_MAX_RANGE_PERCENT = 0.65;
+const DEFENSE_ICE_BASE_SLOW = 0.1;
+const DEFENSE_ICE_MAX_SLOW = 0.7;
 
 export type GameAction =
   | { type: 'selectBook'; bookId: BookId }
@@ -677,6 +704,8 @@ export function defenseSkillCost(state: GameState, skillId: DefenseSkillId): num
   switch (skillId) {
     case 'damage':
       return Math.round(80 * Math.pow(1.26, level));
+    case 'damageMultiplier':
+      return Math.round(260 * Math.pow(1.42, level));
     case 'attackSpeed':
       return Math.round(110 * Math.pow(1.34, level));
     case 'range':
@@ -685,24 +714,46 @@ export function defenseSkillCost(state: GameState, skillId: DefenseSkillId): num
       return Math.round(170 * Math.pow(1.36, level));
     case 'criticalMultiplier':
       return Math.round(210 * Math.pow(1.34, level));
-    case 'ricochetCount':
-      return Math.round(520 * Math.pow(1.9, level));
-    case 'ricochetChance':
-      return Math.round(260 * Math.pow(1.42, level));
     case 'superCriticalChance':
       return Math.round(420 * Math.pow(1.48, level));
     case 'superCriticalMultiplier':
       return Math.round(520 * Math.pow(1.46, level));
+    case 'lightningDamage':
+      return Math.round(180 * Math.pow(1.31, level));
+    case 'lightningSpeed':
+      return Math.round(240 * Math.pow(1.36, level));
+    case 'lightningCount':
+      return Math.round(360 * Math.pow(1.54, level));
+    case 'iceDamage':
+      return Math.round(170 * Math.pow(1.31, level));
+    case 'iceSpeed':
+      return Math.round(220 * Math.pow(1.34, level));
+    case 'iceRange':
+      return Math.round(190 * Math.pow(1.32, level));
+    case 'iceSlow':
+      return Math.round(230 * Math.pow(1.36, level));
     case 'health':
       return Math.round(95 * Math.pow(1.3, level));
     case 'healthRegen':
       return Math.round(180 * Math.pow(1.38, level));
-    case 'resistance':
-      return Math.round(220 * Math.pow(1.42, level));
     case 'moneyPerEnemy':
       return Math.round(130 * Math.pow(1.34, level));
-    case 'moneyPerWave':
-      return Math.round(240 * Math.pow(1.38, level));
+    case 'goldMultiplier':
+      return Math.round(420 * Math.pow(1.18, level));
+  }
+}
+
+export function defenseSkillLocked(state: GameState, skillId: DefenseSkillId): boolean {
+  switch (skillId) {
+    case 'iceSpeed':
+    case 'iceRange':
+    case 'iceSlow':
+      return state.defenseSkills.iceDamage < 1;
+    case 'lightningDamage':
+    case 'lightningSpeed':
+      return state.defenseSkills.lightningCount < 1;
+    default:
+      return false;
   }
 }
 
@@ -717,8 +768,8 @@ export function defenseTowerHealthRegenPerSecond(state: GameState): number {
   return state.defenseSkills.healthRegen * 0.08;
 }
 
-export function defenseTowerResistance(state: GameState): number {
-  return Math.min(0.72, state.defenseSkills.resistance * 0.03);
+export function defenseTowerResistance(_state: GameState): number {
+  return 0;
 }
 
 export function defenseTowerRange(state: GameState): number {
@@ -750,20 +801,73 @@ export function defenseSuperCriticalMultiplier(state: GameState): number {
   return 3 + state.defenseSkills.superCriticalMultiplier * 0.25;
 }
 
-export function defenseRicochetChance(state: GameState): number {
-  return Math.min(0.8, state.defenseSkills.ricochetChance * 0.04);
+export function defenseLightningDamage(state: GameState): number {
+  return Math.max(1, Math.round((1 + state.defenseSkills.lightningDamage) * defenseDamageMultiplier(state)));
 }
 
-export function defenseRicochetCount(state: GameState): number {
-  return state.defenseSkills.ricochetCount;
+export function defenseLightningAttackInterval(state: GameState): number {
+  return Math.max(
+    DEFENSE_LIGHTNING_MIN_INTERVAL,
+    DEFENSE_LIGHTNING_BASE_INTERVAL - state.defenseSkills.lightningSpeed * 0.08,
+  );
+}
+
+export function defenseLightningTargetCount(state: GameState): number {
+  return state.defenseSkills.lightningCount;
+}
+
+export function defenseIceActive(state: GameState): boolean {
+  return (
+    state.defenseSkills.iceDamage > 0 ||
+    state.defenseSkills.iceSpeed > 0 ||
+    state.defenseSkills.iceRange > 0 ||
+    state.defenseSkills.iceSlow > 0
+  );
+}
+
+export function defenseIceDamage(state: GameState): number {
+  return defenseIceActive(state) ? Math.max(1, Math.round(Math.max(1, state.defenseSkills.iceDamage) * defenseDamageMultiplier(state))) : 0;
+}
+
+export function defenseDamageMultiplier(state: GameState): number {
+  return 1 + state.defenseSkills.damageMultiplier * 0.05;
+}
+
+export function defenseIceAttackInterval(state: GameState): number {
+  return Math.max(DEFENSE_ICE_MIN_INTERVAL, DEFENSE_ICE_BASE_INTERVAL - state.defenseSkills.iceSpeed * 0.05);
+}
+
+export function defenseIceRangePercent(state: GameState): number {
+  if (!defenseIceActive(state)) {
+    return 0;
+  }
+
+  const maxRangeLevel = defenseSkillMaxLevel('iceRange');
+  const rangeLevel = Math.max(1, Math.min(maxRangeLevel, state.defenseSkills.iceRange));
+  const rangeProgress = maxRangeLevel <= 1 ? 1 : (rangeLevel - 1) / (maxRangeLevel - 1);
+  return DEFENSE_ICE_BASE_RANGE_PERCENT + (DEFENSE_ICE_MAX_RANGE_PERCENT - DEFENSE_ICE_BASE_RANGE_PERCENT) * rangeProgress;
+}
+
+export function defenseIceRange(state: GameState): number {
+  return defenseIceRangePercent(state);
+}
+
+export function defenseIceSlow(state: GameState): number {
+  if (!defenseIceActive(state)) {
+    return 0;
+  }
+
+  return Math.min(DEFENSE_ICE_MAX_SLOW, DEFENSE_ICE_BASE_SLOW + state.defenseSkills.iceSlow * 0.02);
 }
 
 export function defenseEnemyReward(state: GameState): number {
-  return 1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(state.defense.wave / 4) + state.defenseSkills.moneyPerEnemy;
+  const baseReward =
+    1 + Math.floor(state.books.defense.level * 0.35) + Math.floor(state.defense.wave / 4) + state.defenseSkills.moneyPerEnemy;
+  return Math.max(1, Math.round(baseReward * defenseGoldMultiplier(state)));
 }
 
-export function defenseMoneyPerWave(state: GameState): number {
-  return state.defenseSkills.moneyPerWave * 3;
+export function defenseGoldMultiplier(state: GameState): number {
+  return Math.min(100, 1 + (state.defenseSkills.goldMultiplier ?? 0) * 0.1);
 }
 
 export function defenseTowerHitDamage(
@@ -948,6 +1052,10 @@ function buyTargetSkill(state: GameState, skillId: TargetSkillId): void {
 }
 
 function buyDefenseSkill(state: GameState, skillId: DefenseSkillId): void {
+  if (defenseSkillLocked(state, skillId)) {
+    return;
+  }
+
   const maxLevel = defenseSkillMaxLevel(skillId);
   if (state.defenseSkills[skillId] >= maxLevel) {
     return;
@@ -1251,19 +1359,24 @@ function maxTargetSkills(state: GameState): void {
 
 function maxDefenseSkills(state: GameState): void {
   state.defenseSkills.damage = DEBUG_DEFENSE_SKILL_MAX_LEVELS.damage;
+  state.defenseSkills.damageMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.damageMultiplier;
   state.defenseSkills.attackSpeed = DEBUG_DEFENSE_SKILL_MAX_LEVELS.attackSpeed;
   state.defenseSkills.range = DEBUG_DEFENSE_SKILL_MAX_LEVELS.range;
   state.defenseSkills.criticalChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.criticalChance;
   state.defenseSkills.criticalMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.criticalMultiplier;
-  state.defenseSkills.ricochetCount = DEBUG_DEFENSE_SKILL_MAX_LEVELS.ricochetCount;
-  state.defenseSkills.ricochetChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.ricochetChance;
   state.defenseSkills.superCriticalChance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.superCriticalChance;
   state.defenseSkills.superCriticalMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.superCriticalMultiplier;
+  state.defenseSkills.lightningDamage = DEBUG_DEFENSE_SKILL_MAX_LEVELS.lightningDamage;
+  state.defenseSkills.lightningSpeed = DEBUG_DEFENSE_SKILL_MAX_LEVELS.lightningSpeed;
+  state.defenseSkills.lightningCount = DEBUG_DEFENSE_SKILL_MAX_LEVELS.lightningCount;
+  state.defenseSkills.iceDamage = DEBUG_DEFENSE_SKILL_MAX_LEVELS.iceDamage;
+  state.defenseSkills.iceSpeed = DEBUG_DEFENSE_SKILL_MAX_LEVELS.iceSpeed;
+  state.defenseSkills.iceRange = DEBUG_DEFENSE_SKILL_MAX_LEVELS.iceRange;
+  state.defenseSkills.iceSlow = DEBUG_DEFENSE_SKILL_MAX_LEVELS.iceSlow;
   state.defenseSkills.health = DEBUG_DEFENSE_SKILL_MAX_LEVELS.health;
   state.defenseSkills.healthRegen = DEBUG_DEFENSE_SKILL_MAX_LEVELS.healthRegen;
-  state.defenseSkills.resistance = DEBUG_DEFENSE_SKILL_MAX_LEVELS.resistance;
   state.defenseSkills.moneyPerEnemy = DEBUG_DEFENSE_SKILL_MAX_LEVELS.moneyPerEnemy;
-  state.defenseSkills.moneyPerWave = DEBUG_DEFENSE_SKILL_MAX_LEVELS.moneyPerWave;
+  state.defenseSkills.goldMultiplier = DEBUG_DEFENSE_SKILL_MAX_LEVELS.goldMultiplier;
   state.defense.tower.range = defenseTowerRange(state);
   state.defense.towerHealth = defenseMaxTowerHealth(state);
 }
@@ -1342,19 +1455,24 @@ function resetAllSkills(state: GameState): void {
   state.targets.automationTimer = 0;
 
   state.defenseSkills.damage = 0;
+  state.defenseSkills.damageMultiplier = 0;
   state.defenseSkills.attackSpeed = 0;
   state.defenseSkills.range = 0;
   state.defenseSkills.criticalChance = 0;
   state.defenseSkills.criticalMultiplier = 0;
-  state.defenseSkills.ricochetCount = 0;
-  state.defenseSkills.ricochetChance = 0;
   state.defenseSkills.superCriticalChance = 0;
   state.defenseSkills.superCriticalMultiplier = 0;
+  state.defenseSkills.lightningDamage = 0;
+  state.defenseSkills.lightningSpeed = 0;
+  state.defenseSkills.lightningCount = 0;
+  state.defenseSkills.iceDamage = 0;
+  state.defenseSkills.iceSpeed = 0;
+  state.defenseSkills.iceRange = 0;
+  state.defenseSkills.iceSlow = 0;
   state.defenseSkills.health = 0;
   state.defenseSkills.healthRegen = 0;
-  state.defenseSkills.resistance = 0;
   state.defenseSkills.moneyPerEnemy = 0;
-  state.defenseSkills.moneyPerWave = 0;
+  state.defenseSkills.goldMultiplier = 0;
   state.defense.tower.range = defenseTowerRange(state);
   state.defense.towerHealth = defenseMaxTowerHealth(state);
 
@@ -2015,7 +2133,7 @@ export function defenseWaveEnemyCount(state: GameState): number {
 }
 
 export function defenseTowerDamage(state: GameState): number {
-  return 1 + state.defenseSkills.damage;
+  return Math.max(1, Math.round((1 + state.defenseSkills.damage) * defenseDamageMultiplier(state)));
 }
 
 export function defenseTowerAttackInterval(state: GameState): number {
@@ -2432,7 +2550,10 @@ function tickDefense(state: GameState, deltaSeconds: number): void {
     defense.towerHealth + defenseTowerHealthRegenPerSecond(state) * scaledDeltaSeconds,
   );
   defense.tower.cooldown = Math.max(0, defense.tower.cooldown - scaledDeltaSeconds);
+  defense.lightningCooldown = Math.max(0, defense.lightningCooldown - scaledDeltaSeconds);
+  defense.iceCooldown = Math.max(0, defense.iceCooldown - scaledDeltaSeconds);
   tickDefenseShot(state, deltaSeconds);
+  tickDefenseLightningStrikes(state, deltaSeconds);
   tickDefenseEnemyProjectiles(state, scaledDeltaSeconds);
   if (defense.towerHealth <= 0) {
     resetDefenseRun(state);
@@ -2441,8 +2562,10 @@ function tickDefense(state: GameState, deltaSeconds: number): void {
   tickDefenseDamagePopups(state, deltaSeconds);
   tickDefenseMoneyPopups(state, deltaSeconds);
   spawnDefenseEnemies(state, scaledDeltaSeconds);
+  fireDefenseLightning(state);
+  fireDefenseIceAura(state);
   fireDefenseTower(state);
-  moveDefenseEnemies(state, scaledDeltaSeconds, deltaSeconds);
+  moveDefenseEnemies(state, scaledDeltaSeconds);
   completeDefenseWaveIfReady(state);
 }
 
@@ -2469,17 +2592,18 @@ function spawnDefenseEnemies(state: GameState, deltaSeconds: number): void {
       ? Math.max(1, Math.round(slimeMaxHealth * DEFENSE_SKELETON_MAGE_HEALTH_RATIO))
       : kind === 'bat'
         ? Math.max(1, Math.round(slimeMaxHealth * DEFENSE_BAT_HEALTH_RATIO))
-        : slimeMaxHealth;
+        : kind === 'goblinKing'
+          ? Math.max(1, Math.round(slimeMaxHealth * DEFENSE_GOBLIN_KING_HEALTH_RATIO))
+          : slimeMaxHealth;
   defense.enemies.push({
     id: defense.nextEnemyId,
     kind,
     lane,
-    distance: 1,
+    distance: DEFENSE_ENEMY_SPAWN_DISTANCE,
     health: maxHealth,
     maxHealth,
     state: 'walking',
     deathTimer: 0,
-    hitStopTimer: 0,
     attackCooldown: kind === 'skeletonMage' ? 0 : undefined,
   });
   defense.nextEnemyId += 1;
@@ -2488,6 +2612,9 @@ function spawnDefenseEnemies(state: GameState, deltaSeconds: number): void {
 function defenseEnemyKindForSpawn(wave: number, spawnedThisWave: number): NonNullable<DefenseEnemy['kind']> {
   if (wave < 2) {
     return 'slime';
+  }
+  if (wave >= 5 && spawnedThisWave % 5 === 0) {
+    return 'goblinKing';
   }
   if (spawnedThisWave % 4 === 0) {
     return 'bat';
@@ -2498,7 +2625,7 @@ function defenseEnemyKindForSpawn(wave: number, spawnedThisWave: number): NonNul
   return 'slime';
 }
 
-function moveDefenseEnemies(state: GameState, deltaSeconds: number, realDeltaSeconds: number): void {
+function moveDefenseEnemies(state: GameState, deltaSeconds: number): void {
   const defense = state.defense;
   const speed = 0.105 + Math.min(0.06, defense.wave * 0.006);
   const survivors: DefenseEnemy[] = [];
@@ -2512,23 +2639,24 @@ function moveDefenseEnemies(state: GameState, deltaSeconds: number, realDeltaSec
       continue;
     }
 
-    if ((enemy.hitStopTimer ?? 0) > 0) {
-      survivors.push({ ...enemy, hitStopTimer: Math.max(0, (enemy.hitStopTimer ?? 0) - realDeltaSeconds) });
-      continue;
-    }
-
     const enemyKind = enemy.kind ?? 'slime';
+    const movementScale = defenseEnemyIceSpeedMultiplier(state, enemy);
     if (enemyKind === 'skeletonMage') {
-      survivors.push(moveDefenseSkeletonMage(state, enemy, speed, deltaSeconds));
+      survivors.push(moveDefenseSkeletonMage(state, enemy, speed * movementScale, deltaSeconds));
       continue;
     }
 
     if (enemyKind === 'bat') {
-      survivors.push(moveDefenseBat(state, enemy, speed, deltaSeconds));
+      survivors.push(moveDefenseBat(state, enemy, speed * movementScale, deltaSeconds));
       continue;
     }
 
-    const nextDistance = defenseEnemyInTowerHitbox(enemy) ? enemy.distance : enemy.distance - speed * deltaSeconds;
+    if (enemyKind === 'goblinKing') {
+      survivors.push(moveDefenseGoblinKing(state, enemy, speed * movementScale, deltaSeconds));
+      continue;
+    }
+
+    const nextDistance = defenseEnemyInTowerHitbox(enemy) ? enemy.distance : enemy.distance - speed * movementScale * deltaSeconds;
     if (defenseEnemyInTowerHitbox({ ...enemy, distance: nextDistance })) {
       survivors.push(updateDefenseTowerContactEnemy(state, enemy, nextDistance, deltaSeconds, DEFENSE_SLIME_ATTACK_ANIMATION_DURATION));
       continue;
@@ -2553,6 +2681,28 @@ function moveDefenseBat(
     : enemy.distance - slimeSpeed * DEFENSE_BAT_SPEED_MULTIPLIER * deltaSeconds;
   if (defenseEnemyInTowerHitbox({ ...enemy, distance: nextDistance })) {
     return updateDefenseTowerContactEnemy(state, enemy, nextDistance, deltaSeconds, DEFENSE_BAT_ATTACK_ANIMATION_DURATION);
+  }
+
+  return { ...enemy, distance: nextDistance, state: 'walking' };
+}
+
+function moveDefenseGoblinKing(
+  state: GameState,
+  enemy: DefenseEnemy,
+  slimeSpeed: number,
+  deltaSeconds: number,
+): DefenseEnemy {
+  const nextDistance = defenseEnemyInTowerHitbox(enemy)
+    ? enemy.distance
+    : enemy.distance - slimeSpeed * DEFENSE_GOBLIN_KING_SPEED_MULTIPLIER * deltaSeconds;
+  if (defenseEnemyInTowerHitbox({ ...enemy, distance: nextDistance })) {
+    return updateDefenseTowerContactEnemy(
+      state,
+      enemy,
+      nextDistance,
+      deltaSeconds,
+      DEFENSE_GOBLIN_KING_ATTACK_ANIMATION_DURATION,
+    );
   }
 
   return { ...enemy, distance: nextDistance, state: 'walking' };
@@ -2640,7 +2790,10 @@ function defenseShotDuration(target: Pick<DefenseEnemy, 'lane' | 'distance'>): n
   );
 }
 
-function pushDefenseShot(state: GameState, target: Pick<DefenseEnemy, 'lane' | 'distance'>): void {
+function pushDefenseShot(
+  state: GameState,
+  target: Pick<DefenseEnemy, 'lane' | 'distance'> & Pick<Partial<DefenseEnemy>, 'kind'>,
+): void {
   const defense = state.defense;
   const shotDuration = defenseShotDuration(target);
   defense.shotPulse += 1;
@@ -2648,6 +2801,7 @@ function pushDefenseShot(state: GameState, target: Pick<DefenseEnemy, 'lane' | '
     id: defense.shotPulse,
     lane: target.lane,
     distance: target.distance,
+    targetKind: target.kind,
     timer: shotDuration,
     duration: shotDuration,
   });
@@ -2679,6 +2833,116 @@ function damageDefenseTower(state: GameState): void {
   state.defense.score = 0;
 }
 
+function fireDefenseLightning(state: GameState): void {
+  const defense = state.defense;
+  const strikeCount = defenseLightningTargetCount(state);
+  if (strikeCount <= 0) {
+    defense.lightningCooldown = 0;
+    return;
+  }
+
+  if (defense.lightningCooldown > 0) {
+    return;
+  }
+
+  const targets = randomDefenseLightningTargets(defense.enemies, strikeCount);
+  if (targets.length === 0) {
+    return;
+  }
+
+  for (const target of targets) {
+    applyDefenseLightningHit(state, target);
+    pushDefenseLightningStrike(state, target);
+    collectDefenseEnemyIfDefeated(state, target);
+  }
+
+  defense.lightningCooldown = defenseLightningAttackInterval(state);
+}
+
+function randomDefenseLightningTargets(enemies: DefenseEnemy[], count: number): DefenseEnemy[] {
+  const candidates = enemies.filter(isDefenseLightningTarget);
+  for (let index = candidates.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [candidates[index], candidates[swapIndex]] = [candidates[swapIndex], candidates[index]];
+  }
+  return candidates.slice(0, count);
+}
+
+function isDefenseLightningTarget(enemy: DefenseEnemy): boolean {
+  if (enemy.state === 'dying' || enemy.health <= 0) {
+    return false;
+  }
+
+  return defenseEnemyFullyVisible(enemy);
+}
+
+function applyDefenseLightningHit(state: GameState, enemy: DefenseEnemy): void {
+  const amount = defenseLightningDamage(state);
+  enemy.health -= amount;
+  recordDefenseDamagePopup(state, enemy, amount, 'normal');
+}
+
+function pushDefenseLightningStrike(state: GameState, target: Pick<DefenseEnemy, 'id' | 'lane' | 'distance'>): void {
+  const defense = state.defense;
+  const id = defense.nextLightningStrikeId;
+  defense.lightningStrikes.push({
+    id,
+    targetEnemyId: target.id,
+    lane: target.lane,
+    distance: target.distance,
+    timer: DEFENSE_LIGHTNING_STRIKE_DURATION,
+    duration: DEFENSE_LIGHTNING_STRIKE_DURATION,
+  });
+  defense.nextLightningStrikeId += 1;
+
+  if (defense.lightningStrikes.length > 30) {
+    defense.lightningStrikes.splice(0, defense.lightningStrikes.length - 30);
+  }
+}
+
+function fireDefenseIceAura(state: GameState): void {
+  const defense = state.defense;
+  if (!defenseIceActive(state)) {
+    defense.iceCooldown = 0;
+    return;
+  }
+
+  if (defense.iceCooldown > 0) {
+    return;
+  }
+
+  const targets = defense.enemies.filter((enemy) => isDefenseIceTarget(state, enemy));
+  if (targets.length === 0) {
+    return;
+  }
+
+  const amount = defenseIceDamage(state);
+  for (const target of targets) {
+    target.health -= amount;
+    recordDefenseDamagePopup(state, target, amount, 'normal');
+    collectDefenseEnemyIfDefeated(state, target);
+  }
+
+  defense.iceCooldown = defenseIceAttackInterval(state);
+}
+
+function isDefenseIceTarget(state: GameState, enemy: DefenseEnemy): boolean {
+  return enemy.state !== 'dying' && enemy.health > 0 && defenseEnemyInIceRange(state, enemy);
+}
+
+function defenseEnemyInIceRange(state: GameState, enemy: Pick<DefenseEnemy, 'lane' | 'distance'>): boolean {
+  const range = defenseIceRange(state);
+  return range > 0 && defenseEnemyDistanceFromCenter(enemy) <= range;
+}
+
+function defenseEnemyIceSpeedMultiplier(state: GameState, enemy: Pick<DefenseEnemy, 'lane' | 'distance'>): number {
+  if (!defenseEnemyInIceRange(state, enemy)) {
+    return 1;
+  }
+
+  return Math.max(0.3, 1 - defenseIceSlow(state));
+}
+
 function fireDefenseTower(state: GameState): void {
   const defense = state.defense;
   if (defense.enemies.length === 0) {
@@ -2705,7 +2969,6 @@ function fireDefenseTower(state: GameState): void {
   pushDefenseShot(state, target);
 
   collectDefenseEnemyIfDefeated(state, target);
-  queueDefenseRicochets(state, target.id);
 }
 
 function fireQueuedDefenseShot(state: GameState): boolean {
@@ -2745,27 +3008,10 @@ function isDefenseShotTargetAliveAndInRange(state: GameState, enemy: DefenseEnem
   return enemy.state !== 'dying' && enemy.health > 0 && defenseEnemyInTowerRange(enemy, defenseTowerRange(state));
 }
 
-function queueDefenseRicochets(state: GameState, originalTargetId: number): void {
-  const defense = state.defense;
-  const maxRicochets = defenseRicochetCount(state);
-  if (maxRicochets <= 0 || defenseRicochetChance(state) <= 0 || Math.random() >= defenseRicochetChance(state)) {
-    return;
-  }
-
-  const targets = defense.enemies
-    .filter((enemy) => enemy.id !== originalTargetId)
-    .filter((enemy) => isDefenseShotTargetAliveAndInRange(state, enemy))
-    .sort((first, second) => first.distance - second.distance)
-    .slice(0, maxRicochets);
-
-  defense.queuedShots.push(...targets.map((enemy) => ({ enemyId: enemy.id, damageScale: 0.65 })));
-}
-
 function applyDefenseEnemyHit(state: GameState, enemy: DefenseEnemy, damageScale = 1): void {
   const hit = defenseTowerHitResult(state, enemy);
   const amount = Math.max(1, Math.round(hit.amount * damageScale));
   enemy.health -= amount;
-  enemy.hitStopTimer = DEFENSE_ENEMY_HIT_STOP_SECONDS;
   recordDefenseDamagePopup(state, enemy, amount, hit.kind);
 }
 
@@ -2798,7 +3044,12 @@ function collectDefenseEnemyIfDefeated(state: GameState, enemy: DefenseEnemy): v
   const reward = defenseEnemyReward(state);
   const defense = state.defense;
   enemy.state = 'dying';
-  enemy.deathTimer = DEFENSE_ENEMY_DEATH_DURATION;
+  enemy.deathTimer =
+    (enemy.kind ?? 'slime') === 'skeletonMage'
+      ? DEFENSE_SKELETON_MAGE_DEATH_DURATION
+      : enemy.kind === 'goblinKing'
+        ? DEFENSE_GOBLIN_KING_DEATH_DURATION
+        : DEFENSE_ENEMY_DEATH_DURATION;
   defense.killsThisWave += 1;
   defense.score += reward;
   defense.best = Math.max(defense.best, defense.score);
@@ -2810,9 +3061,12 @@ function collectDefenseEnemyIfDefeated(state: GameState, enemy: DefenseEnemy): v
 
 function recordDefenseMoneyPopup(state: GameState, enemy: Pick<DefenseEnemy, 'lane' | 'distance'>, amount: number): void {
   const defense = state.defense;
+  const combo = defenseMoneyPopupCombo(defense.moneyPopups);
   const mergeTarget = defense.moneyPopups.find((popup) => shouldMergeDefenseMoneyPopup(popup, enemy));
   if (mergeTarget) {
+    const mergeCombo = defenseMoneyPopupIsRecent(mergeTarget) ? Math.max(mergeTarget.combo + 1, combo) : combo;
     mergeTarget.amount += amount;
+    mergeTarget.combo = Math.min(DEFENSE_MONEY_POPUP_COMBO_MAX, mergeCombo);
     mergeTarget.timer = DEFENSE_MONEY_POPUP_DURATION;
     return;
   }
@@ -2822,12 +3076,22 @@ function recordDefenseMoneyPopup(state: GameState, enemy: Pick<DefenseEnemy, 'la
     lane: enemy.lane,
     distance: enemy.distance,
     amount,
+    combo,
     timer: DEFENSE_MONEY_POPUP_DURATION,
   });
   defense.nextMoneyPopupId += 1;
   if (defense.moneyPopups.length > 16) {
     defense.moneyPopups.splice(0, defense.moneyPopups.length - 16);
   }
+}
+
+function defenseMoneyPopupCombo(popups: Array<{ timer: number }>): number {
+  const recentCount = popups.filter(defenseMoneyPopupIsRecent).length;
+  return Math.min(DEFENSE_MONEY_POPUP_COMBO_MAX, recentCount + 1);
+}
+
+function defenseMoneyPopupIsRecent(popup: { timer: number }): boolean {
+  return popup.timer > DEFENSE_MONEY_POPUP_DURATION - DEFENSE_MONEY_POPUP_COMBO_SECONDS;
 }
 
 function shouldMergeDefenseMoneyPopup(
@@ -2856,12 +3120,6 @@ function completeDefenseWaveIfReady(state: GameState): void {
   defense.spawnedThisWave = 0;
   defense.killsThisWave = 0;
   defense.spawnTimer = -1.1;
-  const waveMoney = defenseMoneyPerWave(state);
-  if (waveMoney > 0) {
-    defense.lastReward += waveMoney;
-    state.resources.sigils += waveMoney;
-  }
-  defense.towerHealth = Math.min(defenseMaxTowerHealth(state), defense.towerHealth + 2);
 }
 
 function resetDefenseRun(state: GameState): void {
@@ -2876,14 +3134,18 @@ function resetDefenseRun(state: GameState): void {
   defense.killsThisWave = 0;
   defense.nextEnemyId = 1;
   defense.nextEnemyProjectileId = 1;
+  defense.nextLightningStrikeId = 1;
   defense.nextDamagePopupId = 1;
   defense.nextMoneyPopupId = 1;
   defense.lastReward = 0;
   defense.shotPulse = 0;
+  defense.lightningCooldown = 0;
+  defense.iceCooldown = 0;
   defense.tower.range = defenseTowerRange(state);
   defense.tower.cooldown = 0;
   defense.shots = [];
   defense.enemyProjectiles = [];
+  defense.lightningStrikes = [];
   defense.queuedShots = [];
   defense.enemies = [];
   defense.damagePopups = [];
@@ -2915,14 +3177,18 @@ function setDefenseWave(state: GameState, rawWave: number): void {
   defense.killsThisWave = 0;
   defense.nextEnemyId = 1;
   defense.nextEnemyProjectileId = 1;
+  defense.nextLightningStrikeId = 1;
   defense.nextDamagePopupId = 1;
   defense.nextMoneyPopupId = 1;
   defense.lastReward = 0;
   defense.shotPulse = 0;
+  defense.lightningCooldown = 0;
+  defense.iceCooldown = 0;
   defense.tower.range = defenseTowerRange(state);
   defense.tower.cooldown = 0;
   defense.shots = [];
   defense.enemyProjectiles = [];
+  defense.lightningStrikes = [];
   defense.queuedShots = [];
   defense.enemies = [];
   defense.damagePopups = [];
@@ -2938,6 +3204,17 @@ function tickDefenseShot(state: GameState, deltaSeconds: number): void {
     shot.timer -= deltaSeconds;
   }
   state.defense.shots = state.defense.shots.filter((shot) => shot.timer > 0);
+}
+
+function tickDefenseLightningStrikes(state: GameState, deltaSeconds: number): void {
+  if (state.defense.lightningStrikes.length === 0) {
+    return;
+  }
+
+  for (const strike of state.defense.lightningStrikes) {
+    strike.timer -= deltaSeconds;
+  }
+  state.defense.lightningStrikes = state.defense.lightningStrikes.filter((strike) => strike.timer > 0);
 }
 
 function tickDefenseEnemyProjectiles(state: GameState, deltaSeconds: number): void {
@@ -3930,19 +4207,20 @@ function slimeTrainerMaxHealth(level: number): number {
 }
 
 function grantDebugResources(state: GameState): void {
-  state.mana += 999;
+  const debugResourceAmount = 100_000;
+  state.mana += debugResourceAmount;
   state.forbiddenGrimoire.keys += 1;
-  state.resources.scales += 999;
-  state.resources.runes += 999;
-  state.resources.spores += 999;
-  state.resources.sigils += 999;
-  state.resources.chips += 999;
-  state.resources.fragments += 999;
-  state.resources.marks += 999;
-  state.resources.minerals += 999;
-  state.resources.gels += 999;
+  state.resources.scales += debugResourceAmount;
+  state.resources.runes += debugResourceAmount;
+  state.resources.spores += debugResourceAmount;
+  state.resources.sigils += debugResourceAmount;
+  state.resources.chips += debugResourceAmount;
+  state.resources.fragments += debugResourceAmount;
+  state.resources.marks += debugResourceAmount;
+  state.resources.minerals += debugResourceAmount;
+  state.resources.gels += debugResourceAmount;
   state.mining.materials = createInitialMiningMaterials();
   for (const resourceId of MINING_MATERIAL_RESOURCE_IDS) {
-    state.mining.materials[resourceId as MiningMaterialResourceId] = 999;
+    state.mining.materials[resourceId as MiningMaterialResourceId] = debugResourceAmount;
   }
 }

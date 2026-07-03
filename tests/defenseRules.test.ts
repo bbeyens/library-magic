@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {
   defenseEnemyEdgePoint,
   defenseEnemyDistanceFromCenter,
+  defenseEnemyFullyVisible,
   defenseEnemyInTowerHitbox,
   defenseEnemyInTowerRange,
   defenseEnemyPathDistanceForCenterRange,
@@ -11,12 +12,22 @@ import {
 } from '../src/game/simulation/defenseRules.ts';
 import {
   applyAction,
+  defenseDamageMultiplier,
   defenseEnemyReward,
+  defenseGoldMultiplier,
+  defenseIceActive,
+  defenseIceAttackInterval,
+  defenseIceDamage,
+  defenseIceRangePercent,
+  defenseIceSlow,
+  defenseLightningAttackInterval,
+  defenseLightningDamage,
+  defenseLightningTargetCount,
   defenseWaveEnemyCount,
   defenseWaveProgress,
   defenseMaxTowerHealth,
-  defenseMoneyPerWave,
   defenseSkillCost,
+  defenseSkillLocked,
   defenseSkillMaxLevel,
   defenseTowerAttackInterval,
   defenseTowerDamage,
@@ -35,24 +46,36 @@ assert.deepEqual(defenseEnemyEdgePoint(180), { x: 0, y: 50 });
 assert.deepEqual(defenseEnemyEdgePoint(270), { x: 50, y: 0 });
 
 assert.deepEqual(defenseEnemyPosition({ lane: 0, distance: 1 }), { x: 100, y: 50 });
+assert.deepEqual(defenseEnemyPosition({ lane: 0, distance: 1.08 }), { x: 104, y: 50 });
+assert.deepEqual(defenseEnemyPosition({ lane: 180, distance: 1.08 }), { x: -4, y: 50 });
 assert.deepEqual(defenseEnemyPosition({ lane: 0, distance: 0.5 }), { x: 75, y: 50 });
 assert.deepEqual(defenseEnemyPosition({ lane: 0, distance: 0 }), { x: 50, y: 50 });
-assert.equal(defenseEnemyPathDistanceForCenterRange({ lane: 0 }, 0.25), 0.25);
-assert.equal(Number(defenseEnemyPathDistanceForCenterRange({ lane: 45 }, 0.25).toFixed(3)), 0.177);
-assert.equal(Number(defenseEnemyDistanceFromCenter({ lane: 45, distance: defenseEnemyPathDistanceForCenterRange({ lane: 45 }, 0.25) }).toFixed(3)), 0.25);
+assert.equal(defenseEnemyPathDistanceForCenterRange({ lane: 0 }, 0.35), 0.35);
+assert.equal(Number(defenseEnemyPathDistanceForCenterRange({ lane: 45 }, 0.35).toFixed(3)), 0.247);
+assert.equal(Number(defenseEnemyDistanceFromCenter({ lane: 45, distance: defenseEnemyPathDistanceForCenterRange({ lane: 45 }, 0.35) }).toFixed(3)), 0.35);
 
 assert.equal(defenseEnemyInTowerRange({ lane: 0, distance: 0.68 }, 0.68), true);
 assert.equal(defenseEnemyInTowerRange({ lane: 0, distance: 0.69 }, 0.68), false);
 assert.equal(defenseEnemyInTowerRange({ lane: 45, distance: 0.68 }, 0.68), false);
 assert.equal(defenseEnemyInTowerRange({ lane: 45, distance: 0.48 }, 0.68), true);
+assert.equal(defenseEnemyFullyVisible({ lane: 0, distance: 0.87 }), true);
+assert.equal(defenseEnemyFullyVisible({ lane: 0, distance: 0.88 }), false);
+assert.equal(defenseEnemyFullyVisible({ kind: 'skeletonMage', lane: 270, distance: 0.7 }), true);
+assert.equal(defenseEnemyFullyVisible({ kind: 'skeletonMage', lane: 270, distance: 0.72 }), false);
 
 assert.equal(defenseEnemyInTowerHitbox({ lane: 0, distance: 0 }), true);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 0, distance: 0.025 }), true);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 0, distance: 0.026 }), false);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 90, distance: 0.025 }), true);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 90, distance: 0.026 }), false);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 45, distance: 0.017 }), true);
-assert.equal(defenseEnemyInTowerHitbox({ lane: 45, distance: 0.018 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 0, distance: 0.162 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 0, distance: 0.163 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 90, distance: 0.162 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 90, distance: 0.163 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 45, distance: 0.114 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ lane: 45, distance: 0.115 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 0, distance: 0.195 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 0, distance: 0.196 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 90, distance: 0.122 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 90, distance: 0.123 }), false);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 270, distance: 0.32 }), true);
+assert.equal(defenseEnemyInTowerHitbox({ kind: 'goblinKing', lane: 270, distance: 0.321 }), false);
 
 assert.equal(nextDefenseSpeedMultiplier(1), 2);
 assert.equal(nextDefenseSpeedMultiplier(2), 4);
@@ -77,19 +100,24 @@ state.mana = 10000;
 
 const defenseSkillIds: DefenseSkillId[] = [
   'damage',
+  'damageMultiplier',
   'attackSpeed',
   'range',
   'criticalChance',
   'criticalMultiplier',
-  'ricochetCount',
-  'ricochetChance',
   'superCriticalChance',
   'superCriticalMultiplier',
+  'lightningDamage',
+  'lightningSpeed',
+  'lightningCount',
+  'iceDamage',
+  'iceSpeed',
+  'iceRange',
+  'iceSlow',
   'health',
   'healthRegen',
-  'resistance',
   'moneyPerEnemy',
-  'moneyPerWave',
+  'goldMultiplier',
 ];
 
 for (const skillId of defenseSkillIds) {
@@ -106,6 +134,7 @@ state.resources.sigils = 10000;
 
 assert.equal(defenseTowerRangePercent(state), 0.3);
 assert.equal(Math.round(defenseTowerRange(state) * 1000), 552);
+assert.equal(defenseDamageMultiplier(state), 1);
 
 const noSkillBookLevelState = createInitialState();
 noSkillBookLevelState.books.defense.unlocked = true;
@@ -154,25 +183,19 @@ assert.equal(pausedDefenseState.defense.paused, false);
 assert.equal(pausedDefenseState.defense.shotPulse, 1);
 assert.equal(pausedDefenseState.defense.enemies[0]?.health, 1);
 
-const hitStopState = createInitialState();
-hitStopState.books.defense.unlocked = true;
-hitStopState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
-hitStopState.lastTick = 5000;
-hitStopState.defense.tower.cooldown = 0;
-hitStopState.defense.enemies = [
+const noHitStopState = createInitialState();
+noHitStopState.books.defense.unlocked = true;
+noHitStopState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+noHitStopState.lastTick = 5000;
+noHitStopState.defense.tower.cooldown = 0;
+noHitStopState.defense.enemies = [
   { id: 1, lane: 0, distance: 0.4, health: 2, maxHealth: 2, state: 'walking', deathTimer: 0 },
 ];
 
-tickState(hitStopState, 5016);
+tickState(noHitStopState, 5016);
 
-assert.equal(hitStopState.defense.enemies[0]?.health, 1);
-assert.equal(hitStopState.defense.enemies[0]?.distance, 0.4);
-
-tickState(hitStopState, 5082);
-assert.equal(hitStopState.defense.enemies[0]?.distance, 0.4);
-
-tickState(hitStopState, 5098);
-assert.equal((hitStopState.defense.enemies[0]?.distance ?? 0) < 0.4, true);
+assert.equal(noHitStopState.defense.enemies[0]?.health, 1);
+assert.equal((noHitStopState.defense.enemies[0]?.distance ?? 0) < 0.4, true);
 
 const waveProgressState = createInitialState();
 waveProgressState.books.defense.unlocked = true;
@@ -195,6 +218,18 @@ assert.equal(waveProgressState.defense.moneyPopups.length, 1);
 assert.equal(waveProgressState.defense.moneyPopups[0]?.amount, defenseEnemyReward(waveProgressState));
 assert.equal(defenseWaveProgress(waveProgressState), 1 / defenseWaveEnemyCount(waveProgressState));
 
+const waveCompleteNoHealState = createInitialState();
+waveCompleteNoHealState.books.defense.unlocked = true;
+waveCompleteNoHealState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+waveCompleteNoHealState.lastTick = 5000;
+waveCompleteNoHealState.defense.towerHealth = 5;
+waveCompleteNoHealState.defense.spawnedThisWave = defenseWaveEnemyCount(waveCompleteNoHealState);
+
+tickState(waveCompleteNoHealState, 5016);
+
+assert.equal(waveCompleteNoHealState.defense.wave, 2);
+assert.equal(waveCompleteNoHealState.defense.towerHealth, 5);
+
 const clusteredRewardState = createInitialState();
 clusteredRewardState.books.defense.unlocked = true;
 clusteredRewardState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
@@ -215,6 +250,29 @@ tickState(clusteredRewardState, 6096);
 assert.equal(clusteredRewardState.defense.killsThisWave, 2);
 assert.equal(clusteredRewardState.defense.moneyPopups.length, 1);
 assert.equal(clusteredRewardState.defense.moneyPopups[0]?.amount, defenseEnemyReward(clusteredRewardState) * 2);
+assert.equal(clusteredRewardState.defense.moneyPopups[0]?.combo, 2);
+
+const resetRewardPopupColorState = createInitialState();
+resetRewardPopupColorState.books.defense.unlocked = true;
+resetRewardPopupColorState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+resetRewardPopupColorState.lastTick = 6200;
+resetRewardPopupColorState.defense.tower.cooldown = 999;
+resetRewardPopupColorState.defense.enemies = [
+  { id: 1, lane: 0, distance: 0.4, health: 1, maxHealth: 1, state: 'walking', deathTimer: 0 },
+  { id: 2, lane: 1, distance: 0.4, health: 1, maxHealth: 1, state: 'walking', deathTimer: 0 },
+];
+resetRewardPopupColorState.defense.queuedShots = [
+  { enemyId: 1, damageScale: 1 },
+  { enemyId: 2, damageScale: 1 },
+];
+
+tickState(resetRewardPopupColorState, 6216);
+tickState(resetRewardPopupColorState, 6467);
+
+assert.equal(resetRewardPopupColorState.defense.killsThisWave, 2);
+assert.equal(resetRewardPopupColorState.defense.moneyPopups.length, 2);
+assert.equal(resetRewardPopupColorState.defense.moneyPopups[1]?.amount, defenseEnemyReward(resetRewardPopupColorState));
+assert.equal(resetRewardPopupColorState.defense.moneyPopups[1]?.combo, 1);
 
 const retargetQueuedShotState = createInitialState();
 retargetQueuedShotState.books.defense.unlocked = true;
@@ -268,11 +326,44 @@ applyAction(state, { type: 'buyDefenseSkill', skillId: 'attackSpeed' });
 applyAction(state, { type: 'buyDefenseSkill', skillId: 'range' });
 applyAction(state, { type: 'buyDefenseSkill', skillId: 'health' });
 applyAction(state, { type: 'buyDefenseSkill', skillId: 'moneyPerEnemy' });
-applyAction(state, { type: 'buyDefenseSkill', skillId: 'moneyPerWave' });
 
 assert.equal(state.defenseSkills.damage, 1);
 assert.equal(state.mana, 10000);
+
+const lockedElementSkillState = createInitialState();
+lockedElementSkillState.books.defense.unlocked = true;
+lockedElementSkillState.resources.sigils = 10000;
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'iceSpeed'), true);
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'iceRange'), true);
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'iceSlow'), true);
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'lightningDamage'), true);
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'lightningSpeed'), true);
+const sigilsBeforeLockedBuy = lockedElementSkillState.resources.sigils;
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'iceSpeed' });
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'lightningDamage' });
+assert.equal(lockedElementSkillState.defenseSkills.iceSpeed, 0);
+assert.equal(lockedElementSkillState.defenseSkills.lightningDamage, 0);
+assert.equal(lockedElementSkillState.resources.sigils, sigilsBeforeLockedBuy);
+
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'iceDamage' });
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'iceSpeed'), false);
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'iceSpeed' });
+assert.equal(lockedElementSkillState.defenseSkills.iceSpeed, 1);
+
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'lightningCount' });
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'lightningDamage'), false);
+assert.equal(defenseSkillLocked(lockedElementSkillState, 'lightningSpeed'), false);
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'lightningDamage' });
+applyAction(lockedElementSkillState, { type: 'buyDefenseSkill', skillId: 'lightningSpeed' });
+assert.equal(lockedElementSkillState.defenseSkills.lightningDamage, 1);
+assert.equal(lockedElementSkillState.defenseSkills.lightningSpeed, 1);
+
 assert.equal(defenseTowerDamage(state), 2);
+state.defenseSkills.damageMultiplier = 4;
+assert.equal(defenseDamageMultiplier(state), 1.2);
+assert.equal(defenseTowerDamage(state), 2);
+state.defenseSkills.damage = 9;
+assert.equal(defenseTowerDamage(state), 12);
 assert.equal(defenseTowerAttackInterval(state) < 0.78, true);
 state.defenseSkills.attackSpeed = defenseSkillMaxLevel('attackSpeed');
 assert.equal(defenseTowerAttackInterval(state), 0.25);
@@ -283,8 +374,43 @@ state.defenseSkills.range = defenseSkillMaxLevel('range');
 assert.equal(defenseTowerRangePercent(state), 0.8);
 assert.equal(Math.round(defenseTowerRange(state) * 1000), 872);
 assert.equal(defenseMaxTowerHealth(state), 12);
+assert.equal(defenseLightningDamage(state), 1);
+assert.equal(defenseLightningTargetCount(state), 0);
+assert.equal(defenseIceActive(state), false);
+assert.equal(defenseIceDamage(state), 0);
+state.defenseSkills.damageMultiplier = 0;
+state.defenseSkills.lightningDamage = 2;
+state.defenseSkills.lightningSpeed = 3;
+state.defenseSkills.lightningCount = 2;
+assert.equal(defenseLightningDamage(state), 3);
+assert.equal(defenseLightningTargetCount(state), 2);
+assert.equal(defenseLightningAttackInterval(state).toFixed(2), '2.36');
+state.defenseSkills.iceDamage = 1;
+assert.equal(defenseIceActive(state), true);
+assert.equal(defenseIceDamage(state), 1);
+state.defenseSkills.damageMultiplier = 20;
+assert.equal(defenseDamageMultiplier(state), 2);
+assert.equal(defenseLightningDamage(state), 6);
+assert.equal(defenseIceDamage(state), 2);
+state.defenseSkills.damageMultiplier = 0;
+assert.equal(defenseIceAttackInterval(state), 2);
+state.defenseSkills.iceRange = 1;
+assert.equal(defenseIceRangePercent(state), 0.3);
+assert.equal(defenseIceSlow(state), 0.1);
+state.defenseSkills.iceSpeed = defenseSkillMaxLevel('iceSpeed');
+state.defenseSkills.iceRange = defenseSkillMaxLevel('iceRange');
+state.defenseSkills.iceSlow = defenseSkillMaxLevel('iceSlow');
+assert.equal(defenseIceAttackInterval(state), 0.5);
+assert.equal(defenseIceRangePercent(state), 0.65);
+assert.equal(defenseIceSlow(state), 0.7);
 assert.equal(defenseEnemyReward(state), 2);
-assert.equal(defenseMoneyPerWave(state), 3);
+assert.equal(defenseGoldMultiplier(state), 1);
+state.defenseSkills.goldMultiplier = 1;
+assert.equal(defenseGoldMultiplier(state), 1.1);
+assert.equal(defenseEnemyReward(state), 2);
+state.defenseSkills.goldMultiplier = defenseSkillMaxLevel('goldMultiplier');
+assert.equal(defenseGoldMultiplier(state), 100);
+assert.equal(defenseEnemyReward(state), 200);
 
 const debugTowerHealthState = createInitialState();
 debugTowerHealthState.books.defense.unlocked = true;
@@ -297,6 +423,8 @@ applyAction(debugTowerHealthState, { type: 'setDefenseDebugTowerHealth', enabled
 assert.equal(defenseMaxTowerHealth(debugTowerHealthState), 14);
 assert.equal(debugTowerHealthState.defense.towerHealth, 14);
 
+state.defenseSkills.damage = 1;
+state.defenseSkills.damageMultiplier = 0;
 state.defenseSkills.criticalChance = 10;
 state.defenseSkills.criticalMultiplier = 4;
 assert.equal(defenseTowerHitDamage(state, { lane: 0, distance: 0 }, () => 0.1), 5);
@@ -386,6 +514,25 @@ tickState(simultaneousTowerAttackState, 3016);
 assert.equal(simultaneousTowerAttackState.defense.towerHealth, defenseMaxTowerHealth(simultaneousTowerAttackState) - 4);
 assert.equal(simultaneousTowerAttackState.defense.enemies.length, 2);
 
+const slimeAttackAnimationState = createInitialState();
+slimeAttackAnimationState.books.defense.unlocked = true;
+slimeAttackAnimationState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+slimeAttackAnimationState.lastTick = 1000;
+slimeAttackAnimationState.defense.tower.cooldown = 99;
+slimeAttackAnimationState.defense.spawnedThisWave = defenseWaveEnemyCount(slimeAttackAnimationState);
+slimeAttackAnimationState.defense.enemies = [
+  { id: 1, kind: 'slime', lane: 0, distance: 0.026, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+];
+
+tickState(slimeAttackAnimationState, 1016);
+assert.equal(slimeAttackAnimationState.defense.enemies[0]?.state, 'attacking');
+
+tickState(slimeAttackAnimationState, 1516);
+assert.equal(slimeAttackAnimationState.defense.enemies[0]?.state, 'attacking');
+
+tickState(slimeAttackAnimationState, 1916);
+assert.equal(slimeAttackAnimationState.defense.enemies[0]?.state, 'idle');
+
 const skeletonMageState = createInitialState();
 skeletonMageState.books.defense.unlocked = true;
 skeletonMageState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
@@ -396,7 +543,7 @@ skeletonMageState.defense.enemies = [
     id: 1,
     kind: 'skeletonMage',
     lane: 0,
-    distance: 0.255,
+    distance: 0.355,
     health: 2,
     maxHealth: 2,
     state: 'walking',
@@ -406,19 +553,24 @@ skeletonMageState.defense.enemies = [
 ];
 
 tickState(skeletonMageState, 3100);
-assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.25);
+assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.35);
 assert.equal(skeletonMageState.defense.enemies[0]?.state, 'attacking');
 assert.equal(skeletonMageState.defense.enemyProjectiles.length, 0);
 
 tickState(skeletonMageState, 3600);
-assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.25);
+assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.35);
 assert.equal(skeletonMageState.defense.enemyProjectiles.length, 1);
 assert.equal(skeletonMageState.defense.towerHealth, defenseMaxTowerHealth(skeletonMageState));
 
 tickState(skeletonMageState, 4200);
+assert.equal(skeletonMageState.defense.enemyProjectiles.length, 1);
+assert.equal(skeletonMageState.defense.towerHealth, defenseMaxTowerHealth(skeletonMageState));
+assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.35);
+
+tickState(skeletonMageState, 4500);
 assert.equal(skeletonMageState.defense.enemyProjectiles.length, 0);
 assert.equal(skeletonMageState.defense.towerHealth, defenseMaxTowerHealth(skeletonMageState) - 1);
-assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.25);
+assert.equal(skeletonMageState.defense.enemies[0]?.distance, 0.35);
 
 const diagonalSkeletonMageState = createInitialState();
 diagonalSkeletonMageState.books.defense.unlocked = true;
@@ -430,7 +582,7 @@ diagonalSkeletonMageState.defense.enemies = [
     id: 1,
     kind: 'skeletonMage',
     lane: 45,
-    distance: 0.181,
+    distance: 0.251,
     health: 2,
     maxHealth: 2,
     state: 'walking',
@@ -439,8 +591,8 @@ diagonalSkeletonMageState.defense.enemies = [
   },
 ];
 tickState(diagonalSkeletonMageState, 3100);
-assert.equal(Number(diagonalSkeletonMageState.defense.enemies[0]?.distance.toFixed(3)), 0.177);
-assert.equal(Number(defenseEnemyDistanceFromCenter(diagonalSkeletonMageState.defense.enemies[0]!).toFixed(3)), 0.25);
+assert.equal(Number(diagonalSkeletonMageState.defense.enemies[0]?.distance.toFixed(3)), 0.247);
+assert.equal(Number(defenseEnemyDistanceFromCenter(diagonalSkeletonMageState.defense.enemies[0]!).toFixed(3)), 0.35);
 assert.equal(diagonalSkeletonMageState.defense.enemies[0]?.state, 'attacking');
 
 const batSpawnState = createInitialState();
@@ -456,7 +608,36 @@ tickState(batSpawnState, 7016);
 
 assert.equal(batSpawnState.defense.enemies[0]?.kind, 'bat');
 assert.equal(batSpawnState.defense.enemies[0]?.maxHealth, 1);
-assert.equal((batSpawnState.defense.enemies[0]?.distance ?? 1) < 1, true);
+assert.equal((batSpawnState.defense.enemies[0]?.distance ?? 0) > 1, true);
+
+const goblinKingSpawnState = createInitialState();
+goblinKingSpawnState.books.defense.unlocked = true;
+goblinKingSpawnState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+goblinKingSpawnState.lastTick = 9000;
+goblinKingSpawnState.defense.wave = 5;
+goblinKingSpawnState.defense.spawnedThisWave = 4;
+goblinKingSpawnState.defense.spawnTimer = 99;
+goblinKingSpawnState.defense.tower.cooldown = 99;
+
+tickState(goblinKingSpawnState, 9016);
+
+assert.equal(goblinKingSpawnState.defense.enemies[0]?.kind, 'goblinKing');
+assert.equal(goblinKingSpawnState.defense.enemies[0]?.maxHealth, 40);
+
+const goblinKingSpeedState = createInitialState();
+goblinKingSpeedState.books.defense.unlocked = true;
+goblinKingSpeedState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+goblinKingSpeedState.lastTick = 10000;
+goblinKingSpeedState.defense.wave = 5;
+goblinKingSpeedState.defense.tower.cooldown = 99;
+goblinKingSpeedState.defense.spawnedThisWave = defenseWaveEnemyCount(goblinKingSpeedState);
+goblinKingSpeedState.defense.enemies = [
+  { id: 1, kind: 'goblinKing', lane: 0, distance: 0.8, health: 40, maxHealth: 40, state: 'walking', deathTimer: 0 },
+];
+
+tickState(goblinKingSpeedState, 11000);
+
+assert.equal(Number(goblinKingSpeedState.defense.enemies[0]?.distance.toFixed(5)), 0.76625);
 
 const batAttackState = createInitialState();
 batAttackState.books.defense.unlocked = true;
@@ -493,67 +674,79 @@ tickState(batAttackState, 10800);
 assert.equal(batAttackState.defense.enemies.length, 1);
 assert.equal(batAttackState.defense.towerHealth, defenseMaxTowerHealth(batAttackState) - 2);
 
-const ricochetState = createInitialState();
-ricochetState.books.defense.unlocked = true;
-ricochetState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
-ricochetState.lastTick = 2000;
-ricochetState.defense.tower.cooldown = 0;
-ricochetState.defenseSkills.ricochetCount = 2;
-ricochetState.defenseSkills.ricochetChance = defenseSkillMaxLevel('ricochetChance');
-ricochetState.defense.enemies = [
-  { id: 1, lane: 0, distance: 0.38, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
-  { id: 2, lane: 12, distance: 0.42, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
-  { id: 3, lane: 348, distance: 0.44, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+const iceAuraState = createInitialState();
+iceAuraState.books.defense.unlocked = true;
+iceAuraState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+iceAuraState.lastTick = 12000;
+iceAuraState.defense.tower.cooldown = 999;
+iceAuraState.defenseSkills.iceDamage = 1;
+iceAuraState.defense.enemies = [
+  { id: 1, lane: 0, distance: 0.14, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+  { id: 2, lane: 0, distance: 0.8, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
 ];
 
-const originalRandom = Math.random;
-Math.random = () => 0;
-try {
-  tickState(ricochetState, 2016);
-  assert.equal(ricochetState.defense.shotPulse, 1);
-  assert.equal(ricochetState.defense.shots.length, 1);
-  assert.equal(ricochetState.defense.damagePopups.length, 1);
-  assert.equal(ricochetState.defense.enemies[0]?.health, 4);
-  assert.equal(ricochetState.defense.enemies[1]?.health, 5);
-  assert.equal(ricochetState.defense.enemies[2]?.health, 5);
+tickState(iceAuraState, 12016);
 
-  tickState(ricochetState, 2216);
-  assert.equal(ricochetState.defense.shotPulse, 2);
-  assert.equal(ricochetState.defense.shots.length, 2);
-  assert.equal(ricochetState.defense.damagePopups.length, 2);
-  assert.equal(ricochetState.defense.enemies[1]?.health, 4);
+assert.equal(iceAuraState.defense.enemies[0]?.health, 4);
+assert.equal(iceAuraState.defense.enemies[1]?.health, 5);
+assert.equal(Number(iceAuraState.defense.iceCooldown.toFixed(2)), 2);
 
-  tickState(ricochetState, 2416);
-  assert.equal(ricochetState.defense.shotPulse, 3);
-  assert.equal(ricochetState.defense.shots.map((shot) => shot.id).join(','), '2,3');
-  assert.equal(ricochetState.defense.damagePopups.length, 3);
-  assert.equal(ricochetState.defense.enemies[2]?.health, 4);
-} finally {
-  Math.random = originalRandom;
-}
+tickState(iceAuraState, 13016);
 
-const ricochetIgnoresDeadState = createInitialState();
-ricochetIgnoresDeadState.books.defense.unlocked = true;
-ricochetIgnoresDeadState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
-ricochetIgnoresDeadState.lastTick = 3000;
-ricochetIgnoresDeadState.defense.tower.cooldown = 0;
-ricochetIgnoresDeadState.defenseSkills.ricochetCount = 2;
-ricochetIgnoresDeadState.defenseSkills.ricochetChance = defenseSkillMaxLevel('ricochetChance');
-ricochetIgnoresDeadState.defense.enemies = [
-  { id: 1, lane: 0, distance: 0.38, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
-  { id: 2, lane: 3, distance: 0.39, health: 0, maxHealth: 5, state: 'walking', deathTimer: 0 },
-  { id: 3, lane: 6, distance: 0.4, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+assert.equal(iceAuraState.defense.enemies[0]?.health, 4);
+
+tickState(iceAuraState, 14032);
+
+assert.equal(iceAuraState.defense.enemies[0]?.health, 3);
+
+const iceSlowState = createInitialState();
+iceSlowState.books.defense.unlocked = true;
+iceSlowState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+iceSlowState.lastTick = 15000;
+iceSlowState.defense.tower.cooldown = 999;
+iceSlowState.defense.iceCooldown = 999;
+iceSlowState.defenseSkills.iceDamage = 1;
+iceSlowState.defenseSkills.iceRange = 15;
+iceSlowState.defenseSkills.iceSlow = defenseSkillMaxLevel('iceSlow');
+iceSlowState.defense.enemies = [
+  { id: 1, lane: 0, distance: 0.25, health: 20, maxHealth: 20, state: 'walking', deathTimer: 0 },
 ];
 
-Math.random = () => 0;
-try {
-  tickState(ricochetIgnoresDeadState, 3016);
-  assert.deepEqual(
-    ricochetIgnoresDeadState.defense.queuedShots.map((shot) => shot.enemyId),
-    [3],
-  );
-} finally {
-  Math.random = originalRandom;
-}
+const noIceSlowState = createInitialState();
+noIceSlowState.books.defense.unlocked = true;
+noIceSlowState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+noIceSlowState.lastTick = 15000;
+noIceSlowState.defense.tower.cooldown = 999;
+noIceSlowState.defense.enemies = [
+  { id: 1, lane: 0, distance: 0.25, health: 20, maxHealth: 20, state: 'walking', deathTimer: 0 },
+];
+
+tickState(iceSlowState, 16000);
+tickState(noIceSlowState, 16000);
+
+assert.equal((iceSlowState.defense.enemies[0]?.distance ?? 0) > (noIceSlowState.defense.enemies[0]?.distance ?? 0), true);
+
+const lightningMapTargetState = createInitialState();
+lightningMapTargetState.books.defense.unlocked = true;
+lightningMapTargetState.openBookPanels = [{ bookId: 'defense', slot: 0 }];
+lightningMapTargetState.lastTick = 17000;
+lightningMapTargetState.defense.spawnedThisWave = defenseWaveEnemyCount(lightningMapTargetState);
+lightningMapTargetState.defense.tower.cooldown = 999;
+lightningMapTargetState.defenseSkills.lightningDamage = 2;
+lightningMapTargetState.defenseSkills.lightningCount = 2;
+lightningMapTargetState.defense.enemies = [
+  { id: 1, lane: 0, distance: 1.08, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+  { id: 2, lane: 90, distance: 0.95, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+  { id: 3, lane: 90, distance: 0.85, health: 5, maxHealth: 5, state: 'walking', deathTimer: 0 },
+];
+
+tickState(lightningMapTargetState, 17016);
+
+assert.equal(lightningMapTargetState.defense.enemies[0]?.health, 5);
+assert.equal(lightningMapTargetState.defense.enemies[1]?.health, 5);
+assert.equal(lightningMapTargetState.defense.enemies[2]?.health, 2);
+assert.equal(lightningMapTargetState.defense.lightningStrikes.length, 1);
+assert.equal(lightningMapTargetState.defense.lightningStrikes[0]?.targetEnemyId, 3);
+assert.equal(lightningMapTargetState.defense.lightningStrikes[0]?.lane, 90);
 
 console.log('defenseRules ok');

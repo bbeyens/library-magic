@@ -55,6 +55,7 @@ The second problem is usually the harder one.
 2. **Recover before polishing**: fix missing silhouette and framing before palette or edge cleanup.
 3. **One anchor per sequence**: normalize all frames to one shared center/bottom rule unless the source genuinely requires otherwise.
 4. **Review artifacts matter**: contact sheets and GIFs are part of the pipeline, not optional extras.
+5. **Prove variants before shipping them**: alternate sheets, mirrored versions, and palette variants are separate animations until their visible center and baseline match the primary strip frame by frame.
 
 ## Workflow
 
@@ -170,6 +171,34 @@ Before exporting runtime sheets:
 
 If using the `gamedev-assets` skill, run `asset_sprite_baseline.py` to audit and optionally write baseline-corrected sheets.
 
+### 6c. Prove runtime variants and mirrors before adding variety
+
+When an engine animation appears to move even though the DOM/canvas object stays fixed, suspect the sheet registration before changing game coordinates.
+
+Use this isolation loop:
+- first ship a single source strip with one frame size, one frame count, and one shared anchor
+- verify the runtime sampler uses the real column count, for example `384x64` means `6` frames of `64x64`
+- for CSS sprites, use exact background positions for the columns; a 6-frame strip is `0%, 20%, 40%, 60%, 80%, 100%`
+- remove mirrored rendering such as `scaleX(-1)` until the non-mirrored strip is stable
+- only reintroduce alternate sheets or mirrored variants after comparing alpha bounds, visible center, and baseline against the primary strip frame by frame
+
+If a bug disappears when two alternated sheets become one strip, the runtime placement was probably fine. The variants had different visual anchors inside their cells.
+
+### 6d. Prove runtime playback before blaming the sheet
+
+When a sprite stays on frame `0`, stops halfway through an action, or only plays part of death/attack at higher game speeds, audit the runtime before rebuilding assets.
+
+Use this checklist:
+- keep the rendered sprite node stable for the whole animation; do not recreate or reparent it every tick
+- if z-order sorting is needed, compare the current id order and only move DOM nodes when the order actually changes
+- for CSS `background-position` sprites, use discrete frame timing such as `steps(1, end)` with explicit frame keyframes; do not rely on smooth `linear` interpolation between sheet columns
+- make the CSS animation duration match the simulation state timer for the action, for example attack state `840ms` should use an `840ms` animation at x1
+- if the simulation has a speed multiplier such as x2 or x4, scale CSS sprite durations with the same inverse multiplier, for example `calc(840ms * var(--time-scale, 1))`
+- update that time-scale variable when the speed button changes, not only on initial render
+- verify with `getAnimations()` or sampled `background-position` at two timestamps before editing the sheet
+
+If x1 looks correct but x2 stops at half and x4 stops at a quarter, the sheet is probably fine. The runtime timer is scaled while the CSS animation duration is not.
+
 ### 7. Build review artifacts
 
 Use:
@@ -232,6 +261,22 @@ Better: for generated sheets, test them only after recovery and normalization; f
 Why bad: a video already carries camera framing and scale. Cropping each frame to its foreground bbox and re-grounding it can add jitter, height changes, and fake zoom.
 Better: for video-derived walk/run cycles, first export a preserve-canvas pass, then try foreground-fit only if the sprite is too small or the runtime target requires a compact crop.
 
+❌ **Anti-pattern: adding alternate sheets or mirrors before registration is proven**
+Why bad: two sheets can both be `64x64` per frame and still have different visible centers. Mirroring can make that mismatch look like a runtime position bug.
+Better: make one single-source strip stable in-engine first, then add variants only if their alpha bounds, center, and baseline match the original frame by frame.
+
+❌ **Anti-pattern: reparenting or rebuilding animated sprite nodes every tick**
+Why bad: CSS animations can restart when the DOM node is moved or recreated. At 60 FPS this can look like every monster is frozen on frame `0`.
+Better: keep one stable node per runtime sprite. Only reorder nodes when the layer order really changes, and patch style/classes in place.
+
+❌ **Anti-pattern: using smooth timing for sheet columns**
+Why bad: `linear` interpolation between `background-position` columns can land between frames or behave inconsistently across browsers.
+Better: use explicit frame ranges plus `steps(1, end)` for CSS spritesheets unless you intentionally want sub-frame interpolation.
+
+❌ **Anti-pattern: ignoring game speed in CSS animation durations**
+Why bad: the simulation may remove an attack/death state after scaled time, while the CSS animation still expects x1 real time. x2 cuts at half, x4 cuts at a quarter.
+Better: expose a runtime time-scale variable and apply it to sprite animation durations, for example `animation: attack calc(840ms * var(--time-scale, 1)) steps(1, end) both`.
+
 ## Variation Guidance
 
 **IMPORTANT**: Do not force every spritesheet into the same aesthetic.
@@ -247,6 +292,9 @@ Things that should remain stable inside a sequence:
 - shared anchor rule
 - frame canvas size
 - visible foot baseline inside the final runtime frame
+- runtime variant anchors, when multiple sheets or mirrors are used for the same action
+- runtime node identity during an animation
+- timing parity between animation duration, action-state timer, and game speed multiplier
 - selection logic for the final GIF
 
 Things that may vary:
@@ -265,6 +313,9 @@ Use the workflow as a toolkit, not a rigid ceremony.
 - If the output is a single directional anchor, stop after generation and review unless the user explicitly wants a sheet.
 - If a one-shot runner is overkill, call the individual scripts directly and keep the artifacts that matter.
 - If normalized review frames are downscaled or converted into runtime sheets, audit the final runtime PNGs again; review anchors do not automatically survive resizing.
+- If runtime drift only appears with alternate sheets or mirrored variants, collapse to one source strip and prove that stable before reintroducing variety.
+- If a runtime sprite freezes on frame `0`, first check whether the engine is recreating/reparenting the node every tick.
+- If an action animation is cut short only at x2/x4, first scale the CSS duration with the simulation speed multiplier.
 
 ## Resources
 

@@ -66,14 +66,13 @@ export interface RuneTypingState {
 
 export interface DefenseEnemy {
   id: number;
-  kind?: 'slime' | 'skeletonMage' | 'bat';
+  kind?: 'slime' | 'skeletonMage' | 'bat' | 'goblinKing';
   lane: number;
   distance: number;
   health: number;
   maxHealth: number;
   state: 'walking' | 'idle' | 'attacking' | 'dying';
   deathTimer: number;
-  hitStopTimer?: number;
   attackCooldown?: number;
   attackAnimationTimer?: number;
   attackProjectileDelay?: number;
@@ -84,12 +83,22 @@ export interface DefenseShot {
   id: number;
   lane: number;
   distance: number;
+  targetKind?: DefenseEnemy['kind'];
   timer: number;
   duration: number;
 }
 
 export interface DefenseEnemyProjectile {
   id: number;
+  lane: number;
+  distance: number;
+  timer: number;
+  duration: number;
+}
+
+export interface DefenseLightningStrike {
+  id: number;
+  targetEnemyId: number;
   lane: number;
   distance: number;
   timer: number;
@@ -117,6 +126,7 @@ export interface DefenseMoneyPopup {
   lane: number;
   distance: number;
   amount: number;
+  combo: number;
   timer: number;
 }
 
@@ -128,19 +138,24 @@ export interface DefenseTowerState {
 
 export interface DefenseSkillsState {
   damage: number;
+  damageMultiplier: number;
   attackSpeed: number;
   range: number;
   criticalChance: number;
   criticalMultiplier: number;
-  ricochetCount: number;
-  ricochetChance: number;
   superCriticalChance: number;
   superCriticalMultiplier: number;
+  lightningDamage: number;
+  lightningSpeed: number;
+  lightningCount: number;
+  iceDamage: number;
+  iceSpeed: number;
+  iceRange: number;
+  iceSlow: number;
   health: number;
   healthRegen: number;
-  resistance: number;
   moneyPerEnemy: number;
-  moneyPerWave: number;
+  goldMultiplier: number;
 }
 
 export type DefenseSpeedMultiplier = 1 | 2 | 4;
@@ -159,12 +174,16 @@ export interface DefenseState {
   killsThisWave: number;
   nextEnemyId: number;
   nextEnemyProjectileId: number;
+  nextLightningStrikeId: number;
   nextDamagePopupId: number;
   nextMoneyPopupId: number;
   lastReward: number;
   shotPulse: number;
+  lightningCooldown: number;
+  iceCooldown: number;
   shots: DefenseShot[];
   enemyProjectiles: DefenseEnemyProjectile[];
+  lightningStrikes: DefenseLightningStrike[];
   queuedShots: DefenseQueuedShot[];
   tower: DefenseTowerState;
   enemies: DefenseEnemy[];
@@ -756,19 +775,24 @@ export function createInitialState(): GameState {
     },
     defenseSkills: {
       damage: 0,
+      damageMultiplier: 0,
       attackSpeed: 0,
       range: 0,
       criticalChance: 0,
       criticalMultiplier: 0,
-      ricochetCount: 0,
-      ricochetChance: 0,
       superCriticalChance: 0,
       superCriticalMultiplier: 0,
+      lightningDamage: 0,
+      lightningSpeed: 0,
+      lightningCount: 0,
+      iceDamage: 0,
+      iceSpeed: 0,
+      iceRange: 0,
+      iceSlow: 0,
       health: 0,
       healthRegen: 0,
-      resistance: 0,
       moneyPerEnemy: 0,
-      moneyPerWave: 0,
+      goldMultiplier: 0,
     },
     defense: {
       running: false,
@@ -784,12 +808,16 @@ export function createInitialState(): GameState {
       killsThisWave: 0,
       nextEnemyId: 1,
       nextEnemyProjectileId: 1,
+      nextLightningStrikeId: 1,
       nextDamagePopupId: 1,
       nextMoneyPopupId: 1,
       lastReward: 0,
       shotPulse: 0,
+      lightningCooldown: 0,
+      iceCooldown: 0,
       shots: [],
       enemyProjectiles: [],
+      lightningStrikes: [],
       queuedShots: [],
       tower: {
         id: 'unique',

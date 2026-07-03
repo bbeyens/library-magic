@@ -1,0 +1,4 @@
+interface:
+  display_name: "HUD Counter Popups"
+  short_description: "Stable animated HUD counters and popups"
+  default_prompt: "Use $hud-counter-popups to implement a stable animated resource counter or damage popup in Library Magic."

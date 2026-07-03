@@ -82,8 +82,10 @@ This structure makes the skill easier to install, copy, symlink, and update acro
 5. Recover frame silhouettes from the full sheet.
 6. If needed, remove the background from recovered frame crops.
 7. Normalize all frames onto one shared anchor.
-8. Create contact sheets and GIFs.
-9. Curate a selected-sequence GIF for the strongest motion.
+8. Before adding alternate sheets or mirrored variants, verify one single-source runtime strip in-engine.
+9. Before rebuilding assets for an animation bug, verify runtime playback stability.
+10. Create contact sheets and GIFs.
+11. Curate a selected-sequence GIF for the strongest motion.
 
 ## Why full-sheet recovery matters
 
@@ -98,6 +100,37 @@ So the source of truth should often be:
 - the full generated sheet
 - the dominant foreground components
 - a row/column bucketing pass back to the intended grid
+
+## Runtime variant audit
+
+When a sprite appears to drift in the game but the rendered object is not moving, test the registration before touching game coordinates.
+
+Start with one strip:
+- one source image
+- one fixed cell size
+- one frame count
+- one shared center/baseline anchor
+
+For CSS background sprites, sample the exact column grid. A `384x64` strip is six `64x64` frames, so the background positions are `0%, 20%, 40%, 60%, 80%, 100%`.
+
+Do not add mirrored rendering or alternate sheets until the single strip is stable. If the drift disappears when two alternated sheets become one strip, the variants probably had different visible centers inside their cells.
+
+## Runtime playback audit
+
+When a sprite stays on frame `0`, stops halfway through an action, or only plays part of death/attack at x2/x4, do not immediately remake the sheet.
+
+First verify the engine behavior:
+- one stable runtime node should represent one sprite for the whole animation
+- sorting/layering should only reparent nodes when the order actually changes
+- CSS spritesheet playback should use explicit frame keyframes and discrete timing such as `steps(1, end)`
+- action-state timers and CSS animation durations should match at x1
+- if the simulation runs at x2/x4, CSS sprite durations need the same inverse time scale
+- speed changes must update the CSS time-scale variable live
+- sample `getAnimations()` or `background-position` at two timestamps to confirm the animation is advancing
+
+Two useful diagnoses:
+- If every enemy looks frozen on frame `0`, suspect node rebuild/reparent or class churn before asset cropping.
+- If x1 is correct but x2 stops at half and x4 stops at a quarter, suspect an unscaled CSS duration before sprite frame math.
 
 ## Recommended artifacts
 

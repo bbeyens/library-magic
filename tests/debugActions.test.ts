@@ -51,15 +51,15 @@ const defenseSkillIds: DefenseSkillId[] = [
   'range',
   'criticalChance',
   'criticalMultiplier',
-  'ricochetCount',
-  'ricochetChance',
   'superCriticalChance',
   'superCriticalMultiplier',
+  'lightningDamage',
+  'lightningSpeed',
+  'lightningCount',
   'health',
   'healthRegen',
-  'resistance',
   'moneyPerEnemy',
-  'moneyPerWave',
+  'goldMultiplier',
 ];
 for (const skillId of defenseSkillIds) {
   assert.equal(state.defenseSkills[skillId], defenseSkillMaxLevel(skillId));
@@ -81,6 +81,22 @@ assert.equal(state.blackjack.twentyOneThree.autoEnabled, true);
 
 for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
   assert.equal(state.blackjack.upgradeCells[cellId], blackjackCurrentUpgradeCellMaxLevel(cellId));
+}
+
+const debugResourceState = createInitialState();
+applyAction(debugResourceState, { type: 'grantDebugResources' });
+assert.equal(debugResourceState.mana, 100_000);
+assert.equal(debugResourceState.resources.scales, 100_000);
+assert.equal(debugResourceState.resources.runes, 100_000);
+assert.equal(debugResourceState.resources.spores, 100_000);
+assert.equal(debugResourceState.resources.sigils, 100_000);
+assert.equal(debugResourceState.resources.chips, 100_050);
+assert.equal(debugResourceState.resources.fragments, 100_000);
+assert.equal(debugResourceState.resources.marks, 100_000);
+assert.equal(debugResourceState.resources.minerals, 100_000);
+assert.equal(debugResourceState.resources.gels, 100_000);
+for (const amount of Object.values(debugResourceState.mining.materials)) {
+  assert.equal(amount, 100_000);
 }
 
 applyAction(state, { type: 'resetAllSkills' });
