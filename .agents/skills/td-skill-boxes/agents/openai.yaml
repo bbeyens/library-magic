@@ -1,0 +1,4 @@
+interface:
+  display_name: "TD Skill Boxes"
+  short_description: "Reuse the TD mini-game skill dock layout"
+  default_prompt: "Use $td-skill-boxes to port the TD skill box layout to another Library Magic mini-game."
