@@ -6,15 +6,18 @@ import {
   MINING_BLOCK_SPRITE_TIERS,
   MINING_GRID_COLUMNS,
   MINING_GRID_ROWS,
+  MINING_TERRAIN_LAYER_COUNT,
   miningBlockCrackOverlayForDamage,
   miningBlockMaterialForDepth,
   miningBlockSpriteTierForDepth,
   miningMaterialExchangeValue,
 } from '../src/game/simulation/state.ts';
 
-assert.equal(MINING_GRID_COLUMNS, 7);
-assert.equal(MINING_GRID_ROWS, 7);
-assert.equal(createInitialMiningBlocks().length, 49);
+assert.equal(MINING_GRID_COLUMNS, 6);
+assert.equal(MINING_GRID_ROWS, 6);
+assert.equal(MINING_TERRAIN_LAYER_COUNT, 5);
+assert.equal(createInitialMiningBlocks().length, 36);
+assert.equal(createInitialMiningBlocks()[0]?.layersRemaining, 5);
 
 assert.equal(MINING_BLOCK_SPRITE_TIERS.length, 20);
 assert.equal(miningBlockSpriteTierForDepth(1).spriteIndex, 1);
@@ -61,7 +64,7 @@ for (let breakCount = 0; breakCount < 5; breakCount += 1) {
   applyAction(state, { type: 'digMiningBlock', blockId: 0 });
 }
 
-assert.equal(state.mining.blocks[0]!.depth, 6);
+assert.equal(state.mining.blocks[0]!.depth, 5);
 assert.equal(state.mining.blocks[0]!.material, 'dirt');
 assert.equal(state.mining.materials.dirt > 5, true);
 assert.equal(state.mana, manaBeforeMining);
@@ -73,13 +76,20 @@ applyAction(state, { type: 'exchangeMiningMaterials' });
 assert.equal(state.mining.materials.dirt, 0);
 assert.equal(state.resources.minerals, mineCoinsBeforeMining + dirtBeforeExchange * miningMaterialExchangeValue('dirt'));
 
-for (let breakCount = 0; breakCount < 5; breakCount += 1) {
-  state.mining.blocks[0]!.health = 1;
-  applyAction(state, { type: 'digMiningBlock', blockId: 0 });
+assert.equal(state.mining.terrainCycle, 1);
+assert.equal(state.mining.blocks[0]!.layersRemaining, 0);
+assert.equal(state.mining.blocks[1]!.layersRemaining, 5);
+
+for (let blockIndex = 1; blockIndex < state.mining.blocks.length; blockIndex += 1) {
+  for (let layerBreak = 0; layerBreak < MINING_TERRAIN_LAYER_COUNT; layerBreak += 1) {
+    state.mining.blocks[blockIndex]!.health = 1;
+    applyAction(state, { type: 'digMiningBlock', blockId: blockIndex });
+  }
 }
 
-assert.equal(state.mining.blocks[0]!.depth, 11);
-assert.equal(state.mining.blocks[0]!.material, 'sand');
+assert.equal(state.mining.terrainCycle, 2);
+assert.equal(state.mining.blocks.every((block) => block.layersRemaining === 5), true);
+assert.equal(state.mining.blocks.every((block) => block.depth === 6), true);
 assert.equal(state.mining.materials.dirt > 0, true);
 
 console.log('miningRules ok');

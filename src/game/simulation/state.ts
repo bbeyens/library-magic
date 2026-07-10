@@ -307,6 +307,7 @@ export interface MiningBlock {
   id: number;
   depth: number;
   material: MiningBlockMaterialId;
+  layersRemaining: number;
   health: number;
   maxHealth: number;
   lastHit: number;
@@ -323,6 +324,7 @@ export interface MiningSkillsState {
 export interface MiningState {
   blocks: MiningBlock[];
   materials: Record<MiningMaterialResourceId, number>;
+  terrainCycle: number;
   totalMined: number;
   deepestLayer: number;
   lastReward: number;
@@ -410,8 +412,9 @@ export interface GameState {
 
 export const SNAKE_BASE_GRID_SIZE = 4;
 export const SNAKE_MAX_GRID_SIZE = 9;
-export const MINING_GRID_COLUMNS = 7;
-export const MINING_GRID_ROWS = 7;
+export const MINING_GRID_COLUMNS = 6;
+export const MINING_GRID_ROWS = 6;
+export const MINING_TERRAIN_LAYER_COUNT = 5;
 export const MINING_SPRITE_LAYER_SIZE = 5;
 
 export type MiningBlockMaterialId =
@@ -596,14 +599,16 @@ export function miningBlockCrackOverlayForDamage(
   return { row, column };
 }
 
-export function createInitialMiningBlocks(): MiningBlock[] {
+export function createInitialMiningBlocks(terrainCycle = 1): MiningBlock[] {
+  const startDepth = Math.max(1, Math.floor(terrainCycle - 1) * MINING_TERRAIN_LAYER_COUNT + 1);
   return Array.from({ length: MINING_GRID_COLUMNS * MINING_GRID_ROWS }, (_, id) => {
-    const maxHealth = miningBlockMaxHealth(1);
-    const material = miningBlockMaterialForDepth(1);
+    const maxHealth = miningBlockMaxHealth(startDepth);
+    const material = miningBlockMaterialForDepth(startDepth);
     return {
       id,
-      depth: 1,
+      depth: startDepth,
       material: material.id,
+      layersRemaining: MINING_TERRAIN_LAYER_COUNT,
       health: maxHealth,
       maxHealth,
       lastHit: 0,
@@ -941,6 +946,7 @@ export function createInitialState(): GameState {
     mining: {
       blocks: createInitialMiningBlocks(),
       materials: createInitialMiningMaterials(),
+      terrainCycle: 1,
       totalMined: 0,
       deepestLayer: 1,
       lastReward: 0,
