@@ -1,0 +1,66 @@
+[gd_scene format=3 uid="uid://cpb6ikeus112b"]
+
+[ext_resource type="Script" uid="uid://cmlw1nb8uhfbt" path="res://scripts/Main.gd" id="1_ybtvm"]
+[ext_resource type="Texture2D" uid="uid://gjxf4f3wpjcu" path="res://assets/HUB/forbidden-hub-gameplay-covers-1.jpg" id="2_hub"]
+
+[node name="Main" type="Control" unique_id=551659161]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ybtvm")
+
+[node name="Stage" type="Control" parent="." unique_id=1860628435]
+layout_mode = 1
+offset_right = 1280.0
+offset_bottom = 720.0
+
+[node name="Background" type="TextureRect" parent="Stage" unique_id=304510055]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 5
+stretch_mode = 6
+texture = ExtResource("2_hub")
+
+[node name="Shade" type="ColorRect" parent="Stage" unique_id=1987456655]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.035, 0.023, 0.04, 0.32)
+
+[node name="HudLayer" type="Control" parent="Stage" unique_id=1665880064]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="BookLayer" type="Control" parent="Stage" unique_id=523337041]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PageLayer" type="Control" parent="Stage" unique_id=1537654425]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="RitualPanel" type="PanelContainer" parent="Stage" unique_id=218014059]
+layout_mode = 0

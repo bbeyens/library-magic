@@ -30,7 +30,11 @@ const DEFENSE_SLIME_VISIBLE_BOX_PX = {
 };
 const DEFENSE_SKELETON_VISIBLE_CENTER_OFFSET = {
   x: 0,
-  y: (-32 / DEFENSE_MAP_PIXEL_SIZE) * 100,
+  y: (-24 / DEFENSE_MAP_PIXEL_SIZE) * 100,
+};
+const DEFENSE_SKELETON_PROJECTILE_ORIGIN_OFFSET_PX = {
+  x: 9,
+  y: -30,
 };
 const DEFENSE_GOBLIN_FRAME_SIZE_PX = 64;
 const DEFENSE_GOBLIN_RENDER_WIDTH_PX = 64 * 1.08;
@@ -138,6 +142,22 @@ export function defenseEnemyVisibleCenter(
   return {
     x: clampPercent(position.x + offset.x),
     y: clampPercent(position.y + offset.y),
+  };
+}
+
+export function defenseEnemyImpactPoint(
+  enemy: Pick<DefenseEnemy, 'lane' | 'distance'> & Pick<Partial<DefenseEnemy>, 'kind'>,
+): DefensePoint {
+  return defenseEnemyVisibleCenter(enemy);
+}
+
+export function defenseSkeletonMageProjectileOriginPoint(enemy: Pick<DefenseEnemy, 'lane' | 'distance'>): DefensePoint {
+  const position = defenseEnemyPosition(enemy);
+  const facingScale = position.x <= DEFENSE_CENTER ? 1 : -1;
+
+  return {
+    x: clampPercent(position.x + ((DEFENSE_SKELETON_PROJECTILE_ORIGIN_OFFSET_PX.x * facingScale) / DEFENSE_MAP_PIXEL_SIZE) * 100),
+    y: clampPercent(position.y + (DEFENSE_SKELETON_PROJECTILE_ORIGIN_OFFSET_PX.y / DEFENSE_MAP_PIXEL_SIZE) * 100),
   };
 }
 

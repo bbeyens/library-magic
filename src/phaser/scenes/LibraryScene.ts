@@ -957,7 +957,7 @@ export class LibraryScene extends Phaser.Scene {
       const resourceId = bookResourceId(view.definition);
       const resourceStock = Math.floor(bookResourceStock(state, view.definition));
       const previousStock = this.displayedResourceStocks.get(resourceId);
-      if (previousStock !== undefined && resourceStock > previousStock) {
+      if (state.openBookPanels.length === 0 && previousStock !== undefined && resourceStock > previousStock) {
         this.showResourceHudGain(view, resourceStock - previousStock);
       }
       this.displayedResourceStocks.set(resourceId, resourceStock);

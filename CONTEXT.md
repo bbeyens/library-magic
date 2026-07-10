@@ -65,7 +65,7 @@ The target-clicking Book Mini-Game. It produces Marques by clicking targets, imp
 _Avoid_: Target mode, aim trainer
 
 **Mine des Profondeurs**:
-The digging Book Mini-Game. It breaks Blocs de mine in a 7x7 grid. Blocks use numbered sprite tiers from `public/assets/Block terre`, one sprite for five layers; deeper replacements have more hit points, darker shading, and material-specific rewards that can be exchanged for Pieces de mine.
+The digging Book Mini-Game. It breaks Blocs de mine in a 6x6 isometric terrain. Each cell renders as an independent five-layer tile model with visible top and side depth, so broken front blocks reveal the blocks behind them. When every block in the terrain has been destroyed, the next Terrain de mine cycle starts with the same dimensions and a later depth band.
 _Avoid_: Mining mode, digging app
 
 **Slime Trainer**:
@@ -111,7 +111,7 @@ The unique resource produced by Slime Trainer.
 _Avoid_: Slime points, slime coins, XP
 
 **Bloc de mine**:
-A diggable cell inside Mine des Profondeurs. Each block has hit points, a numbered sprite tier, a light-to-dark shade position inside its five-layer band, and a material such as Terre, Pierre, Sable, Charbon, Fer, Or, Rubis, Lapis, Diamant, Emeraude, or Obsidienne.
+A diggable cell inside Mine des Profondeurs. Each block is an independent isometric tile with up to five visible layers, hit points, a numbered sprite/depth tier, a light-to-dark shade position inside its terrain band, and a material such as Terre, Pierre, Sable, Charbon, Fer, Or, Rubis, Lapis, Diamant, Emeraude, or Obsidienne.
 _Avoid_: Tile, square, rock
 
 **Materiau de mine**:
@@ -119,8 +119,12 @@ The material resource produced when a Bloc de mine breaks. Material resources ar
 _Avoid_: Mana reward, color only
 
 **Profondeur**:
-The escalating layer of a Bloc de mine. Greater Profondeur means the replacement block has more hit points, moves through sprite tiers every five layers, and may cast small neighbor shadows when it is lower than adjacent blocks.
+The escalating layer of a Bloc de mine. Greater Profondeur means the next visible layer has more hit points, moves through sprite tiers every five layers, and may cast small neighbor shadows when it is lower than adjacent blocks.
 _Avoid_: Stage, wave, level
+
+**Terrain de mine**:
+A full 6x6 set of five-layer Blocs de mine. Destroying all five layers across all 36 blocks advances to the next Terrain de mine cycle while preserving the same tile dimensions for later recolors.
+_Avoid_: One slab, background board, whole floor
 
 ### Progression
 

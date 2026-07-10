@@ -20,6 +20,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.serpent.unlocked = false;
   for (let click = 0; click < 8; click += 1) {
     applyAction(state, { type: 'chargeMana' });
   }
@@ -31,6 +32,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.typing.unlocked = false;
   applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });
   state.mana = 40;
   state.resources.scales = 10;
@@ -55,6 +57,8 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.typing.unlocked = false;
+  state.books.herbarium.unlocked = false;
   applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });
   state.mana = 40;
   state.resources.scales = 10;
@@ -75,6 +79,8 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.typing.unlocked = false;
+  state.books.serpent.unlocked = false;
   state.forbiddenGrimoire.level = 2;
   state.forbiddenGrimoire.keys = 1;
   applyAction(state, { type: 'selectForbiddenSealBook', bookId: 'typing' });

@@ -1,0 +1,73 @@
+[gd_scene load_steps=2 format=3 uid="uid://library_magic_book_page"]
+
+[ext_resource type="Script" path="res://scenes/books/book_page.gd" id="1_page"]
+
+[node name="BookPage" type="PanelContainer"]
+custom_minimum_size = Vector2(620, 420)
+offset_right = 620.0
+offset_bottom = 420.0
+script = ExtResource("1_page")
+
+[node name="MarginContainer" type="MarginContainer" parent="."]
+layout_mode = 2
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 18
+
+[node name="Rows" type="VBoxContainer" parent="MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="TitleLabel" type="Label" parent="MarginContainer/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "Livre"
+
+[node name="SubtitleLabel" type="Label" parent="MarginContainer/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Sous-titre"
+autowrap_mode = 3
+
+[node name="StatsLabel" type="Label" parent="MarginContainer/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Ressource"
+
+[node name="ContentLabel" type="Label" parent="MarginContainer/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_font_sizes/font_size = 16
+text = "Page en construction"
+autowrap_mode = 3
+
+[node name="FeedbackLabel" type="Label" parent="MarginContainer/Rows"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "Pret"
+autowrap_mode = 3
+
+[node name="Actions" type="HBoxContainer" parent="MarginContainer/Rows"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="ActionButton" type="Button" parent="MarginContainer/Rows/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 42)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 15
+text = "Agir"
+
+[node name="CloseButton" type="Button" parent="MarginContainer/Rows/Actions"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 42)
+layout_mode = 2
+theme_override_font_sizes/font_size = 15
+text = "Fermer"

@@ -1,0 +1,4 @@
+interface:
+  display_name: "TD Performance Debug"
+  short_description: "Diagnose TD FPS drops and cleanup leaks"
+  default_prompt: "Use $td-performance-debug to diagnose a progressive FPS drop in Bastion Arcanique TD."

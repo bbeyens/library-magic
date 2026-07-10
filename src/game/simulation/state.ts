@@ -10,17 +10,96 @@ export interface BookState {
   charge: number;
 }
 
+export type ManaIdleCompanionSkillId =
+  | 'idleGlock'
+  | 'idleAk47'
+  | 'idleBazooka'
+  | 'idleBow'
+  | 'idleSword'
+  | 'idleOrangeCat'
+  | 'idlePickaxe';
+
+export type ManaResearchSkillId =
+  | 'researchClickPower'
+  | 'researchMeowKnight'
+  | 'researchIdleGlock'
+  | 'researchIdleAk47'
+  | 'researchIdleBazooka'
+  | 'researchIdleBow'
+  | 'researchIdleSword'
+  | 'researchIdleOrangeCat'
+  | 'researchIdlePickaxe';
+
+export interface ManaActiveResearch {
+  skillId: ManaResearchSkillId;
+  elapsed: number;
+  duration: number;
+}
+
 export interface ManaSkillsState {
   power: number;
-  automation: number;
+  clickMultiplier: number;
+  research: number;
+  clickResearch: number;
+  autoClicker: number;
+  multiAutoClicker: number;
+  xpOrbChance: number;
+  yellowOrbChance: number;
+  greenOrbChance: number;
+  blueOrbChance: number;
+  xpValue: number;
+  levelUpEffect: number;
+  holdClick: number;
+  allyFindOrb: number;
+  meowKnight: number;
+  idleGlock: number;
+  idleAk47: number;
+  idleBazooka: number;
+  idleBow: number;
+  idleSword: number;
+  idleOrangeCat: number;
+  idlePickaxe: number;
+  researchClickPower: number;
+  researchMeowKnight: number;
+  researchIdleGlock: number;
+  researchIdleAk47: number;
+  researchIdleBazooka: number;
+  researchIdleBow: number;
+  researchIdleSword: number;
+  researchIdleOrangeCat: number;
+  researchIdlePickaxe: number;
   criticalHit: number;
   criticalEffect: number;
-  extraWands: number;
-  automationTimer: number;
-  autoCastCount: number;
-  lastAutoCastGain: number;
+  activeResearch: ManaActiveResearch | null;
+  autoClickTimer: number;
+  lastAutoClickCount: number;
+  meowKnightTimer: number;
+  lastMeowKnightAttackCount: number;
+  idleCompanionTimers: Partial<Record<ManaIdleCompanionSkillId, number>>;
+  idleCompanionAttackCounts: Partial<Record<ManaIdleCompanionSkillId, number>>;
   lastManaGainCritical: boolean;
-  lastAutoCastCritical: boolean;
+}
+
+export type ManaOrbKind = 'red' | 'yellow' | 'green' | 'blue';
+
+export interface ManaXpOrb {
+  id: number;
+  kind: ManaOrbKind;
+  x: number;
+  y: number;
+  value: number;
+}
+
+export interface ManaCrystalState {
+  xp: number;
+  harvestedMana: number;
+  xpOrb: ManaXpOrb | null;
+  lastCollectedXpOrb: ManaXpOrb | null;
+  nextXpOrbId: number;
+  lastXpGain: number;
+  lastXpOrbSpawned: boolean;
+  holdClickActive: boolean;
+  holdClickTimer: number;
 }
 
 export interface SnakeSkillsState {
@@ -45,7 +124,7 @@ export interface SnakeState {
   body: SnakeCell[];
   direction: SnakeDirection;
   nextDirection: SnakeDirection;
-  food: SnakeCell;
+  food: SnakeCell | null;
   bonusFood: SnakeBonusFood | null;
   moveTimer: number;
   moveFrame: number;
@@ -77,6 +156,7 @@ export interface DefenseEnemy {
   attackAnimationTimer?: number;
   attackProjectileDelay?: number;
   attackDamageDelay?: number;
+  lastHitSource?: DefenseHitFeedbackSource;
 }
 
 export interface DefenseShot {
@@ -111,13 +191,16 @@ export interface DefenseQueuedShot {
 }
 
 export type DefenseDamagePopupKind = 'normal' | 'critical' | 'superCritical';
+export type DefenseHitFeedbackSource = 'normal' | 'lightning' | 'ice';
 
 export interface DefenseDamagePopup {
   id: number;
   lane: number;
   distance: number;
+  targetKind?: DefenseEnemy['kind'];
   amount: number;
   kind: DefenseDamagePopupKind;
+  source: DefenseHitFeedbackSource;
   timer: number;
 }
 
@@ -126,7 +209,10 @@ export interface DefenseMoneyPopup {
   lane: number;
   distance: number;
   amount: number;
+  coinCount: number;
   combo: number;
+  delay: number;
+  counterDelay?: number;
   timer: number;
 }
 
@@ -156,6 +242,7 @@ export interface DefenseSkillsState {
   healthRegen: number;
   moneyPerEnemy: number;
   goldMultiplier: number;
+  baseSpeed: number;
 }
 
 export type DefenseSpeedMultiplier = 1 | 2 | 4;
@@ -163,23 +250,34 @@ export type DefenseSpeedMultiplier = 1 | 2 | 4;
 export interface DefenseState {
   running: boolean;
   paused: boolean;
+  deathTimer: number;
   wave: number;
+  level: number;
+  xp: number;
+  lastXpGain: number;
   speedMultiplier: DefenseSpeedMultiplier;
+  baseSpeedEnabled: boolean;
   debugTowerHealthEnabled: boolean;
   towerHealth: number;
   score: number;
   best: number;
   spawnTimer: number;
+  nextSpawnDelay: number;
   spawnedThisWave: number;
   killsThisWave: number;
+  cleanupPulse: number;
   nextEnemyId: number;
   nextEnemyProjectileId: number;
   nextLightningStrikeId: number;
   nextDamagePopupId: number;
   nextMoneyPopupId: number;
+  lastGoldBoostWave: number;
   lastReward: number;
   shotPulse: number;
   lightningCooldown: number;
+  lightningBurstCharges: number;
+  lightningBurstCooldown: number;
+  lightningBurstTargetIds: number[];
   iceCooldown: number;
   shots: DefenseShot[];
   enemyProjectiles: DefenseEnemyProjectile[];
@@ -307,6 +405,7 @@ export interface MiningBlock {
   id: number;
   depth: number;
   material: MiningBlockMaterialId;
+  layersRemaining: number;
   health: number;
   maxHealth: number;
   lastHit: number;
@@ -323,6 +422,7 @@ export interface MiningSkillsState {
 export interface MiningState {
   blocks: MiningBlock[];
   materials: Record<MiningMaterialResourceId, number>;
+  terrainCycle: number;
   totalMined: number;
   deepestLayer: number;
   lastReward: number;
@@ -352,7 +452,14 @@ export interface SlimeTrainerState {
 }
 
 export type SnakeDirection = 'up' | 'right' | 'down' | 'left';
-export type SnakeBonusFruitType = 'orange' | 'pear' | 'banana';
+export type SnakeBonusFruitType =
+  | 'round-blue'
+  | 'round-green'
+  | 'round-pink'
+  | 'diamond-red'
+  | 'diamond-blue'
+  | 'diamond-green'
+  | 'diamond-pink';
 export type RuneTypingFeedback = 'idle' | 'correct' | 'mistake' | 'complete';
 export type HundredOptionId = 'A' | 'B' | 'C' | 'D';
 export type HundredOutcome = 'idle' | 'rolled' | 'won' | 'bust';
@@ -393,6 +500,7 @@ export interface GameState {
   openBookPanels: OpenBookPanel[];
   books: Record<BookId, BookState>;
   manaSkills: ManaSkillsState;
+  manaCrystal: ManaCrystalState;
   snakeSkills: SnakeSkillsState;
   snake: SnakeState;
   runeTyping: RuneTypingState;
@@ -410,8 +518,9 @@ export interface GameState {
 
 export const SNAKE_BASE_GRID_SIZE = 4;
 export const SNAKE_MAX_GRID_SIZE = 9;
-export const MINING_GRID_COLUMNS = 7;
-export const MINING_GRID_ROWS = 7;
+export const MINING_GRID_COLUMNS = 6;
+export const MINING_GRID_ROWS = 6;
+export const MINING_TERRAIN_LAYER_COUNT = 5;
 export const MINING_SPRITE_LAYER_SIZE = 5;
 
 export type MiningBlockMaterialId =
@@ -528,7 +637,7 @@ export function createStartingSnakeBody(gridSize: number): SnakeCell[] {
   ];
 }
 
-export function randomSnakeFood(body: SnakeCell[], gridSize: number): SnakeCell {
+export function randomSnakeFood(body: SnakeCell[], gridSize: number): SnakeCell | null {
   const occupiedCells = new Set(body.map(cellKey));
   const availableCells: SnakeCell[] = [];
 
@@ -542,7 +651,7 @@ export function randomSnakeFood(body: SnakeCell[], gridSize: number): SnakeCell 
   }
 
   if (availableCells.length === 0) {
-    return { x: 0, y: 0 };
+    return null;
   }
 
   return availableCells[Math.floor(Math.random() * availableCells.length)];
@@ -596,14 +705,16 @@ export function miningBlockCrackOverlayForDamage(
   return { row, column };
 }
 
-export function createInitialMiningBlocks(): MiningBlock[] {
+export function createInitialMiningBlocks(terrainCycle = 1): MiningBlock[] {
+  const startDepth = Math.max(1, Math.floor(terrainCycle - 1) * MINING_TERRAIN_LAYER_COUNT + 1);
   return Array.from({ length: MINING_GRID_COLUMNS * MINING_GRID_ROWS }, (_, id) => {
-    const maxHealth = miningBlockMaxHealth(1);
-    const material = miningBlockMaterialForDepth(1);
+    const maxHealth = miningBlockMaxHealth(startDepth);
+    const material = miningBlockMaterialForDepth(startDepth);
     return {
       id,
-      depth: 1,
+      depth: startDepth,
       material: material.id,
+      layersRemaining: MINING_TERRAIN_LAYER_COUNT,
       health: maxHealth,
       maxHealth,
       lastHit: 0,
@@ -663,77 +774,119 @@ export function createInitialState(): GameState {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       typing: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       herbarium: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       defense: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       blackjack: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       hundred: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       mine: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       targets: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
       slimeTrainer: {
         level: 1,
         automation: 0,
         pinned: false,
-        unlocked: false,
+        unlocked: true,
         charge: 0,
       },
     },
     manaSkills: {
       power: 0,
-      automation: 0,
+      clickMultiplier: 0,
+      research: 0,
+      clickResearch: 0,
+      autoClicker: 0,
+      multiAutoClicker: 0,
+      xpOrbChance: 0,
+      yellowOrbChance: 0,
+      greenOrbChance: 0,
+      blueOrbChance: 0,
+      xpValue: 0,
+      levelUpEffect: 0,
+      holdClick: 0,
+      allyFindOrb: 0,
+      meowKnight: 0,
+      idleGlock: 0,
+      idleAk47: 0,
+      idleBazooka: 0,
+      idleBow: 0,
+      idleSword: 0,
+      idleOrangeCat: 0,
+      idlePickaxe: 0,
+      researchClickPower: 0,
+      researchMeowKnight: 0,
+      researchIdleGlock: 0,
+      researchIdleAk47: 0,
+      researchIdleBazooka: 0,
+      researchIdleBow: 0,
+      researchIdleSword: 0,
+      researchIdleOrangeCat: 0,
+      researchIdlePickaxe: 0,
       criticalHit: 0,
       criticalEffect: 0,
-      extraWands: 0,
-      automationTimer: 0,
-      autoCastCount: 0,
-      lastAutoCastGain: 0,
+      activeResearch: null,
+      autoClickTimer: 0,
+      lastAutoClickCount: 0,
+      meowKnightTimer: 0,
+      lastMeowKnightAttackCount: 0,
+      idleCompanionTimers: {},
+      idleCompanionAttackCounts: {},
       lastManaGainCritical: false,
-      lastAutoCastCritical: false,
+    },
+    manaCrystal: {
+      xp: 0,
+      harvestedMana: 0,
+      xpOrb: null,
+      lastCollectedXpOrb: null,
+      nextXpOrbId: 1,
+      lastXpGain: 0,
+      lastXpOrbSpawned: false,
+      holdClickActive: false,
+      holdClickTimer: 0,
     },
     snakeSkills: {
       speed: 0,
@@ -793,27 +946,39 @@ export function createInitialState(): GameState {
       healthRegen: 0,
       moneyPerEnemy: 0,
       goldMultiplier: 0,
+      baseSpeed: 0,
     },
     defense: {
       running: false,
       paused: false,
+      deathTimer: 0,
       wave: 1,
+      level: 0,
+      xp: 0,
+      lastXpGain: 0,
       speedMultiplier: 1,
+      baseSpeedEnabled: true,
       debugTowerHealthEnabled: false,
-      towerHealth: 10,
+      towerHealth: 3,
       score: 0,
       best: 0,
       spawnTimer: 0,
+      nextSpawnDelay: 0,
       spawnedThisWave: 0,
       killsThisWave: 0,
+      cleanupPulse: 0,
       nextEnemyId: 1,
       nextEnemyProjectileId: 1,
       nextLightningStrikeId: 1,
       nextDamagePopupId: 1,
       nextMoneyPopupId: 1,
+      lastGoldBoostWave: 0,
       lastReward: 0,
       shotPulse: 0,
       lightningCooldown: 0,
+      lightningBurstCharges: 0,
+      lightningBurstCooldown: 0,
+      lightningBurstTargetIds: [],
       iceCooldown: 0,
       shots: [],
       enemyProjectiles: [],
@@ -941,6 +1106,7 @@ export function createInitialState(): GameState {
     mining: {
       blocks: createInitialMiningBlocks(),
       materials: createInitialMiningMaterials(),
+      terrainCycle: 1,
       totalMined: 0,
       deepestLayer: 1,
       lastReward: 0,

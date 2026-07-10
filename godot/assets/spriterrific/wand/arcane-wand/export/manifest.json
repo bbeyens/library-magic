@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "generator": "scripts/generate-wand-sprite.mjs",
+  "action": "cast",
+  "direction": "e",
+  "mode": "deterministic-pixel-art",
+  "spritesheet": "spritesheet.png",
+  "frameWidth": 96,
+  "frameHeight": 32,
+  "columns": 4,
+  "rows": 1,
+  "frames": 4,
+  "fps": 12,
+  "publicAssetReady": true
+}

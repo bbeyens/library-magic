@@ -1,11 +1,21 @@
+@font-face {
+  font-family: "M5x7";
+  src: url("/assets/fonts/m5x7.ttf") format("truetype");
+  font-weight: 400 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
   color-scheme: dark;
-  font-family: Georgia, "Times New Roman", serif;
+  --game-font: "M5x7", Georgia, "Times New Roman", serif;
+  font-family: var(--game-font);
   background: #0e0b0f;
   color: #f2dfbd;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
   --wood: #4e3326;
   --wood-dark: #25181c;
   --line: #b3835a;
@@ -20,6 +30,15 @@
 
 * {
   box-sizing: border-box;
+  font-smooth: never;
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--game-font);
 }
 
 body {
@@ -126,6 +145,67 @@ button {
 
 #frame-counter[data-status="low"] {
   color: rgba(255, 132, 132, 0.96);
+}
+
+#debug-monitor {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 70;
+  width: 300px;
+  padding: 10px;
+  border: 1px solid rgba(142, 220, 255, 0.34);
+  border-radius: 8px;
+  color: rgba(235, 250, 255, 0.9);
+  background: rgba(4, 8, 13, 0.78);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+    0 14px 34px rgba(0, 0, 0, 0.38);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.15;
+  letter-spacing: 0;
+  pointer-events: none;
+  user-select: none;
+}
+
+#debug-monitor[hidden] {
+  display: none;
+}
+
+#debug-monitor header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid rgba(142, 220, 255, 0.2);
+}
+
+#debug-monitor header strong {
+  color: #9ee5ff;
+  font-size: 12px;
+}
+
+#debug-monitor header span {
+  color: rgba(235, 250, 255, 0.52);
+}
+
+.debug-monitor-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  gap: 4px 10px;
+}
+
+.debug-monitor-label {
+  color: rgba(235, 250, 255, 0.62);
+}
+
+.debug-monitor-grid b {
+  min-width: 64px;
+  color: #f4f8ff;
+  font-weight: 700;
+  text-align: right;
 }
 
 .screen-vignette {
@@ -247,17 +327,17 @@ button {
   user-select: none;
 }
 
-.book-panel-close,
-.book-panel-size {
+.book-panel-close {
   position: absolute;
   z-index: 6;
   width: 30px;
   height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
-  color: #f7ddb2;
-  background: #82583a;
+  border-radius: 16px;
+  color: #111111;
+  font-size: 16px;
+  background: #ffb59e;
   box-shadow:
     inset 0 -3px 0 rgba(0, 0, 0, 0.22),
     0 3px 8px rgba(52, 34, 26, 0.24);
@@ -272,19 +352,8 @@ button {
   right: 10px;
 }
 
-.book-panel-size {
-  right: 8px;
-  bottom: 8px;
-  border-radius: 8px 4px 10px 4px;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.book-panel-close:hover,
-.book-panel-size:hover {
-  background: #956642;
+.book-panel-close:hover {
+  background: #ffc2af;
 }
 
 .book-page-header {
@@ -521,7 +590,7 @@ button {
 
 .mini-skill-popover .compact-upgrade-entry span {
   color: #f1fbff;
-  font-size: 20px;
+  font-size: 16px;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.18);
 }
 
@@ -1692,8 +1761,8 @@ button.compact-upgrade-entry {
   cursor: pointer;
 }
 
-.skill-shop-card:hover,
-.skill-shop-card:focus-visible {
+.skill-shop-card:hover:not(:disabled):not(.is-unaffordable):not(.is-locked),
+.skill-shop-card:focus-visible:not(:disabled):not(.is-unaffordable):not(.is-locked) {
   transform: translateY(-1px);
   filter: brightness(1.06);
 }
@@ -1754,10 +1823,25 @@ button.compact-upgrade-entry {
 .skill-shop-card-topline {
   min-width: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   grid-column: 1 / -1;
-  align-items: start;
+  align-items: center;
   gap: 6px;
+}
+
+.skill-shop-card-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: #ffd9c0;
+  font-size: 17px;
+  font-weight: 950;
+  line-height: 1;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.7);
 }
 
 .skill-shop-card-topline strong {
@@ -1800,7 +1884,7 @@ button.compact-upgrade-entry {
   width: 24px;
   display: grid;
   place-items: center;
-  font-size: 20px;
+  font-size: 16px;
   line-height: 1;
   text-shadow: 0 2px 0 #000000;
 }
@@ -1917,6 +2001,11 @@ button.compact-upgrade-entry {
   box-shadow:
     inset 0 -5px 0 rgba(0, 0, 0, 0.2),
     0 4px 0 rgba(0, 0, 0, 0.34);
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    filter 120ms ease,
+    transform 160ms cubic-bezier(0.2, 0.86, 0.24, 1);
 }
 
 .skill-shop-tab.is-attack {
@@ -1937,10 +2026,23 @@ button.compact-upgrade-entry {
     linear-gradient(180deg, #ffc400, #a97809);
 }
 
+.skill-shop-tab.is-research {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 46%),
+    linear-gradient(180deg, #ff9d2e, #ad5b11);
+}
+
 .skill-shop-tab.is-selected {
   color: #ffffff;
   transform: translateY(-3px);
   filter: brightness(1.08);
+  border-color: rgba(255, 244, 188, 0.95);
+  box-shadow:
+    inset 0 -5px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 4px 0 rgba(0, 0, 0, 0.34),
+    0 0 0 2px rgba(255, 244, 188, 0.48),
+    0 0 18px rgba(255, 220, 118, 0.52);
 }
 
 .skill-shop-tab span {
@@ -2242,8 +2344,14 @@ button.upgrade-entry {
 }
 
 .book-overlay[data-book-id="mana"] {
+  --mana-arena-size: 480px;
+  width: min(var(--mana-arena-size), calc(100cqw - 16px));
+  aspect-ratio: auto;
+  height: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
   color: #f2dfbd;
-  border-color: rgba(38, 42, 48, 0.92);
   background: #050407;
   box-shadow:
     inset 0 0 0 2px rgba(178, 229, 255, 0.08),
@@ -2251,11 +2359,32 @@ button.upgrade-entry {
     0 18px 36px rgba(0, 0, 0, 0.44);
 }
 
+.book-overlay[data-book-id="mana"].panel-size-large {
+  --panel-max-width: min(var(--mana-arena-size), calc(100cqw - 8px));
+  width: var(--panel-max-width);
+  height: auto;
+  aspect-ratio: auto;
+}
+
+.book-overlay[data-book-id="mana"].panel-size-large.is-single-open-panel:not(.is-drag-positioned) {
+  left: calc((100cqw - var(--panel-max-width)) / 2);
+}
+
 .book-overlay[data-book-id="mana"] .book-page-header {
+  position: absolute;
+  left: clamp(10px, 2.5cqw, 18px);
+  top: clamp(10px, 2.5cqw, 18px);
+  z-index: 0;
   background: transparent;
+  pointer-events: none;
 }
 
 .book-overlay[data-book-id="mana"] .book-page-body {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+  z-index: 1;
   background: #050407;
 }
 
@@ -2268,13 +2397,14 @@ button.upgrade-entry {
 }
 
 .book-overlay[data-book-id="serpent"] {
-  width: min(var(--panel-width, var(--panel-max-width)), var(--panel-max-width), calc(100cqh - 24px), calc(100cqw - 112px));
-  aspect-ratio: 1 / 1;
+  --snake-arena-size: 480px;
+  width: min(var(--panel-width, var(--snake-arena-size)), var(--panel-max-width), calc(100cqw - 112px));
+  aspect-ratio: auto;
   height: auto;
   padding: 0;
   border: 0;
   border-radius: 8px;
-  background: #43536b;
+  background: #071014;
 }
 
 .book-overlay[data-book-id="blackjack"] {
@@ -2287,14 +2417,16 @@ button.upgrade-entry {
 }
 
 .book-overlay[data-book-id="mine"] {
-  width: min(var(--panel-width, var(--panel-max-width)), var(--panel-max-width), calc(100cqh - 24px), calc(100cqw - 112px));
-  aspect-ratio: 1 / 1;
+  --mine-arena-size: 480px;
+  width: min(var(--mine-arena-size), calc(100cqw - 16px));
+  aspect-ratio: auto;
   height: auto;
   padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 0;
   color: #ece5d0;
-  background: #272a28;
+  background: transparent;
+  box-shadow: none;
 }
 
 .book-overlay[data-book-id="mine"] .book-page-body {
@@ -2308,6 +2440,7 @@ button.upgrade-entry {
   z-index: 9;
 }
 
+.book-overlay[data-book-id="mana"] .book-page-body,
 .book-overlay[data-book-id="defense"] .book-page-body,
 .book-overlay[data-book-id="blackjack"] .book-page-body,
 .book-overlay[data-book-id="hundred"] .book-page-body,
@@ -2320,7 +2453,17 @@ button.upgrade-entry {
 }
 
 .book-overlay[data-book-id="serpent"] .book-page-body {
-  inset: 0;
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.book-overlay[data-book-id="mana"] .book-page-body {
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
 }
 
 .book-overlay[data-book-id="blackjack"] .book-page-body {
@@ -2335,42 +2478,45 @@ button.upgrade-entry {
 }
 
 .book-overlay[data-book-id="serpent"] .book-page-header {
-  position: absolute;
-  left: clamp(10px, 2.5cqw, 18px);
-  top: clamp(10px, 2.5cqw, 18px);
-  z-index: 9;
+  display: none;
 }
 
+.book-overlay[data-book-id="mana"] .book-panel-close,
 .book-overlay[data-book-id="defense"] .book-panel-close,
-.book-overlay[data-book-id="defense"] .book-panel-size,
 .book-overlay[data-book-id="blackjack"] .book-panel-close,
-.book-overlay[data-book-id="blackjack"] .book-panel-size,
 .book-overlay[data-book-id="hundred"] .book-panel-close,
-.book-overlay[data-book-id="hundred"] .book-panel-size,
 .book-overlay[data-book-id="mine"] .book-panel-close,
-.book-overlay[data-book-id="mine"] .book-panel-size,
 .book-overlay[data-book-id="targets"] .book-panel-close,
-.book-overlay[data-book-id="targets"] .book-panel-size,
-.book-overlay[data-book-id="serpent"] .book-panel-close,
-.book-overlay[data-book-id="serpent"] .book-panel-size {
+.book-overlay[data-book-id="serpent"] .book-panel-close {
   z-index: 8;
-}
-
-.book-overlay[data-book-id="hundred"] .book-panel-size {
-  top: 44px;
-  right: 8px;
-  bottom: auto;
 }
 
 .mana-panel {
   position: relative;
   display: flex;
-  flex: 1;
-  justify-content: center;
-  align-items: center;
+  flex-direction: column;
+  flex: 0 0 auto;
   min-height: 0;
+  width: 100%;
+  height: auto;
   overflow: hidden;
   border-radius: 8px;
+  background: #102632;
+}
+
+.mana-crystal-arena {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  width: 100%;
+  height: min(var(--mana-arena-size, 480px), calc(100cqw - 16px));
+  max-height: none;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  overflow: hidden;
+  border: 0;
+  border-radius: 8px 8px 0 0;
   background:
     radial-gradient(circle at 50% 73%, rgba(118, 224, 255, 0.26), transparent 18%),
     radial-gradient(circle at 50% 50%, rgba(159, 216, 255, 0.17), transparent 34%),
@@ -2382,15 +2528,15 @@ button.upgrade-entry {
   background-size: cover;
 }
 
-.mana-panel::before,
-.mana-panel::after {
+.mana-crystal-arena::before,
+.mana-crystal-arena::after {
   content: "";
   position: absolute;
   inset: 0;
   pointer-events: none;
 }
 
-.mana-panel::before {
+.mana-crystal-arena::before {
   z-index: 0;
   background:
     radial-gradient(circle at 16% 18%, rgba(255, 255, 255, 0.5) 0 1px, transparent 2px),
@@ -2400,7 +2546,7 @@ button.upgrade-entry {
   opacity: 0.86;
 }
 
-.mana-panel::after {
+.mana-crystal-arena::after {
   z-index: 1;
   box-shadow:
     inset 0 0 80px rgba(0, 0, 0, 0.36),
@@ -2409,28 +2555,25 @@ button.upgrade-entry {
 
 .mana-counter-box {
   position: absolute;
-  top: 14px;
+  top: clamp(54px, 13cqw, 70px);
   left: 50%;
   z-index: 8;
   display: grid;
-  min-width: 172px;
-  padding: 8px 16px 9px;
-  border: 1px solid rgba(235, 249, 255, 0.24);
-  border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(12, 18, 27, 0.72), rgba(4, 6, 11, 0.52)),
-    radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.2), transparent 64%);
-  box-shadow:
-    0 12px 28px rgba(0, 0, 0, 0.32),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   color: #f7fdff;
   text-align: center;
   text-shadow:
-    0 2px 0 rgba(0, 0, 0, 0.62),
-    0 0 12px rgba(181, 235, 255, 0.42);
+    0 3px 0 rgba(0, 0, 0, 0.72),
+    0 0 12px rgba(181, 235, 255, 0.52),
+    0 0 26px rgba(88, 192, 255, 0.28);
   transform: translateX(-50%);
   pointer-events: none;
-  backdrop-filter: blur(8px);
+  backdrop-filter: none;
 }
 
 .mana-counter-box strong {
@@ -2451,6 +2594,374 @@ button.upgrade-entry {
   color: #ffffff;
 }
 
+.mana-xp-bar {
+  position: absolute;
+  left: calc(clamp(8px, 2cqw, 14px) + 20px);
+  top: calc(clamp(8px, 2cqw, 14px) + 20px);
+  z-index: 92;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #ffe6a8;
+  background: transparent;
+  box-shadow: none;
+  isolation: isolate;
+  pointer-events: auto;
+  overflow: visible;
+}
+
+.mana-xp-badge {
+  position: relative;
+  z-index: 13;
+  width: clamp(38px, 8.16cqw, 55px);
+  height: clamp(38px, 8.16cqw, 55px);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 2px solid rgba(42, 28, 18, 0.92);
+  border-radius: 50%;
+  color: #ffe08a;
+  background:
+    conic-gradient(#ffdd6e var(--mana-xp-progress, 0%), rgba(36, 24, 18, 0.92) 0),
+    #2a1c12;
+  box-shadow:
+    0 0 0 2px rgba(224, 179, 79, 0.78),
+    inset 0 0 0 1px rgba(255, 244, 178, 0.18),
+    inset 0 0 8px rgba(0, 0, 0, 0.54),
+    0 1px 0 rgba(255, 244, 178, 0.16);
+  pointer-events: auto;
+}
+
+.mana-xp-badge::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  z-index: 0;
+  border-radius: 50%;
+  background: #2a1c12;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.58);
+}
+
+.mana-xp-badge strong {
+  position: relative;
+  z-index: 1;
+  color: #ffe08a;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.mana-discovered-gems {
+  position: absolute;
+  inset: -12px;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.mana-discovered-gem {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16px;
+  aspect-ratio: 1;
+  background-image: var(--mana-gem-image);
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  image-rendering: pixelated;
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--mana-gem-angle, 0deg))
+    translate(34px)
+    rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+    scale(1);
+  transform-origin: 50% 50%;
+  filter: drop-shadow(0 2px 1px rgba(0, 0, 0, 0.5));
+  animation: none;
+}
+
+.mana-discovered-gem.is-pending-dock {
+  opacity: 0;
+  animation: none;
+}
+
+.mana-discovered-gem.is-docking {
+  animation: mana-discovered-gem-dock 260ms ease-out both;
+}
+
+.mana-xp-badge.is-gem-docking {
+  animation: mana-xp-badge-gem-pulse 320ms ease-out both;
+}
+
+.mana-gem-flight,
+.mana-gem-pulse,
+.mana-gem-spark {
+  position: absolute;
+  z-index: 16;
+  pointer-events: none;
+}
+
+.mana-gem-flight {
+  left: 0;
+  top: 0;
+  image-rendering: pixelated;
+  will-change: transform, opacity;
+  filter: drop-shadow(0 4px 2px rgba(0, 0, 0, 0.42));
+}
+
+.mana-gem-showcase-dim,
+.mana-gem-showcase-rays {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+}
+
+.mana-gem-showcase-dim {
+  inset: 0;
+  z-index: 78;
+  background: #000;
+}
+
+.mana-gem-showcase-rays {
+  z-index: 79;
+  border-radius: 50%;
+  background: repeating-conic-gradient(
+    rgba(255, 226, 140, 0.22) 0 11deg,
+    transparent 11deg 26deg
+  );
+  -webkit-mask: radial-gradient(circle, #000 0 34%, transparent 62%);
+  mask: radial-gradient(circle, #000 0 34%, transparent 62%);
+  animation: mana-gem-showcase-spin 22s linear infinite;
+}
+
+.mana-gem-flight.is-showcasing {
+  z-index: 80;
+  filter:
+    drop-shadow(0 0 18px rgba(255, 232, 158, 0.78))
+    drop-shadow(0 6px 3px rgba(0, 0, 0, 0.45));
+}
+
+.mana-gem-pulse {
+  border: 2px solid #ffe89a;
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.mana-gem-spark {
+  width: 5px;
+  height: 5px;
+  border-radius: 2px;
+}
+
+.mana-xp-body {
+  position: absolute;
+  left: calc(100% + 12px);
+  top: 4px;
+  z-index: 120;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 255px;
+  padding: 5px 10px 7px;
+  border: 1px solid rgba(224, 179, 79, 0.66);
+  border-radius: 8px;
+  background: rgba(20, 14, 10, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 170, 0.12),
+    0 5px 12px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: translate(-4px, 0);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.mana-xp-bar:hover .mana-xp-body,
+.mana-xp-bar:focus-visible .mana-xp-body,
+.mana-xp-bar:focus-within .mana-xp-body,
+.mana-xp-badge:hover + .mana-xp-body,
+.mana-xp-badge:focus-visible + .mana-xp-body {
+  opacity: 1;
+  transform: translate(0, 0);
+  visibility: visible;
+}
+
+.mana-xp-bar:hover,
+.mana-xp-bar:focus-visible,
+.mana-xp-bar:focus-within {
+  z-index: 140;
+}
+
+.mana-xp-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  min-width: 0;
+  color: #e5c98a;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.mana-xp-top span {
+  display: block;
+  min-width: 0;
+  color: #e5c98a;
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.mana-xp-top span b {
+  color: #fff0af;
+  font-weight: 900;
+}
+
+.mana-xp-top strong {
+  min-width: 0;
+  color: #fff0af;
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.mana-xp-track {
+  position: relative;
+  display: block;
+  min-width: 0;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid #000000;
+  border-radius: 4px;
+  background: #241812;
+}
+
+.mana-xp-track span {
+  content: "";
+  position: absolute;
+  inset: 0;
+  right: auto;
+  width: var(--mana-xp-fill, 0%);
+  border-radius: 3px;
+  background:
+    linear-gradient(#ffdd6e, #e0a83a);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: width 250ms ease-out;
+}
+
+.mana-xp-effects {
+  display: flex;
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 5px;
+  color: #8dff70;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  white-space: nowrap;
+}
+
+.mana-xp-effects span {
+  color: #8dff70;
+  font-size: 16px;
+}
+
+.mana-xp-bar.is-xp-gaining .mana-xp-track span {
+  animation: mana-xp-fill-pulse 360ms cubic-bezier(0.18, 0.88, 0.26, 1) both;
+}
+
+.mana-xp-orb-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  pointer-events: none;
+}
+
+.mana-xp-orb {
+  position: absolute;
+  left: var(--mana-xp-orb-x, 50%);
+  top: var(--mana-xp-orb-y, 50%);
+  display: grid;
+  place-items: center;
+  width: clamp(24px, 6.5cqw, 42px);
+  aspect-ratio: 1;
+  border: 0;
+  border-radius: 50%;
+  color: #fff2df;
+  background-image: url("/assets/Crystal/orbs/gem_red_64.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  box-shadow:
+    0 0 14px rgba(255, 86, 98, 0.68),
+    0 7px 12px rgba(0, 0, 0, 0.34);
+  image-rendering: pixelated;
+  transform: translate(-50%, -50%) scale(1);
+  cursor: pointer;
+  pointer-events: auto;
+  animation: mana-xp-orb-drop 520ms cubic-bezier(0.16, 0.9, 0.24, 1) both, mana-xp-orb-idle 1.3s ease-in-out 520ms infinite;
+}
+
+.mana-xp-orb.is-yellow {
+  background-image: url("/assets/Crystal/orbs/gem_yellow_64.png");
+  box-shadow:
+    0 0 14px rgba(255, 221, 76, 0.68),
+    0 7px 12px rgba(0, 0, 0, 0.34);
+}
+
+.mana-xp-orb.is-green {
+  background-image: url("/assets/Crystal/orbs/gem_green_64.png");
+  box-shadow:
+    0 0 14px rgba(91, 238, 133, 0.64),
+    0 7px 12px rgba(0, 0, 0, 0.34);
+}
+
+.mana-xp-orb.is-blue {
+  background-image: url("/assets/Crystal/orbs/gem_blue_64.png");
+  box-shadow:
+    0 0 14px rgba(75, 166, 255, 0.66),
+    0 7px 12px rgba(0, 0, 0, 0.34);
+}
+
+.mana-xp-orb span {
+  opacity: 0;
+  font-size: 10px;
+  font-weight: 950;
+  line-height: 1;
+  text-shadow: 0 1px 0 #55040a;
+}
+
+.mana-xp-orb.is-auto-collect {
+  cursor: default;
+  pointer-events: none;
+  animation: none;
+}
+
+.mana-xp-orb:hover,
+.mana-xp-orb:focus-visible {
+  filter: brightness(1.12);
+  transform: translate(-50%, -50%) scale(1.08);
+}
+
 .mana-fall-layer {
   position: absolute;
   inset: 0;
@@ -2458,6 +2969,66 @@ button.upgrade-entry {
   overflow: hidden;
   pointer-events: none;
   contain: layout paint style;
+}
+
+.mana-auto-click-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint style;
+}
+
+.mana-auto-click-hand {
+  --auto-hand-x: 50%;
+  --auto-hand-y: 50%;
+  --auto-hand-rotate: 0deg;
+  position: absolute;
+  left: var(--auto-hand-x);
+  top: var(--auto-hand-y);
+  width: clamp(26px, 6.2cqw, 42px);
+  aspect-ratio: 51 / 63;
+  background-image: url("/assets/Crystal/cursors/auto-click-hand.png");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 1px rgba(0, 0, 0, 0.44));
+  transform: translate(-50%, -50%) rotate(var(--auto-hand-rotate)) scale(1);
+  transform-origin: 50% 72%;
+  animation: mana-auto-hand-float 1750ms ease-in-out var(--auto-hand-delay, 0ms) infinite;
+  will-change: transform, translate;
+}
+
+.mana-auto-click-hand.is-hand-1 {
+  --auto-hand-x: 62%;
+  --auto-hand-y: 42%;
+  --auto-hand-rotate: -14deg;
+}
+
+.mana-auto-click-hand.is-hand-2 {
+  --auto-hand-x: 38%;
+  --auto-hand-y: 44%;
+  --auto-hand-rotate: 16deg;
+}
+
+.mana-auto-click-hand.is-hand-3 {
+  --auto-hand-x: 60%;
+  --auto-hand-y: 64%;
+  --auto-hand-rotate: -6deg;
+}
+
+.mana-auto-click-hand.is-hand-4 {
+  --auto-hand-x: 40%;
+  --auto-hand-y: 63%;
+  --auto-hand-rotate: 10deg;
+}
+
+.mana-auto-click-hand.is-clicking {
+  animation:
+    mana-auto-hand-click 230ms cubic-bezier(0.17, 1.18, 0.28, 1) both,
+    mana-auto-hand-float 1750ms ease-in-out var(--auto-hand-delay, 0ms) infinite;
 }
 
 .mana-orb {
@@ -2475,7 +3046,7 @@ button.upgrade-entry {
   --crystal-shake-r: 0.3deg;
   --crystal-shake-rn: -0.3deg;
   --crystal-click-scale: 1;
-  width: clamp(220px, 54%, 390px);
+  width: var(--mana-orb-size, clamp(150px, 38%, 280px));
   aspect-ratio: 1;
   height: auto;
   overflow: visible;
@@ -2599,43 +3170,93 @@ button.upgrade-entry {
 
 .mana-sprite {
   position: relative;
-  width: min(100%, 300px);
+  z-index: 1;
+  width: min(80%, 240px);
   aspect-ratio: 1;
   height: auto;
-  background-image: url("/assets/Crystal/idle-experiment/idle-spritesheet.png");
+  background-image: var(--mana-crystal-gem-image, url("/assets/Crystal/gems/crystal-a.png"));
   background-repeat: no-repeat;
-  background-position: 0 0;
-  background-size: 800% 100%;
+  background-position: center;
+  background-size: contain;
   image-rendering: pixelated;
   transform-origin: 50% 58%;
   transform: scale(1);
   transition: transform 360ms cubic-bezier(0.2, 0.9, 0.18, 1);
-  animation: crystal-sprite-idle 1000ms steps(1, end) infinite;
-  will-change: transform, background-position;
+  animation: crystal-gem-float 4200ms ease-in-out infinite;
+  will-change: transform, translate;
+}
+
+.mana-crystal-cover {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: repeat(16, 1fr);
+  grid-template-rows: repeat(16, 1fr);
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  pointer-events: none;
+  transform-origin: 50% 58%;
+  transition: transform 360ms cubic-bezier(0.2, 0.9, 0.18, 1);
+  image-rendering: pixelated;
+}
+
+.mana-crystal-cover i {
+  min-width: 0;
+  min-height: 0;
+  margin: -0.5px;
+  background-image: url("/assets/Crystal/crystal-cover-rock.png");
+  background-repeat: no-repeat;
+  background-position: var(--cover-x, 0%) var(--cover-y, 0%);
+  background-size: 1600% 1600%;
+  image-rendering: pixelated;
+  opacity: 1;
+  transform: scale(1);
+  transition:
+    opacity 180ms steps(3, end),
+    transform 180ms steps(3, end);
+}
+
+.mana-crystal-cover i.is-removed {
+  opacity: 0;
+  transform: scale(0.16);
 }
 
 .mana-orb:active {
   transform: translateY(1px);
 }
 
-.mana-orb.is-click-charged .mana-sprite {
+.mana-orb.is-click-charged .mana-sprite,
+.mana-orb.is-click-charged .mana-crystal-cover {
   transform: scale(var(--crystal-click-scale));
 }
 
-.mana-orb:hover .mana-sprite {
+.mana-orb:hover .mana-sprite,
+.mana-orb:hover .mana-crystal-cover {
   transform: scale(1.15);
 }
 
 .mana-orb.is-hover-bouncing .mana-sprite {
   animation:
-    crystal-sprite-idle 1000ms steps(1, end) infinite,
+    crystal-gem-float 4200ms ease-in-out infinite,
     crystal-hover-bounce 640ms cubic-bezier(0.2, 0.94, 0.24, 1) both;
+}
+
+.mana-orb.is-hover-bouncing .mana-crystal-cover {
+  animation: crystal-hover-bounce 640ms cubic-bezier(0.2, 0.94, 0.24, 1) both;
 }
 
 .mana-orb:active .mana-sprite {
   animation:
-    crystal-sprite-idle 1000ms steps(1, end) infinite,
+    crystal-gem-float 4200ms ease-in-out infinite,
     crystal-press-bounce 520ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
+}
+
+.mana-orb:active .mana-crystal-cover {
+  animation: crystal-press-bounce 520ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
+}
+
+.mana-orb.is-crystal-hidden .mana-sprite {
+  animation-play-state: paused;
 }
 
 .mana-orb.is-clicked-a {
@@ -2646,141 +3267,94 @@ button.upgrade-entry {
   animation: crystal-click-b 420ms cubic-bezier(0.18, 1.35, 0.32, 1);
 }
 
-.mana-orb.is-wand-hit-a .mana-orb-aura,
-.mana-orb.is-wand-hit-b .mana-orb-aura {
-  animation: crystal-aura-pulse 540ms ease-out both;
-}
-
-.magic-wands {
+.mana-companion-layer {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  --wand-left-distance: min(34cqw, 300px);
-  --wand-right-distance: min(21cqw, 184px);
-  width: min(92%, 720px);
-  height: min(72%, 430px);
-  z-index: 2;
+  inset: 0;
+  z-index: 8;
   pointer-events: none;
-  transform: translate(-50%, -50%);
 }
 
-.magic-wand {
+.mana-companion-meow {
   position: absolute;
-  left: 50%;
-  top: 50%;
-  width: 108px;
-  height: 32px;
-  transform-origin: 88px 50%;
-}
-
-.magic-wand::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 50%;
-  width: 96px;
-  height: 32px;
-  background-image: url("/assets/spriterrific/wand/arcane-wand/export/spritesheet.png");
+  left: 15%;
+  bottom: 7%;
+  width: clamp(48px, 11cqw, 66px);
+  aspect-ratio: 1;
+  background-image: url("/assets/Crystal/companions/meow-knight-idle.png");
   background-repeat: no-repeat;
-  background-size: 400% 100%;
   background-position: 0% 0%;
+  background-size: 600% 100%;
   image-rendering: pixelated;
-  transform: translateY(-50%);
-  transform-origin: 88px 50%;
+  filter: drop-shadow(0 5px 2px rgba(0, 0, 0, 0.45));
+  transform: translate(-50%, 50%) scale(2.9);
+  transform-origin: 50% 78%;
+  animation: mana-meow-idle 900ms steps(1, end) infinite;
 }
 
-.magic-wand::after {
-  content: "";
+.mana-companion-meow[hidden] {
+  display: none;
+}
+
+.mana-companion-meow.is-attacking {
+  background-image: url("/assets/Crystal/companions/meow-knight-attack.png");
+  background-size: 400% 100%;
+  animation: mana-meow-attack 420ms steps(1, end) both;
+}
+
+.mana-idle-companion {
   position: absolute;
-  left: 82px;
-  top: 12px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  opacity: 0;
-  background: radial-gradient(circle, #f7feff 0 18%, #7fe3ff 20% 44%, rgba(127, 227, 255, 0) 70%);
-  transform: scale(0.4);
-  pointer-events: none;
+  left: var(--idle-companion-x, 50%);
+  top: var(--idle-companion-y, 50%);
+  z-index: 2;
+  width: clamp(44px, calc(var(--idle-companion-width, 52px) * 1.8), 256px);
+  aspect-ratio: var(--idle-companion-aspect, 1);
+  background-image: var(--idle-companion-image);
+  background-repeat: no-repeat;
+  background-position: 0% 0%;
+  background-size: var(--idle-companion-bg-size, 700% 100%);
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 1px rgba(0, 0, 0, 0.45));
+  transform:
+    translate(-50%, -50%)
+    rotate(var(--idle-companion-rotate, 0deg))
+    scaleX(var(--idle-companion-flip, 1));
+  transform-origin: 50% 50%;
 }
 
-.magic-wand i {
-  position: absolute;
-  left: 87px;
-  top: 14px;
-  width: 190px;
-  height: 5px;
-  border-radius: 999px;
-  opacity: 0;
-  background:
-    linear-gradient(90deg, rgba(249, 254, 255, 0.95) 0 8%, rgba(124, 222, 255, 0.82) 12% 42%, rgba(237, 159, 255, 0.28) 68%, transparent 100%);
-  box-shadow:
-    0 0 9px rgba(112, 199, 255, 0.56),
-    0 0 18px rgba(237, 159, 255, 0.22);
-  transform-origin: 0 50%;
-  transform: scaleX(0.05);
+.mana-idle-companion[hidden] {
+  display: none;
 }
 
-.wand-1 {
-  transform: translate(calc(-50% - var(--wand-left-distance)), 0) rotate(0deg);
+.mana-idle-companion.is-bazooka,
+.mana-idle-companion.is-ak47 {
+  z-index: 3;
 }
 
-.wand-2 {
-  transform: translate(calc(-50% + var(--wand-right-distance)), 0) rotate(180deg);
+.mana-idle-companion.is-sword,
+.mana-idle-companion.is-orange-cat {
+  z-index: 4;
 }
 
-.wand-3 {
-  transform: translate(calc(-50% - var(--wand-left-distance)), -44px) rotate(8deg);
+.mana-idle-companion.is-attacking.is-frames-7 {
+  animation: mana-idle-companion-7 520ms steps(1, end) both;
 }
 
-.wand-4 {
-  transform: translate(calc(-50% + var(--wand-right-distance)), -44px) rotate(172deg);
+.mana-idle-companion.is-attacking.is-frames-8 {
+  animation: mana-idle-companion-8 560ms steps(1, end) both;
 }
 
-.wand-5 {
-  transform: translate(calc(-50% - var(--wand-left-distance)), 44px) rotate(-9deg);
+.mana-idle-companion.is-attacking.is-frames-10 {
+  animation: mana-idle-companion-10 700ms steps(1, end) both;
 }
 
-.wand-6 {
-  transform: translate(calc(-50% + var(--wand-right-distance)), 44px) rotate(189deg);
-}
-
-.wand-7 {
-  transform: translate(calc(-50% - var(--wand-left-distance)), -84px) rotate(15deg);
-}
-
-.wand-8 {
-  transform: translate(calc(-50% + var(--wand-right-distance)), -84px) rotate(165deg);
-}
-
-.wand-9 {
-  transform: translate(calc(-50% - var(--wand-left-distance)), 84px) rotate(-16deg);
-}
-
-.wand-10 {
-  transform: translate(calc(-50% + var(--wand-right-distance)), 84px) rotate(196deg);
-}
-
-.magic-wands.is-casting-a .magic-wand::before,
-.magic-wands.is-casting-b .magic-wand::before {
-  animation:
-    wand-sprite-cast 560ms steps(1, end) both,
-    wand-recoil 560ms ease-out both;
-}
-
-.magic-wands.is-casting-a .magic-wand::after,
-.magic-wands.is-casting-b .magic-wand::after {
-  animation: wand-tip-flare 560ms ease-out both;
-}
-
-.magic-wands.is-casting-a .magic-wand i,
-.magic-wands.is-casting-b .magic-wand i {
-  animation: wand-beam 560ms ease-out both;
+.mana-idle-companion.is-attacking.is-frames-15 {
+  animation: mana-idle-companion-15 900ms steps(1, end) both;
 }
 
 .mana-spark {
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: var(--spark-origin-y, 50%);
+  left: var(--spark-origin-x, 50%);
   z-index: 9;
   width: var(--spark-size, 7px);
   height: var(--spark-size, 7px);
@@ -2936,6 +3510,22 @@ button.upgrade-entry {
   animation: defense-damage-pop 1500ms cubic-bezier(0.16, 0.86, 0.3, 1) forwards;
 }
 
+.floating-gain.is-mana-local,
+.book-overlay .floating-gain.is-mana-local {
+  z-index: 12;
+  color: #ffffff;
+  font-size: 32px;
+  text-shadow: none;
+  -webkit-text-stroke: 0.5px rgba(22, 18, 24, 0.92);
+}
+
+.floating-gain.is-idle-ally,
+.book-overlay .floating-gain.is-idle-ally {
+  font-size: 16px;
+  -webkit-text-stroke: 0.35px rgba(22, 18, 24, 0.92);
+  animation-duration: 720ms;
+}
+
 @keyframes mana-gain-pop {
   0% {
     opacity: 0;
@@ -2956,6 +3546,224 @@ button.upgrade-entry {
   100% {
     opacity: 0;
     transform: translate(-50%, -158%) scale(0.92);
+  }
+}
+
+@keyframes mana-meow-idle {
+  0%,
+  5% {
+    background-position: 0% 0%;
+  }
+  5.01%,
+  30% {
+    background-position: 20% 0%;
+  }
+  30.01%,
+  47.5% {
+    background-position: 40% 0%;
+  }
+  47.51%,
+  65% {
+    background-position: 60% 0%;
+  }
+  65.01%,
+  82.5% {
+    background-position: 80% 0%;
+  }
+  82.51%,
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes mana-meow-attack {
+  0%,
+  24.99% {
+    background-position: 0% 0%;
+  }
+  25%,
+  49.99% {
+    background-position: 33.3333% 0%;
+  }
+  50%,
+  74.99% {
+    background-position: 66.6667% 0%;
+  }
+  75%,
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes mana-idle-companion-7 {
+  0%,
+  16.65% {
+    background-position: 0% 0%;
+  }
+  16.66%,
+  33.32% {
+    background-position: 16.6667% 0%;
+  }
+  33.33%,
+  49.99% {
+    background-position: 33.3333% 0%;
+  }
+  50%,
+  66.65% {
+    background-position: 50% 0%;
+  }
+  66.66%,
+  83.32% {
+    background-position: 66.6667% 0%;
+  }
+  83.33%,
+  99.98% {
+    background-position: 83.3333% 0%;
+  }
+  99.99%,
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes mana-idle-companion-8 {
+  0%,
+  14.27% {
+    background-position: 0% 0%;
+  }
+  14.28%,
+  28.56% {
+    background-position: 14.2857% 0%;
+  }
+  28.57%,
+  42.84% {
+    background-position: 28.5714% 0%;
+  }
+  42.85%,
+  57.13% {
+    background-position: 42.8571% 0%;
+  }
+  57.14%,
+  71.41% {
+    background-position: 57.1429% 0%;
+  }
+  71.42%,
+  85.7% {
+    background-position: 71.4286% 0%;
+  }
+  85.71%,
+  99.98% {
+    background-position: 85.7143% 0%;
+  }
+  99.99%,
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes mana-idle-companion-10 {
+  0%,
+  11.1% {
+    background-position: 0% 0%;
+  }
+  11.11%,
+  22.21% {
+    background-position: 11.1111% 0%;
+  }
+  22.22%,
+  33.32% {
+    background-position: 22.2222% 0%;
+  }
+  33.33%,
+  44.43% {
+    background-position: 33.3333% 0%;
+  }
+  44.44%,
+  55.54% {
+    background-position: 44.4444% 0%;
+  }
+  55.55%,
+  66.65% {
+    background-position: 55.5556% 0%;
+  }
+  66.66%,
+  77.76% {
+    background-position: 66.6667% 0%;
+  }
+  77.77%,
+  88.87% {
+    background-position: 77.7778% 0%;
+  }
+  88.88%,
+  99.98% {
+    background-position: 88.8889% 0%;
+  }
+  99.99%,
+  100% {
+    background-position: 100% 0%;
+  }
+}
+
+@keyframes mana-idle-companion-15 {
+  0%,
+  6.65% {
+    background-position: 0% 0%;
+  }
+  6.66%,
+  13.32% {
+    background-position: 7.1429% 0%;
+  }
+  13.33%,
+  19.99% {
+    background-position: 14.2857% 0%;
+  }
+  20%,
+  26.65% {
+    background-position: 21.4286% 0%;
+  }
+  26.66%,
+  33.32% {
+    background-position: 28.5714% 0%;
+  }
+  33.33%,
+  39.99% {
+    background-position: 35.7143% 0%;
+  }
+  40%,
+  46.65% {
+    background-position: 42.8571% 0%;
+  }
+  46.66%,
+  53.32% {
+    background-position: 50% 0%;
+  }
+  53.33%,
+  59.99% {
+    background-position: 57.1429% 0%;
+  }
+  60%,
+  66.65% {
+    background-position: 64.2857% 0%;
+  }
+  66.66%,
+  73.32% {
+    background-position: 71.4286% 0%;
+  }
+  73.33%,
+  79.99% {
+    background-position: 78.5714% 0%;
+  }
+  80%,
+  86.65% {
+    background-position: 85.7143% 0%;
+  }
+  86.66%,
+  93.32% {
+    background-position: 92.8571% 0%;
+  }
+  93.33%,
+  100% {
+    background-position: 100% 0%;
   }
 }
 
@@ -3009,6 +3817,43 @@ button.upgrade-entry {
   68% {
     transform: translate3d(1%, 2%, 0) scale(1.01);
     opacity: 0.62;
+  }
+}
+
+@keyframes mana-xp-orb-drop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -86%) scale(0.72);
+  }
+  68% {
+    opacity: 1;
+    transform: translate(-50%, -44%) scale(1.08);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@keyframes mana-xp-orb-idle {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    transform: translate(-50%, -56%) scale(1.04);
+  }
+}
+
+@keyframes mana-xp-fill-pulse {
+  0% {
+    filter: brightness(1);
+  }
+  46% {
+    filter: brightness(1.32);
+  }
+  100% {
+    filter: brightness(1);
   }
 }
 
@@ -3133,6 +3978,94 @@ button.upgrade-entry {
   }
 }
 
+@keyframes crystal-gem-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -2px;
+  }
+}
+
+@keyframes mana-discovered-gem-enter {
+  0% {
+    opacity: 0;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(20px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(0.25);
+  }
+  72% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(37px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(1.12);
+  }
+  100% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(34px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(1);
+  }
+}
+
+@keyframes mana-discovered-gem-dock {
+  0% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(34px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(1.6);
+  }
+  55% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(34px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform:
+      translate(-50%, -50%)
+      rotate(var(--mana-gem-angle, 0deg))
+      translate(34px)
+      rotate(calc(var(--mana-gem-angle, 0deg) * -1))
+      scale(1);
+  }
+}
+
+@keyframes mana-xp-badge-gem-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes mana-gem-showcase-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @keyframes crystal-hover-bounce {
   0% {
     transform: scale(1);
@@ -3162,19 +4095,19 @@ button.upgrade-entry {
     transform: scale(1.15);
   }
   20% {
-    transform: scale(0.88);
+    transform: scale(0.955);
   }
   40% {
-    transform: scale(0.96);
+    transform: scale(0.985);
   }
   58% {
-    transform: scale(0.9);
+    transform: scale(0.963);
   }
   76% {
-    transform: scale(0.935);
+    transform: scale(0.976);
   }
   100% {
-    transform: scale(0.88);
+    transform: scale(0.955);
   }
 }
 
@@ -3282,6 +4215,26 @@ button.upgrade-entry {
   }
 }
 
+@keyframes mana-auto-hand-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 2px -3px;
+  }
+}
+
+@keyframes mana-auto-hand-click {
+  0%,
+  100% {
+    transform: translate(-50%, -50%) rotate(var(--auto-hand-rotate)) scale(1);
+  }
+  42% {
+    transform: translate(-50%, -50%) rotate(var(--auto-hand-rotate)) scale(1.2);
+  }
+}
+
 @keyframes mana-spark-burst {
   0% {
     opacity: 1;
@@ -3290,77 +4243,6 @@ button.upgrade-entry {
   100% {
     opacity: 0;
     transform: translate(calc(-50% + var(--spark-x)), calc(-50% + var(--spark-y))) scale(0.12);
-  }
-}
-
-@keyframes wand-sprite-cast {
-  0% {
-    background-position: 0% 0%;
-  }
-  24.99% {
-    background-position: 0% 0%;
-  }
-  25% {
-    background-position: 33.333% 0%;
-  }
-  49.99% {
-    background-position: 33.333% 0%;
-  }
-  50% {
-    background-position: 66.666% 0%;
-  }
-  74.99% {
-    background-position: 66.666% 0%;
-  }
-  75%,
-  100% {
-    background-position: 100% 0%;
-  }
-}
-
-@keyframes wand-recoil {
-  0% {
-    transform: translateY(-50%) translateX(0);
-  }
-  35% {
-    transform: translateY(-50%) translateX(-7px);
-  }
-  100% {
-    transform: translateY(-50%) translateX(0);
-  }
-}
-
-@keyframes wand-tip-flare {
-  0% {
-    opacity: 0;
-    transform: scale(0.45);
-  }
-  28% {
-    opacity: 0.95;
-    transform: scale(1.2);
-  }
-  100% {
-    opacity: 0;
-    transform: scale(0.62);
-  }
-}
-
-@keyframes wand-beam {
-  0% {
-    opacity: 0;
-    transform: scaleX(0.04);
-  }
-  18% {
-    opacity: 1;
-    transform: scaleX(0.98);
-  }
-  72% {
-    opacity: 0.82;
-    transform: scaleX(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scaleX(1);
   }
 }
 
@@ -3567,7 +4449,7 @@ button.upgrade-entry {
   justify-content: center;
   gap: clamp(4px, 1.5cqw, 8px);
   color: #ffb564;
-  font-family: Georgia, "Times New Roman", serif;
+  font-family: inherit;
   font-size: 26px;
   font-weight: 900;
   line-height: 1;
@@ -3783,38 +4665,34 @@ button.upgrade-entry {
 }
 
 .snake-panel {
-  flex: 1;
-  height: 100%;
+  flex: 0 0 auto;
+  height: auto;
   min-height: 0;
-  display: grid;
-  place-items: center;
-  container-type: size;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
   padding: 0;
+  background: #061014;
 }
 
 .snake-board-shell {
   position: relative;
+  isolation: isolate;
+  z-index: 2;
+  flex: 0 0 auto;
   width: 100%;
-  height: 100%;
+  height: auto;
+  aspect-ratio: 1 / 1;
   min-height: 0;
   box-sizing: border-box;
   display: grid;
-  grid-template-rows: auto;
-  justify-items: center;
-  align-content: center;
-  padding:
-    clamp(64px, 9.8cqw, 78px)
-    clamp(20px, 4.2cqw, 34px)
-    clamp(16px, 3.4cqw, 28px);
+  place-items: center;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
+  border-radius: 8px 8px 0 0;
   color: #f3f6ff;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 34%),
-    rgba(54, 73, 98, 0.62);
-  box-shadow:
-    inset 0 -5px 0 rgba(21, 29, 43, 0.14),
-    inset 0 0 0 2px rgba(111, 129, 154, 0.18);
+  background: transparent;
+  box-shadow: none;
 }
 
 .snake-auto-toggle {
@@ -3862,7 +4740,7 @@ button.upgrade-entry {
   isolation: isolate;
   align-self: center;
   box-sizing: border-box;
-  width: min(94%, 86cqh, 560px);
+  width: min(100%, 480px);
   height: auto;
   aspect-ratio: 1;
   display: grid;
@@ -3880,41 +4758,74 @@ button.upgrade-entry {
   image-rendering: pixelated;
 }
 
-.snake-board-hearts,
-.snake-board-multiplier {
+.snake-status-hud {
   position: absolute;
-  z-index: 12;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  min-height: clamp(25px, 4.8cqw, 34px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(7px, 1.6cqw, 14px);
+  padding: 3px clamp(8px, 1.9cqw, 14px);
+  border: 1px solid rgba(234, 247, 255, 0.2);
+  color: rgba(255, 252, 234, 0.98);
+  background: rgba(8, 14, 22, 0.46);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 4px 12px rgba(0, 0, 0, 0.18);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.94),
+    0 0 5px rgba(0, 0, 0, 0.72);
   pointer-events: none;
 }
 
-.snake-board-hearts {
-  left: clamp(8px, 2.2cqw, 14px);
-  top: clamp(7px, 2cqw, 13px);
-  display: flex;
-  gap: clamp(3px, 1.1cqw, 7px);
+.snake-status-hud > span {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.1;
+  white-space: nowrap;
 }
 
-.snake-board-hearts span {
+.snake-hud-hearts {
+  justify-self: start;
+}
+
+.snake-hud-hearts span {
   color: #ff365f;
-  font-size: clamp(18px, 4.4cqw, 31px);
+  font-size: 18px;
   line-height: 1;
   text-shadow:
     0 2px 0 rgba(112, 18, 43, 0.55),
     0 4px 8px rgba(0, 0, 0, 0.32);
 }
 
-.snake-board-multiplier {
-  right: clamp(8px, 2.2cqw, 14px);
-  top: clamp(6px, 1.7cqw, 12px);
+.snake-hud-resource {
+  justify-self: center;
+  color: #fff1b5;
+}
+
+.snake-hud-resource strong {
+  font-size: 1.12em;
+  color: inherit;
+  -webkit-text-stroke: 0.16px rgba(0, 0, 0, 0.82);
+}
+
+.snake-hud-multiplier {
+  justify-self: end;
   color: hsl(var(--snake-multiplier-hue, 52) 92% 58%);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(20px, 4.7cqw, 35px);
-  font-weight: 900;
-  line-height: 1;
-  letter-spacing: 0;
-  text-shadow:
-    0 2px 0 rgba(19, 22, 16, 0.5),
-    0 0 11px hsl(var(--snake-multiplier-hue, 52) 92% 58% / 0.32);
+}
+
+.snake-hud-multiplier strong {
+  font-size: 1.12em;
+  color: inherit;
+  -webkit-text-stroke: 0.16px rgba(0, 0, 0, 0.82);
 }
 
 .snake-cell {
@@ -4137,30 +5048,17 @@ button.upgrade-entry {
 }
 
 .snake-cell.is-food::before {
-  content: "";
-  position: absolute;
-  left: 54%;
-  top: 10%;
-  z-index: 4;
-  width: 5px;
-  height: 8px;
-  background: #2e8f24;
-  box-shadow: 5px 2px 0 #55ba36;
+  display: none;
 }
 
 .snake-cell.is-food::after {
   content: "";
   position: absolute;
-  inset: 18%;
+  inset: 10%;
   z-index: 3;
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 62% 28%, #ffb15d 0 8%, transparent 9%),
-    #ef3f1f;
-  box-shadow:
-    inset -4px -5px 0 #bd2b17,
-    inset 4px 4px 0 #ff6b28,
-    0 4px 0 rgba(86, 115, 36, 0.28);
+  background: url("/assets/Snake%20dragon/food/round-red.png?v=snake-food-1") center / contain no-repeat;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(86, 115, 36, 0.28));
   animation: snake-food-pulse 900ms ease-in-out infinite alternate;
 }
 
@@ -4169,53 +5067,46 @@ button.upgrade-entry {
 }
 
 .snake-cell.is-bonus-food::before {
-  content: "";
-  position: absolute;
-  left: 56%;
-  top: 12%;
-  z-index: 4;
-  width: 5px;
-  height: 7px;
-  background: #2e8f24;
-  box-shadow: 4px 2px 0 #55ba36;
+  display: none;
 }
 
 .snake-cell.is-bonus-food::after {
   content: "";
   position: absolute;
-  inset: 20%;
+  inset: 10%;
   z-index: 3;
-  border-radius: 8px;
-  background: #ff8f1f;
-  box-shadow:
-    inset -4px -5px 0 #c45d14,
-    inset 4px 4px 0 #ffbc3f,
-    0 4px 0 rgba(86, 115, 36, 0.28);
+  background: var(--snake-food-sprite) center / contain no-repeat;
+  image-rendering: pixelated;
+  filter: drop-shadow(0 4px 0 rgba(86, 115, 36, 0.28));
   animation: snake-food-pulse 900ms ease-in-out infinite alternate;
 }
 
-.snake-cell.is-bonus-food.is-pear::after {
-  inset: 16% 22% 18%;
-  border-radius: 10px 10px 8px 8px;
-  background: #b8e53c;
-  box-shadow:
-    inset -4px -5px 0 #78aa24,
-    inset 4px 4px 0 #e0ff6a,
-    0 4px 0 rgba(86, 115, 36, 0.28);
+.snake-cell.is-bonus-food.is-round-blue {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/round-blue.png?v=snake-food-1");
 }
 
-.snake-cell.is-bonus-food.is-banana::before {
-  display: none;
+.snake-cell.is-bonus-food.is-round-green {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/round-green.png?v=snake-food-1");
 }
 
-.snake-cell.is-bonus-food.is-banana::after {
-  inset: 28% 12%;
-  border-radius: 4px 14px 14px 4px;
-  background: #ffd84a;
-  box-shadow:
-    inset -5px -4px 0 #c99518,
-    inset 4px 3px 0 #fff08a,
-    0 4px 0 rgba(86, 115, 36, 0.28);
+.snake-cell.is-bonus-food.is-round-pink {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/round-pink.png?v=snake-food-1");
+}
+
+.snake-cell.is-bonus-food.is-diamond-red {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/diamond-red.png?v=snake-food-1");
+}
+
+.snake-cell.is-bonus-food.is-diamond-blue {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/diamond-blue.png?v=snake-food-1");
+}
+
+.snake-cell.is-bonus-food.is-diamond-green {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/diamond-green.png?v=snake-food-1");
+}
+
+.snake-cell.is-bonus-food.is-diamond-pink {
+  --snake-food-sprite: url("/assets/Snake%20dragon/food/diamond-pink.png?v=snake-food-1");
 }
 
 .snake-cell.is-head.is-food {
@@ -4713,7 +5604,7 @@ button.blackjack-chip-token {
   border: 0;
   border-radius: 50%;
   color: #fff8ce;
-  font-family: Georgia, serif;
+  font-family: inherit;
   font-size: clamp(18px, 4.4cqw, 28px);
   font-weight: 900;
   line-height: 1;
@@ -5652,8 +6543,7 @@ button.blackjack-chip-token {
   transform: translate(-50%, -50%);
 }
 
-.target-panel,
-.mining-panel {
+.target-panel {
   flex: 1;
   height: 100%;
   min-height: 0;
@@ -5663,8 +6553,33 @@ button.blackjack-chip-token {
   padding: 0;
 }
 
+.mining-panel {
+  flex: 0 0 auto;
+  height: auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  padding: 0;
+  background: transparent;
+}
+
 .book-overlay[data-book-id="mine"] .book-page-body {
-  inset: 0;
+  position: relative;
+  inset: auto;
+  flex: 0 0 auto;
+  width: 100%;
+}
+
+.mining-playfield {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  display: grid;
+  overflow: hidden;
+  border-radius: 0;
 }
 
 .target-gallery,
@@ -5786,19 +6701,12 @@ button.blackjack-chip-token {
   overflow: hidden;
   display: grid;
   place-items: stretch;
-  padding: clamp(8px, 1.8cqw, 13px);
+  padding: 0;
   border: 0;
-  border-radius: 10px;
+  border-radius: 0;
   color: #e9e3d2;
-  background:
-    linear-gradient(rgba(183, 190, 176, 0.045) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(183, 190, 176, 0.04) 1px, transparent 1px),
-    radial-gradient(circle at 52% 48%, rgba(107, 118, 104, 0.13), transparent 42%),
-    rgba(41, 44, 42, 0.72);
-  background-size: 22px 22px, 22px 22px, auto, auto;
-  box-shadow:
-    inset 0 0 0 2px rgba(17, 20, 18, 0.22),
-    inset 0 -8px 0 rgba(10, 12, 11, 0.12);
+  background: transparent;
+  box-shadow: none;
 }
 
 .mining-grid-shell .mining-stats {
@@ -5895,29 +6803,84 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-grid {
   align-self: center;
-  justify-self: end;
-  width: min(calc(100% - clamp(52px, 8.8cqw, 68px)), calc(100cqh - clamp(18px, 3cqw, 28px)));
-  height: auto;
-  aspect-ratio: 1;
+  justify-self: center;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
   min-height: 0;
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  grid-template-rows: repeat(7, minmax(0, 1fr));
-  gap: clamp(1px, 0.35cqw, 2px);
-  padding: clamp(3px, 0.75cqw, 5px);
-  border: 2px solid rgba(17, 20, 18, 0.7);
-  border-radius: 8px;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(131, 139, 124, 0.1), transparent 44%),
-    rgba(14, 16, 15, 0.38);
+  position: relative;
+  display: block;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  filter: none;
+  image-rendering: pixelated;
+}
+
+.mining-grid-shell .mining-grid::before,
+.mining-grid-shell .mining-grid::after {
+  content: "";
+  position: absolute;
+  left: 6.25%;
+  right: 6.25%;
+  top: 5.5%;
+  bottom: 11%;
+  pointer-events: none;
+}
+
+.mining-grid-shell .mining-grid::before {
+  display: none;
+}
+
+.mining-grid-shell .mining-grid::after {
+  display: none;
+}
+
+.mining-grid-shell .mining-three-frame {
+  overflow: hidden;
+  background: transparent;
+}
+
+.mining-grid-shell .mining-three-board {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  outline: 0;
+}
+
+.mining-accessible-grid {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mining-keyboard-block {
+  width: 1px;
+  height: 1px;
 }
 
 .mining-grid-shell .mining-block {
-  --block-base: #6f6958;
-  --block-light: rgba(195, 190, 166, 0.38);
-  --block-mid: rgba(75, 72, 61, 0.34);
-  --block-dark: rgba(42, 40, 34, 0.44);
+  --block-base: #61cf2d;
+  --block-top: #79ea38;
+  --block-left: #44ba62;
+  --block-right: #33a552;
+  --block-outline: rgba(17, 55, 25, 0.86);
+  --block-light: rgba(214, 255, 143, 0.42);
+  --block-mid: rgba(54, 117, 43, 0.28);
+  --block-dark: rgba(13, 65, 31, 0.42);
   --block-shade-alpha: 0;
+  --layer-step: clamp(4px, 1cqw, 6px);
+  --layer-drop: clamp(9px, 1.85cqw, 12px);
   --depth-shadow-up: transparent;
   --depth-shadow-right: transparent;
   --depth-shadow-down: transparent;
@@ -5928,37 +6891,29 @@ button.blackjack-chip-token {
   --ore-color: transparent;
   --ore-glint: transparent;
   --ore-opacity: 0;
-  position: relative;
+  position: absolute;
+  left: calc((var(--iso-x) / var(--iso-board-w)) * 100%);
+  top: calc((var(--iso-y) / var(--iso-board-h)) * 100%);
   isolation: isolate;
   overflow: visible;
   min-width: 0;
   min-height: 0;
-  aspect-ratio: 1;
+  width: calc((var(--iso-tile-w) / var(--iso-board-w)) * 100%);
+  height: calc((var(--iso-tile-h) / var(--iso-board-h)) * 100%);
   display: grid;
   place-items: center;
   align-content: center;
   gap: 0;
   padding: 0;
-  border: 2px solid rgba(18, 18, 16, 0.92);
-  border-radius: 2px;
+  border: 0;
+  border-radius: 0;
   color: #ffe9b8;
   font-weight: 900;
-  background-color: var(--block-base);
-  background-image:
-    linear-gradient(rgba(0, 0, 0, var(--block-shade-alpha)), rgba(0, 0, 0, var(--block-shade-alpha))),
-    var(--block-sprite);
-  background-size: 100% 100%, cover;
-  background-position: center;
+  background: transparent;
   cursor: pointer;
   image-rendering: pixelated;
-  box-shadow:
-    inset 0 4px 0 rgba(255, 255, 255, 0.12),
-    inset 0 -7px 0 rgba(17, 13, 10, 0.22),
-    inset 0 7px 0 var(--depth-shadow-up),
-    inset -7px 0 0 var(--depth-shadow-right),
-    inset 0 -7px 0 var(--depth-shadow-down),
-    inset 7px 0 0 var(--depth-shadow-left),
-    0 5px 0 rgba(30, 19, 16, 0.24);
+  transform: translate(-50%, -50%);
+  box-shadow: none;
 }
 
 .mining-grid-shell .mining-block.is-shade-1 { --block-shade-alpha: 0; }
@@ -5984,9 +6939,29 @@ button.blackjack-chip-token {
   display: none;
 }
 
+.mining-grid-shell .mining-block.is-empty::before {
+  display: block;
+  left: 50%;
+  top: 50%;
+  width: clamp(36px, 11.6cqw, 60px);
+  height: clamp(18px, 5.8cqw, 30px);
+  inset: auto;
+  z-index: 0;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: rgba(11, 24, 18, 0.86);
+  box-shadow:
+    inset 0 0 0 1px rgba(75, 154, 93, 0.42),
+    inset 0 -3px 0 rgba(0, 0, 0, 0.24);
+  transform: translate(-50%, -50%);
+}
+
+.mining-grid-shell .mining-block.is-empty::after {
+  display: none;
+}
+
 .mining-grid-shell .mining-block::after {
   z-index: 3;
-  inset: -50%;
+  inset: 0;
   opacity: var(--crack-opacity);
   background-image: url("/assets/Block%20terre/fissur.png");
   background-repeat: no-repeat;
@@ -5994,12 +6969,13 @@ button.blackjack-chip-token {
   background-position:
     calc(var(--crack-x) * 100% / 3)
     calc(var(--crack-y) * 100% / 3);
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
   image-rendering: pixelated;
 }
 
 .mining-grid-shell .mining-block:active {
   filter: brightness(1.18);
-  transform: translateY(2px);
+  transform: translate(-50%, calc(-50% + 1px));
 }
 
 .mining-grid-shell .mining-block span,
@@ -6016,6 +6992,108 @@ button.blackjack-chip-token {
   line-height: 1;
 }
 
+.mining-grid-shell .mining-block-stack {
+  position: absolute;
+  display: block;
+  left: 50%;
+  top: 50%;
+  width: clamp(36px, 11.6cqw, 60px);
+  height: clamp(18px, 5.8cqw, 30px);
+  z-index: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px));
+  transform-origin: 50% 52%;
+}
+
+.mining-grid-shell .mining-block-stack.is-empty {
+  display: none;
+}
+
+.mining-grid-shell .mining-block-layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  z-index: calc(10 - var(--layer-index));
+  pointer-events: none;
+  transform: translateY(calc(var(--layer-index) * var(--layer-step)));
+  filter: brightness(calc(1 - (var(--layer-index) * 0.025)));
+}
+
+.mining-grid-shell .mining-block-face {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.mining-grid-shell .mining-block-face.is-top {
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+  background: var(--block-top);
+  box-shadow:
+    inset 0 0 0 1px rgba(29, 93, 33, 0.72),
+    inset 0 -2px 0 rgba(47, 160, 39, 0.58),
+    inset 0 4px 0 var(--depth-shadow-up),
+    inset -4px 0 0 var(--depth-shadow-right),
+    inset 0 -4px 0 var(--depth-shadow-down),
+    inset 4px 0 0 var(--depth-shadow-left);
+}
+
+.mining-grid-shell .mining-block-layer:not(.is-layer-1) .mining-block-face.is-top {
+  display: none;
+}
+
+.mining-grid-shell .mining-block-layer:not(.is-layer-1) .mining-block-face.is-left,
+.mining-grid-shell .mining-block-layer:not(.is-layer-1) .mining-block-face.is-right {
+  display: none;
+}
+
+.mining-grid-shell .mining-block-face.is-left {
+  left: 0;
+  top: 50%;
+  z-index: 2;
+  width: 50%;
+  height: calc(var(--layer-drop) + ((var(--block-layers, 1) - 1) * var(--layer-step)));
+  transform: skewY(26deg);
+  transform-origin: 100% 0;
+  background: var(--block-left);
+  box-shadow:
+    inset 0 -1px 0 rgba(13, 75, 45, 0.62),
+    inset 1px 0 0 rgba(62, 188, 95, 0.54);
+}
+
+.mining-grid-shell .mining-block-face.is-right {
+  right: 0;
+  top: 50%;
+  z-index: 2;
+  width: 50%;
+  height: calc(var(--layer-drop) + ((var(--block-layers, 1) - 1) * var(--layer-step)));
+  transform: skewY(-26deg);
+  transform-origin: 0 0;
+  background: var(--block-right);
+  box-shadow:
+    inset 0 -1px 0 rgba(12, 65, 40, 0.66),
+    inset -1px 0 0 rgba(44, 155, 74, 0.48);
+}
+
+.mining-grid-shell .mining-block:not(.has-open-left) .mining-block-face.is-left,
+.mining-grid-shell .mining-block:not(.has-open-right) .mining-block-face.is-right {
+  display: none;
+}
+
+.mining-grid-shell .mining-block.is-hit-pulse-0 .mining-block-stack {
+  animation: mining-block-hit-even 170ms steps(2, end);
+}
+
+.mining-grid-shell .mining-block.is-hit-pulse-1 .mining-block-stack {
+  animation: mining-block-hit-odd 170ms steps(2, end);
+}
+
 .mining-grid-shell .mining-block b {
   display: none;
   max-width: 92%;
@@ -6028,28 +7106,37 @@ button.blackjack-chip-token {
 }
 
 .mining-grid-shell .mining-block i {
-  color: rgba(255, 243, 218, 0.94);
-  font-size: clamp(10px, 2.2cqw, 14px);
-  font-style: normal;
-  line-height: 1;
+  display: none;
 }
 
 .mining-grid-shell .mining-block.is-sand {
-  --block-base: #626357;
+  --block-base: #c9b274;
+  --block-top: #e6d179;
+  --block-left: #b99855;
+  --block-right: #a88645;
+  --block-outline: rgba(88, 67, 32, 0.78);
   --block-light: rgba(139, 139, 121, 0.42);
   --block-mid: rgba(70, 71, 62, 0.38);
   --block-dark: rgba(35, 36, 32, 0.44);
 }
 
 .mining-grid-shell .mining-block.is-dirt {
-  --block-base: #765034;
-  --block-light: rgba(151, 105, 62, 0.52);
-  --block-mid: rgba(74, 48, 30, 0.44);
-  --block-dark: rgba(42, 27, 19, 0.5);
+  --block-base: #61cf2d;
+  --block-top: #79ea38;
+  --block-left: #44ba62;
+  --block-right: #33a552;
+  --block-outline: rgba(17, 55, 25, 0.86);
+  --block-light: rgba(218, 255, 138, 0.42);
+  --block-mid: rgba(47, 116, 44, 0.34);
+  --block-dark: rgba(17, 67, 31, 0.46);
 }
 
 .mining-grid-shell .mining-block.is-stone {
   --block-base: #777777;
+  --block-top: #9a9a91;
+  --block-left: #77786d;
+  --block-right: #66665f;
+  --block-outline: rgba(42, 42, 38, 0.82);
   --block-light: rgba(166, 166, 166, 0.5);
   --block-mid: rgba(80, 80, 80, 0.36);
   --block-dark: rgba(42, 42, 42, 0.46);
@@ -6057,6 +7144,10 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-coal {
   --block-base: #6c6c68;
+  --block-top: #777772;
+  --block-left: #585852;
+  --block-right: #464641;
+  --block-outline: rgba(20, 20, 18, 0.86);
   --block-light: rgba(154, 154, 145, 0.38);
   --block-mid: rgba(54, 54, 51, 0.42);
   --block-dark: rgba(28, 28, 27, 0.58);
@@ -6067,6 +7158,10 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-iron {
   --block-base: #74716a;
+  --block-top: #8a867b;
+  --block-left: #6e685f;
+  --block-right: #5e5850;
+  --block-outline: rgba(42, 37, 33, 0.82);
   --block-light: rgba(162, 158, 146, 0.44);
   --block-mid: rgba(69, 67, 61, 0.38);
   --block-dark: rgba(37, 35, 32, 0.48);
@@ -6077,6 +7172,9 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-copper {
   --block-base: #706e69;
+  --block-top: #817c72;
+  --block-left: #696257;
+  --block-right: #574f46;
   --ore-color: rgba(192, 105, 62, var(--ore-opacity));
   --ore-glint: rgba(93, 170, 145, calc(var(--ore-opacity) * 0.65));
   --ore-opacity: 0.82;
@@ -6084,13 +7182,19 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-gold {
   --block-base: #747067;
+  --block-top: #837c68;
+  --block-left: #6b6250;
+  --block-right: #5c5445;
   --ore-color: rgba(219, 173, 55, var(--ore-opacity));
   --ore-glint: rgba(255, 225, 111, var(--ore-opacity));
   --ore-opacity: 0.86;
 }
 
-.mining-grid-shell .mining-block.is-redstone {
+.mining-grid-shell .mining-block.is-ruby {
   --block-base: #6f6d69;
+  --block-top: #807b75;
+  --block-left: #67615a;
+  --block-right: #59524c;
   --ore-color: rgba(179, 40, 38, var(--ore-opacity));
   --ore-glint: rgba(255, 88, 72, var(--ore-opacity));
   --ore-opacity: 0.88;
@@ -6098,6 +7202,9 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-lapis {
   --block-base: #706f6b;
+  --block-top: #817e75;
+  --block-left: #666158;
+  --block-right: #56524a;
   --ore-color: rgba(44, 83, 184, var(--ore-opacity));
   --ore-glint: rgba(92, 135, 235, var(--ore-opacity));
   --ore-opacity: 0.86;
@@ -6105,6 +7212,9 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-diamond {
   --block-base: #727571;
+  --block-top: #858b84;
+  --block-left: #68706a;
+  --block-right: #58605b;
   --ore-color: rgba(73, 208, 221, var(--ore-opacity));
   --ore-glint: rgba(168, 249, 255, var(--ore-opacity));
   --ore-opacity: 0.88;
@@ -6112,6 +7222,9 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-emerald {
   --block-base: #70746d;
+  --block-top: #81887b;
+  --block-left: #656d5f;
+  --block-right: #565d51;
   --ore-color: rgba(50, 190, 101, var(--ore-opacity));
   --ore-glint: rgba(121, 244, 157, var(--ore-opacity));
   --ore-opacity: 0.87;
@@ -6119,12 +7232,33 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-block.is-obsidian {
   --block-base: #2d2739;
+  --block-top: #3f3650;
+  --block-left: #2e263d;
+  --block-right: #231d31;
+  --block-outline: rgba(9, 7, 14, 0.9);
   --block-light: rgba(87, 73, 112, 0.42);
   --block-mid: rgba(27, 21, 37, 0.52);
   --block-dark: rgba(12, 9, 18, 0.65);
   --ore-color: rgba(52, 40, 82, var(--ore-opacity));
   --ore-glint: rgba(111, 82, 166, var(--ore-opacity));
   --ore-opacity: 0.72;
+}
+
+.mining-grid-shell .mining-block.is-empty {
+  cursor: default;
+  pointer-events: none;
+}
+
+@keyframes mining-block-hit-even {
+  0% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px)); }
+  50% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px + 2px)) scale(0.96, 1.04); }
+  100% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px)); }
+}
+
+@keyframes mining-block-hit-odd {
+  0% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px)); }
+  50% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px + 2px)) scale(0.96, 1.04); }
+  100% { transform: translate(-50%, -50%) translateY(calc((5 - var(--block-layers, 1)) * 1px)); }
 }
 
 .mining-depth {
@@ -6426,16 +7560,15 @@ button.blackjack-chip-token {
 .book-overlay[data-book-id="defense"] {
   --defense-shot-origin-x: calc(50% - 1px);
   --defense-shot-origin-y: 50%;
+  --defense-shot-origin-cqw-x: calc(50cqw - 1px);
+  --defense-shot-origin-cqw-y: 50cqw;
   --defense-orb-size: clamp(25.2px, 4.68cqw, 34.2px);
   --defense-enemy-size: clamp(38px, 12.8cqw, 48px);
   --defense-slime-width: 35.6px;
   --defense-slime-height: 26.7px;
   --defense-bat-size: 26px;
-  --defense-arena-size: min(
-    var(--panel-width, var(--panel-max-width)),
-    var(--panel-max-width)
-  );
-  width: var(--defense-arena-px, var(--defense-arena-size));
+  --defense-arena-size: 480px;
+  width: min(var(--defense-arena-px, var(--defense-arena-size)), calc(100cqw - 16px));
   height: auto;
   aspect-ratio: auto;
   padding: 0;
@@ -6513,6 +7646,10 @@ button.blackjack-chip-token {
   animation: defense-arena-damage-shake 300ms cubic-bezier(0.18, 0.84, 0.3, 1) both;
 }
 
+.defense-panel.is-defeated .defense-arena {
+  animation: defense-defeat-focus 3000ms cubic-bezier(0.2, 0.82, 0.24, 1) both;
+}
+
 .defense-skill-dock {
   position: relative;
   z-index: 1;
@@ -6523,6 +7660,246 @@ button.blackjack-chip-token {
   margin-top: 0;
   overflow: hidden;
   background: #102632;
+}
+
+.mining-skill-dock {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  margin-top: 0;
+  overflow: hidden;
+  background: #102632;
+}
+
+.mining-skill-dock .upgrade-panel.is-skill-shop.is-docked,
+.mining-skill-dock .skill-shop-frame {
+  height: auto;
+}
+
+.mining-skill-dock .skill-shop-frame {
+  grid-template-rows: auto 30px;
+  align-content: start;
+  gap: 4px;
+  padding: 4px 6px 5px;
+}
+
+.mining-skill-dock .skill-shop-header {
+  display: none;
+}
+
+.mining-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-card-limit: 8;
+  --td-skill-visible-card-rows: 4;
+  --td-skill-visible-card-height: 36px;
+  --td-skill-visible-card-gap: 6px;
+  --td-skill-visible-grid-height: 170px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--td-skill-visible-card-gap);
+  max-height: var(--td-skill-visible-grid-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.mining-skill-dock .skill-shop-card {
+  --td-skill-base-y: 0px;
+  min-height: 30px;
+  grid-template-columns: 30px minmax(0, 1fr) minmax(52px, max-content);
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px;
+  border-width: 1px;
+  border-radius: 6px;
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.86, 0.24, 1),
+    filter 120ms ease;
+  will-change: transform, filter;
+}
+
+.mining-skill-dock .skill-shop-card:hover:not(:disabled),
+.mining-skill-dock .skill-shop-card:focus-visible:not(:disabled),
+.mining-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
+  z-index: 2;
+  filter: brightness(1.08);
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.mining-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.mining-skill-dock .skill-shop-card:disabled,
+.mining-skill-dock .skill-shop-card:disabled:hover,
+.mining-skill-dock .skill-shop-card:disabled:focus-visible,
+.mining-skill-dock .skill-shop-card.is-unaffordable,
+.mining-skill-dock .skill-shop-card.is-unaffordable:hover,
+.mining-skill-dock .skill-shop-card.is-unaffordable:focus-visible {
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  animation: none;
+  cursor: default;
+}
+
+.mining-skill-dock .skill-shop-card-detail {
+  display: none;
+}
+
+.mining-skill-dock .skill-shop-buy {
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  width: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.mining-skill-dock .skill-shop-card.is-maxed,
+.mining-skill-dock .skill-shop-card.is-maxed * {
+  color: #8cff70;
+}
+
+.mining-skill-dock .skill-shop-tabs {
+  grid-template-columns: 1fr;
+}
+
+.mining-skill-dock .skill-shop-tab {
+  --td-skill-base-y: 0px;
+  min-height: 30px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px;
+  padding: 4px 6px;
+  border-width: 1px;
+  border-radius: 6px;
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.86, 0.24, 1),
+    filter 120ms ease;
+  will-change: transform, filter;
+}
+
+.mining-skill-dock .skill-shop-tab.is-selected {
+  --td-skill-base-y: -2px;
+  border-color: rgba(255, 244, 188, 0.95);
+}
+
+.mining-skill-dock .skill-shop-tab:hover,
+.mining-skill-dock .skill-shop-tab:focus-visible,
+.mining-skill-dock .skill-shop-tab.is-hover-bouncing {
+  z-index: 2;
+  filter: brightness(1.08);
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.mining-skill-dock .skill-shop-tab.is-hover-bouncing {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.mining-skill-dock .skill-shop-tab:active {
+  z-index: 3;
+  filter: brightness(0.98);
+  animation: defense-skill-press-bounce 320ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
+}
+
+.mining-skill-dock .skill-shop-tab strong {
+  font-size: 9px;
+}
+
+.snake-skill-dock {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  margin-top: 0;
+  overflow: hidden;
+  background: #102632;
+}
+
+.snake-skill-dock .upgrade-panel.is-skill-shop.is-docked,
+.snake-skill-dock .skill-shop-frame {
+  height: auto;
+}
+
+.snake-skill-dock .skill-shop-header {
+  display: none;
+}
+
+.snake-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-card-limit: 8;
+  --td-skill-visible-card-rows: 4;
+  --td-skill-visible-card-height: 36px;
+  --td-skill-visible-card-gap: 6px;
+  --td-skill-visible-grid-height: 162px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-height: var(--td-skill-visible-grid-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.snake-skill-dock .skill-shop-card:hover:not(:disabled),
+.snake-skill-dock .skill-shop-card:focus-visible:not(:disabled),
+.snake-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
+  z-index: 2;
+  filter: brightness(1.08);
+  outline: 2px solid rgba(255, 244, 188, 0.72);
+  outline-offset: -2px;
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.snake-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.snake-skill-dock .skill-shop-card:disabled,
+.snake-skill-dock .skill-shop-card:disabled:hover,
+.snake-skill-dock .skill-shop-card:disabled:focus-visible,
+.snake-skill-dock .skill-shop-card.is-unaffordable,
+.snake-skill-dock .skill-shop-card.is-unaffordable:hover,
+.snake-skill-dock .skill-shop-card.is-unaffordable:focus-visible {
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  animation: none;
+  cursor: default;
+}
+
+.snake-skill-dock .skill-shop-card-value small {
+  color: #baff80;
+  font-size: 12px;
+  line-height: 1;
+  -webkit-text-stroke: 0.14px rgba(8, 24, 6, 0.86);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.92),
+    0 0 4px rgba(39, 138, 28, 0.6);
+}
+
+.snake-skill-dock .skill-shop-tab:hover,
+.snake-skill-dock .skill-shop-tab:focus-visible,
+.snake-skill-dock .skill-shop-tab.is-hover-bouncing {
+  z-index: 2;
+  filter: brightness(1.08);
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.snake-skill-dock .skill-shop-tab.is-hover-bouncing {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.snake-skill-dock .skill-shop-tab:active {
+  z-index: 3;
+  filter: brightness(0.98);
+  animation: defense-skill-press-bounce 320ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
 }
 
 .defense-skill-dock .upgrade-panel.is-skill-shop.is-docked,
@@ -6593,11 +7970,13 @@ button.blackjack-chip-token {
 .defense-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
   z-index: 2;
   filter: brightness(1.08);
+  outline: 2px solid rgba(255, 244, 188, 0.72);
+  outline-offset: -2px;
   transform: translateY(var(--td-skill-base-y)) scale(1.045);
 }
 
 .defense-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled) {
-  animation: defense-skill-hover-bounce 460ms cubic-bezier(0.2, 0.94, 0.24, 1) both;
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
 }
 
 .defense-skill-dock .skill-shop-card:active:not(:disabled) {
@@ -6723,6 +8102,13 @@ button.blackjack-chip-token {
 
 .defense-skill-dock .skill-shop-tab.is-selected {
   --td-skill-base-y: -2px;
+  border-color: rgba(255, 244, 188, 0.95);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 2px 0 rgba(0, 0, 0, 0.32),
+    0 0 0 2px rgba(255, 244, 188, 0.48),
+    0 0 14px rgba(255, 220, 118, 0.48);
 }
 
 .defense-skill-dock .skill-shop-tab:hover,
@@ -6734,7 +8120,7 @@ button.blackjack-chip-token {
 }
 
 .defense-skill-dock .skill-shop-tab.is-hover-bouncing {
-  animation: defense-skill-hover-bounce 460ms cubic-bezier(0.2, 0.94, 0.24, 1) both;
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
 }
 
 .defense-skill-dock .skill-shop-tab:active {
@@ -6817,6 +8203,831 @@ button.blackjack-chip-token {
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-skill-dock .skill-shop-tab strong {
   font-size: 8px;
+}
+
+.mana-skill-dock {
+  position: relative;
+  z-index: 1;
+  flex: 0 0 auto;
+  min-height: 0;
+  width: 100%;
+  height: auto;
+  margin-top: 0;
+  overflow: hidden;
+  background: #102632;
+}
+
+.mana-skill-dock .upgrade-panel.is-skill-shop.is-docked,
+.mana-skill-dock .skill-shop-frame {
+  height: auto;
+}
+
+.mana-skill-dock .skill-shop-frame {
+  grid-template-rows: auto 30px;
+  align-content: start;
+  gap: 4px;
+  padding: 4px 6px 5px;
+}
+
+.mana-skill-dock .skill-shop-header {
+  display: none;
+}
+
+.mana-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-card-limit: 8;
+  --td-skill-visible-card-rows: 4;
+  --td-skill-visible-card-height: 36px;
+  --td-skill-visible-card-gap: 6px;
+  --td-skill-visible-grid-height: 170px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--td-skill-visible-card-gap);
+  max-height: var(--td-skill-visible-grid-height);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+.mana-skill-dock .skill-shop-card.is-research {
+  min-height: 50px;
+  grid-template-rows: auto auto 10px;
+  padding-bottom: 6px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.13), transparent 46%),
+    linear-gradient(180deg, #ff9d2e, #a85412);
+}
+
+.mana-skill-dock .skill-shop-card.is-research.is-locked {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), transparent 44%),
+    linear-gradient(180deg, #5b625f, #2f3432);
+}
+
+.skill-shop-research-progress {
+  grid-column: 1 / -1;
+  position: relative;
+  align-self: end;
+  height: 10px;
+  margin: 2px 2px 0;
+  border: 1px solid rgba(0, 0, 0, 0.64);
+  border-radius: 6px;
+  background: rgba(19, 24, 20, 0.75);
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.58);
+}
+
+.skill-shop-research-progress i {
+  display: block;
+  width: var(--skill-research-progress, 0%);
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #78fff4, #27bebe);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  transition: width 180ms linear;
+}
+
+.skill-shop-research-progress b {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #ffffff;
+  font-size: 8px;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.mana-skill-dock .skill-shop-card {
+  --td-skill-base-y: 0px;
+  min-height: 30px;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  grid-template-rows: auto minmax(0, 1fr) 3px;
+  gap: 1px 5px;
+  padding: 4px 45px 4px 6px;
+  border-width: 1px;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.19),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 0 rgba(0, 0, 0, 0.34);
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.86, 0.24, 1),
+    filter 120ms ease;
+  will-change: transform, filter;
+}
+
+.mana-skill-dock .skill-shop-card:hover:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed),
+.mana-skill-dock .skill-shop-card:focus-visible:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed),
+.mana-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed) {
+  z-index: 2;
+  filter: brightness(1.08);
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.mana-skill-dock .skill-shop-card.is-hover-bouncing:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed) {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.mana-skill-dock .skill-shop-card:active:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed) {
+  z-index: 3;
+  filter: brightness(0.98);
+  animation: defense-skill-press-bounce 320ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
+}
+
+.mana-skill-dock .skill-shop-card:disabled,
+.mana-skill-dock .skill-shop-card:disabled:hover,
+.mana-skill-dock .skill-shop-card:disabled:focus-visible,
+.mana-skill-dock .skill-shop-card.is-hover-bouncing:disabled,
+.mana-skill-dock .skill-shop-card.is-unaffordable,
+.mana-skill-dock .skill-shop-card.is-unaffordable:hover,
+.mana-skill-dock .skill-shop-card.is-unaffordable:focus-visible,
+.mana-skill-dock .skill-shop-card.is-unaffordable:active,
+.mana-skill-dock .skill-shop-card.is-hover-bouncing.is-unaffordable,
+.mana-skill-dock .skill-shop-card.is-locked,
+.mana-skill-dock .skill-shop-card.is-locked:hover,
+.mana-skill-dock .skill-shop-card.is-locked:focus-visible,
+.mana-skill-dock .skill-shop-card.is-locked:active,
+.mana-skill-dock .skill-shop-card.is-hover-bouncing.is-locked,
+.mana-skill-dock .skill-shop-card.is-hover-bouncing.is-maxed {
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  animation: none;
+  cursor: default;
+  pointer-events: none;
+}
+
+.mana-skill-dock .skill-shop-card-topline strong {
+  font-size: clamp(9px, 2.2cqw, 12px);
+  line-height: 1;
+  text-shadow: 0 1px 0 #000000;
+}
+
+.mana-skill-dock .skill-shop-card-value {
+  min-width: 0;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.mana-skill-dock .skill-shop-card-value strong {
+  min-width: max-content;
+  font-size: clamp(10px, 2.35cqw, 13px);
+  text-shadow: 0 1px 0 #000000;
+  white-space: nowrap;
+}
+
+.mana-skill-dock .skill-shop-card-value small {
+  min-width: max-content;
+  font-size: clamp(8px, 1.8cqw, 11px);
+  white-space: nowrap;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.84),
+    0 0 4px rgba(120, 255, 116, 0.28);
+}
+
+.mana-skill-dock .skill-shop-card-detail {
+  display: none;
+}
+
+.mana-skill-dock .skill-shop-buy {
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
+  width: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  justify-content: flex-end;
+  overflow: hidden;
+}
+
+.mana-skill-dock .skill-shop-buy .blackjack-cost-resource {
+  gap: 1px;
+}
+
+.mana-skill-dock .skill-shop-buy .blackjack-upgrade-icon.is-cost-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.mana-skill-dock .skill-shop-buy .blackjack-cost-resource b,
+.mana-skill-dock .skill-shop-buy > b {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #64d8ff;
+  font-size: clamp(10px, 2.4cqw, 13px);
+  text-shadow:
+    0 1px 0 #000000,
+    0 0 5px rgba(100, 216, 255, 0.55);
+}
+
+.mana-skill-dock .skill-shop-card.is-maxed,
+.mana-skill-dock .skill-shop-card.is-maxed * {
+  color: #8cff70;
+}
+
+.mana-skill-dock .skill-shop-tab {
+  --td-skill-base-y: 0px;
+  min-height: 30px;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px;
+  padding: 4px 6px;
+  border-width: 1px;
+  border-radius: 6px;
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    0 2px 0 rgba(0, 0, 0, 0.32);
+  transform: translateY(var(--td-skill-base-y)) scale(1);
+  transform-origin: 50% 50%;
+  transition:
+    transform 160ms cubic-bezier(0.2, 0.86, 0.24, 1),
+    filter 120ms ease;
+  will-change: transform, filter;
+}
+
+.mana-skill-dock .skill-shop-tabs {
+  grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+}
+
+.mana-skill-dock .skill-shop-tab.is-selected {
+  --td-skill-base-y: -2px;
+  border-color: rgba(255, 244, 188, 0.95);
+  box-shadow:
+    inset 0 -3px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.22),
+    0 2px 0 rgba(0, 0, 0, 0.32),
+    0 0 0 2px rgba(255, 244, 188, 0.48),
+    0 0 14px rgba(255, 220, 118, 0.48);
+}
+
+.mana-skill-dock .skill-shop-tab:hover,
+.mana-skill-dock .skill-shop-tab:focus-visible,
+.mana-skill-dock .skill-shop-tab.is-hover-bouncing {
+  z-index: 2;
+  filter: brightness(1.08);
+  transform: translateY(var(--td-skill-base-y)) scale(1.045);
+}
+
+.mana-skill-dock .skill-shop-tab.is-hover-bouncing {
+  animation: defense-skill-hover-bounce 180ms cubic-bezier(0.2, 0.86, 0.24, 1) both;
+}
+
+.mana-skill-dock .skill-shop-tab:active {
+  z-index: 3;
+  filter: brightness(0.98);
+  animation: defense-skill-press-bounce 320ms cubic-bezier(0.2, 0.86, 0.22, 1) both;
+}
+
+.mana-skill-dock .skill-shop-tab span {
+  font-size: 14px;
+}
+
+.mana-skill-dock .skill-shop-tab strong {
+  font-size: 9px;
+}
+
+.defense-skill-dock,
+.mana-skill-dock,
+.snake-skill-dock {
+  background: #3a2415;
+  box-shadow:
+    inset 0 2px 0 rgba(255, 255, 255, 0.06),
+    inset 0 0 0 2px rgba(28, 17, 9, 0.9);
+}
+
+.defense-skill-dock .skill-shop-frame,
+.mana-skill-dock .skill-shop-frame,
+.snake-skill-dock .skill-shop-frame {
+  grid-template-rows: minmax(0, var(--td-skill-visible-grid-height)) 34px;
+  gap: 7px;
+  padding: 8px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 255, 255, 0.08), transparent 34%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), transparent 38%),
+    #3a2415;
+}
+
+.defense-skill-dock .skill-shop-card-grid,
+.mana-skill-dock .skill-shop-card-grid,
+.snake-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-card-height: 36px;
+  --td-skill-visible-card-gap: 6px;
+  --td-skill-visible-grid-height: 162px;
+  gap: var(--td-skill-visible-card-gap);
+  padding: 0 2px 1px;
+}
+
+.defense-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-grid-height: 170px;
+  padding: 4px 6px;
+  margin: -4px;
+}
+
+.mana-skill-dock .skill-shop-card-grid {
+  --td-skill-visible-grid-height: 170px;
+  padding: 4px 6px;
+  margin: -4px;
+}
+
+.defense-skill-dock .skill-shop-card,
+.mana-skill-dock .skill-shop-card,
+.snake-skill-dock .skill-shop-card {
+  --td-skill-base-y: 0px;
+  min-height: var(--td-skill-visible-card-height);
+  grid-template-columns: 30px minmax(0, 1fr) minmax(52px, max-content);
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 7px;
+  border-top: 2px solid rgba(255, 181, 158, 0.48);
+  border-right: 1px solid rgba(143, 28, 22, 0.88);
+  border-bottom: 3px solid rgba(111, 21, 15, 0.92);
+  border-left: 1px solid rgba(143, 28, 22, 0.88);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.12), transparent 34%),
+    linear-gradient(180deg, var(--skill-shop-accent), var(--skill-shop-accent-dark));
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.defense-skill-dock .skill-shop-card-topline,
+.mana-skill-dock .skill-shop-card-topline,
+.snake-skill-dock .skill-shop-card-topline {
+  display: contents;
+}
+
+.defense-skill-dock .skill-shop-card-icon,
+.mana-skill-dock .skill-shop-card-icon,
+.snake-skill-dock .skill-shop-card-icon {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: #ffd9c0;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.skill-shop-card-icon .skill-shop-svg-icon {
+  display: block;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
+  fill: currentColor;
+  stroke: currentColor;
+  overflow: visible;
+}
+
+.skill-shop-card-icon .skill-shop-png-icon {
+  display: block;
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.58));
+}
+
+.book-overlay[data-book-id="defense"].panel-size-small .skill-shop-card-icon .skill-shop-png-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.skill-shop-card-icon .skill-shop-svg-icon.is-elements {
+  width: 22px;
+  height: 22px;
+  fill: initial;
+  stroke: initial;
+}
+
+.skill-shop-card-icon .skill-shop-svg-icon.is-sparkles {
+  color: #ffe08a;
+}
+
+.skill-shop-card-icon .skill-shop-svg-icon.is-fireball {
+  color: #ff8b4f;
+}
+
+.defense-skill-dock .skill-shop-card[data-element-kind="lightning"] .skill-shop-card-icon {
+  color: #ffd23c;
+}
+
+.defense-skill-dock .skill-shop-card[data-element-kind="ice"] .skill-shop-card-icon {
+  color: #7fdcff;
+}
+
+.defense-skill-dock .skill-shop-card-topline strong,
+.mana-skill-dock .skill-shop-card-topline strong,
+.snake-skill-dock .skill-shop-card-topline strong {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  min-width: 0;
+  color: #fff2e8;
+  font-size: 16px;
+  line-height: 0.98;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-text-stroke: 0.18px rgba(16, 8, 6, 0.88);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.92),
+    0 0 4px rgba(0, 0, 0, 0.74);
+  white-space: nowrap;
+}
+
+.defense-skill-dock .skill-shop-card-value,
+.mana-skill-dock .skill-shop-card-value,
+.snake-skill-dock .skill-shop-card-value {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.defense-skill-dock .skill-shop-card-value strong,
+.mana-skill-dock .skill-shop-card-value strong,
+.snake-skill-dock .skill-shop-card-value strong {
+  min-width: 0;
+  max-width: 100%;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  -webkit-text-stroke: 0.18px rgba(10, 6, 4, 0.86);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.92),
+    0 0 4px rgba(0, 0, 0, 0.72);
+}
+
+.defense-skill-dock .skill-shop-card-value small {
+  color: #baff80;
+  font-size: 16px;
+  line-height: 1;
+  -webkit-text-stroke: 0.14px rgba(8, 24, 6, 0.86);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.92),
+    0 0 4px rgba(39, 138, 28, 0.6);
+}
+
+.mana-skill-dock .skill-shop-card-value small {
+  color: #baff80;
+  font-size: 16px;
+  line-height: 1;
+  -webkit-text-stroke: 0.14px rgba(8, 24, 6, 0.86);
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.92),
+    0 0 4px rgba(39, 138, 28, 0.6);
+}
+
+.defense-skill-dock .skill-shop-card.is-defense {
+  min-height: var(--td-skill-visible-card-height);
+}
+
+.defense-skill-dock .skill-shop-card.is-defense .skill-shop-card-topline strong {
+  font-size: 16px;
+  line-height: 0.98;
+  text-overflow: ellipsis;
+}
+
+.defense-skill-dock .skill-shop-card.is-defense .skill-shop-card-value,
+.defense-skill-dock .skill-shop-card.is-defense .skill-shop-card-value strong,
+.defense-skill-dock .skill-shop-card.is-defense .skill-shop-card-value small {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.defense-skill-dock .skill-shop-buy,
+.mana-skill-dock .skill-shop-buy,
+.snake-skill-dock .skill-shop-buy {
+  position: static;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-width: 52px;
+  width: max-content;
+  max-width: 74px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border: 0;
+  border-bottom: 2px solid rgba(169, 126, 34, 0.82);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.32);
+  box-shadow: none;
+  pointer-events: none;
+}
+
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-buy,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-buy,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-buy {
+  background: #e0b34f;
+}
+
+.defense-skill-dock .skill-shop-buy .blackjack-cost-resource,
+.mana-skill-dock .skill-shop-buy .blackjack-cost-resource,
+.snake-skill-dock .skill-shop-buy .blackjack-cost-resource {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: max-content;
+  pointer-events: none;
+}
+
+.defense-skill-dock .skill-shop-buy .blackjack-upgrade-icon.is-cost-icon,
+.mana-skill-dock .skill-shop-buy .blackjack-upgrade-icon.is-cost-icon,
+.snake-skill-dock .skill-shop-buy .blackjack-upgrade-icon.is-cost-icon {
+  width: 11px;
+  height: 11px;
+}
+
+.defense-skill-dock .skill-shop-buy .blackjack-cost-resource b,
+.defense-skill-dock .skill-shop-buy > b,
+.mana-skill-dock .skill-shop-buy .blackjack-cost-resource b,
+.mana-skill-dock .skill-shop-buy > b,
+.snake-skill-dock .skill-shop-buy .blackjack-cost-resource b,
+.snake-skill-dock .skill-shop-buy > b {
+  max-width: none;
+  color: #8ee8ff;
+  font-size: 16px;
+  line-height: 1;
+  overflow: visible;
+  text-align: center;
+  text-overflow: clip;
+  -webkit-text-stroke: 0.16px rgba(0, 16, 24, 0.9);
+  text-shadow:
+    0 1px 0 #000000,
+    0 0 5px rgba(85, 220, 255, 0.58);
+  white-space: nowrap;
+}
+
+.mana-skill-dock .skill-shop-card-topline strong {
+  font-size: 16px;
+}
+
+.mana-skill-dock .skill-shop-card-value strong {
+  font-size: 16px;
+}
+
+.mana-skill-dock .skill-shop-card-value small {
+  font-size: 16px;
+}
+
+.mana-skill-dock .skill-shop-buy .blackjack-cost-resource b,
+.mana-skill-dock .skill-shop-buy > b {
+  font-size: 16px;
+}
+
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-buy > b,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-buy > b,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-buy > b {
+  color: #3a2408;
+  letter-spacing: 0.7px;
+  text-shadow: none;
+}
+
+.defense-skill-dock .skill-shop-card.is-maxed,
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-card-topline strong,
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value,
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value strong,
+.defense-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value small,
+.mana-skill-dock .skill-shop-card.is-maxed,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-card-topline strong,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value strong,
+.mana-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value small,
+.snake-skill-dock .skill-shop-card.is-maxed,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-card-topline strong,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value strong,
+.snake-skill-dock .skill-shop-card.is-maxed .skill-shop-card-value small {
+  color: #d9ffc9;
+}
+
+.defense-skill-dock .skill-shop-card.is-maxed,
+.mana-skill-dock .skill-shop-card.is-maxed,
+.snake-skill-dock .skill-shop-card.is-maxed {
+  border-top-color: rgba(202, 255, 169, 0.62);
+  border-right-color: rgba(42, 115, 35, 0.9);
+  border-bottom-color: rgba(18, 80, 24, 0.96);
+  border-left-color: rgba(42, 115, 35, 0.9);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), transparent 34%),
+    linear-gradient(180deg, #52b347, #1f7f33);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.2);
+}
+
+.defense-skill-dock .skill-shop-card.is-locked {
+  border-top-color: rgba(191, 196, 201, 0.42);
+  border-right-color: rgba(73, 78, 86, 0.88);
+  border-bottom-color: rgba(34, 38, 44, 0.96);
+  border-left-color: rgba(73, 78, 86, 0.88);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.09), transparent 34%),
+    linear-gradient(180deg, #707783, #3d434c);
+  filter: saturate(0.08) brightness(0.76);
+}
+
+.defense-skill-dock .skill-shop-card.is-locked > * {
+  visibility: hidden;
+}
+
+.defense-skill-dock .skill-shop-card.is-tab-entering,
+.mana-skill-dock .skill-shop-card.is-tab-entering {
+  animation: defense-skill-tab-enter 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: calc(var(--skill-card-index, 0) * 35ms);
+}
+
+.defense-skill-dock .skill-shop-card:active:not(:disabled):not(.is-unaffordable):not(.is-locked),
+.mana-skill-dock .skill-shop-card:active:not(:disabled):not(.is-unaffordable):not(.is-locked):not(.is-maxed),
+.snake-skill-dock .skill-shop-card:active:not(:disabled):not(.is-unaffordable):not(.is-locked) {
+  border-bottom-width: 2px;
+}
+
+.defense-skill-dock .skill-shop-tab,
+.mana-skill-dock .skill-shop-tab,
+.snake-skill-dock .skill-shop-tab {
+  min-height: 34px;
+  display: grid;
+  place-items: center;
+  padding: 5px 7px;
+  border: 0;
+  border-bottom: 3px solid rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25);
+}
+
+.defense-skill-dock .skill-shop-tab.is-selected,
+.mana-skill-dock .skill-shop-tab.is-selected,
+.snake-skill-dock .skill-shop-tab.is-selected {
+  border-color: transparent;
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.25),
+    0 0 0 2px rgba(255, 244, 188, 0.6),
+    0 0 12px rgba(255, 220, 118, 0.42);
+}
+
+.defense-skill-dock .skill-shop-tab strong,
+.mana-skill-dock .skill-shop-tab strong,
+.snake-skill-dock .skill-shop-tab strong {
+  display: block;
+  width: 100%;
+  font-size: 11px;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+.upgrade-panel.is-skill-shop .skill-shop-header strong,
+.upgrade-panel.is-skill-shop .skill-shop-header span,
+.upgrade-panel.is-skill-shop .skill-shop-card-topline strong,
+.upgrade-panel.is-skill-shop .skill-shop-card-value,
+.upgrade-panel.is-skill-shop .skill-shop-card-value strong,
+.upgrade-panel.is-skill-shop .skill-shop-card-value small,
+.upgrade-panel.is-skill-shop .skill-shop-card-detail,
+.upgrade-panel.is-skill-shop .skill-shop-buy,
+.upgrade-panel.is-skill-shop .skill-shop-buy b,
+.upgrade-panel.is-skill-shop .skill-shop-buy .blackjack-cost-resource b,
+.upgrade-panel.is-skill-shop .skill-shop-tab,
+.upgrade-panel.is-skill-shop .skill-shop-tab span,
+.upgrade-panel.is-skill-shop .skill-shop-tab strong {
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+}
+
+.defense-skill-dock .skill-shop-tab,
+.mana-skill-dock .skill-shop-tab {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  place-items: center;
+  text-align: center;
+}
+
+.defense-skill-dock .skill-shop-tab strong,
+.book-overlay[data-book-id="defense"].panel-size-small .defense-skill-dock .skill-shop-tab strong,
+.mana-skill-dock .skill-shop-tab strong {
+  width: 100%;
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
+}
+
+.mining-skill-dock .skill-shop-card-topline {
+  display: contents;
+}
+
+.mining-skill-dock .skill-shop-card-icon {
+  grid-column: 1;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  color: #ffd9c0;
+  font-size: 14px;
+  background: rgba(0, 0, 0, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+.mining-skill-dock .skill-shop-card-topline strong {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: start;
+  min-width: 0;
+  color: #fff2e8;
+  font-size: 16px;
+  line-height: 0.98;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mining-skill-dock .skill-shop-card-value {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.mining-skill-dock .skill-shop-card-value strong,
+.mining-skill-dock .skill-shop-card-value small {
+  min-width: 0;
+  max-width: 100%;
+  color: #ffffff;
+  font-size: 16px;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mining-skill-dock .skill-shop-card-value small {
+  color: #baff80;
+}
+
+.mining-skill-dock .skill-shop-buy {
+  position: static;
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-width: 52px;
+  width: max-content;
+  max-width: 74px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  border-bottom: 2px solid rgba(169, 126, 34, 0.82);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.32);
+  pointer-events: none;
+}
+
+.mining-skill-dock .skill-shop-buy > b {
+  max-width: none;
+  color: #8ee8ff;
+  font-size: 16px;
+  line-height: 1;
+  overflow: visible;
+  text-align: center;
+  text-overflow: clip;
+  white-space: nowrap;
+}
+
+.mining-skill-dock .skill-shop-card.is-tab-entering {
+  animation: defense-skill-tab-enter 240ms cubic-bezier(0.2, 0.8, 0.3, 1) both;
+  animation-delay: calc(var(--skill-card-index, 0) * 35ms);
+}
+
+.mining-skill-dock .skill-shop-tab {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  place-items: center;
+  text-align: center;
+}
+
+.mining-skill-dock .skill-shop-tab strong {
+  width: 100%;
+  font-size: 24px;
+  line-height: 1;
+  text-align: center;
 }
 
 .defense-arena::before {
@@ -7136,7 +9347,7 @@ button.blackjack-chip-token {
 
 .defense-status-hud {
   position: absolute;
-  z-index: 12;
+  z-index: 40;
   left: 0;
   right: 0;
   bottom: 0;
@@ -7149,42 +9360,51 @@ button.blackjack-chip-token {
   padding: 3px clamp(8px, 1.9cqw, 14px);
   border: 1px solid rgba(234, 247, 255, 0.22);
   border-radius: 0;
-  color: rgba(245, 252, 255, 0.94);
-  background: rgba(8, 14, 22, 0.3);
+  color: rgba(255, 252, 234, 0.98);
+  background: rgba(8, 14, 22, 0.46);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.14),
     0 4px 12px rgba(0, 0, 0, 0.18);
   text-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.8),
-    0 0 5px rgba(0, 0, 0, 0.46);
+    0 1px 0 rgba(0, 0, 0, 0.94),
+    0 0 5px rgba(0, 0, 0, 0.72);
   pointer-events: none;
 }
 
-.defense-status-hud span {
+.defense-status-hud > span {
   min-width: 0;
   display: inline-flex;
   align-items: center;
   gap: 4px;
   color: inherit;
-  font-size: clamp(10px, 2.15cqw, 13px);
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.1;
   white-space: nowrap;
 }
 
-.defense-status-hud strong {
+.defense-status-hud > span > strong {
   color: inherit;
-  font-size: 1.05em;
+  font-size: 1.12em;
+  -webkit-text-stroke: 0.16px rgba(0, 0, 0, 0.82);
 }
 
 .defense-hud-health {
   position: relative;
   justify-self: start;
-  width: 96px;
-  height: 17px;
+  display: inline-flex;
   align-items: center;
+  gap: 8px;
+  width: clamp(132px, 27cqw, 188px);
+  min-height: 16px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #ffe2d5;
+  background: transparent;
   overflow: visible;
-  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7)) drop-shadow(0 0 3px rgba(0, 0, 0, 0.45));
+  box-shadow: none;
+  filter: drop-shadow(0 1px 0 rgba(0, 0, 0, 0.7));
 }
 
 .defense-hud-health.is-warn {
@@ -7199,47 +9419,332 @@ button.blackjack-chip-token {
   animation: defense-hud-health-damage-shake 360ms cubic-bezier(0.16, 0.9, 0.24, 1) both;
 }
 
-.defense-hp-sprite {
-  display: block;
-  width: 71px;
-  height: 12px;
-  flex: 0 0 auto;
-  background-image: url("/assets/td/hud/hp-bar.png");
-  background-repeat: no-repeat;
-  background-size: 4970px 12px;
-  background-position: var(--defense-hp-offset, 0px) 0;
-  image-rendering: pixelated;
-  transform: scale(1.35);
-  transform-origin: left center;
-}
-
 .defense-hp-value {
-  position: absolute;
-  left: 48px;
-  top: 50%;
-  z-index: 1;
-  min-width: 28px;
-  color: #fff6cf;
-  font-size: 11px;
+  flex: 0 0 auto;
+  min-width: max-content;
+  color: #ffe2d5;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
-  text-align: center;
+  letter-spacing: 0;
+  text-align: left;
   text-shadow:
     0 1px 0 rgba(31, 18, 14, 0.95),
     0 0 4px rgba(31, 18, 14, 0.86);
+  -webkit-text-stroke: 0.12px rgba(0, 0, 0, 0.8);
+}
+
+.defense-health-track {
+  position: relative;
+  display: block;
+  flex: 1 1 auto;
+  min-width: 48px;
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.86);
+  border-radius: 4px;
+  background: #27100e;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.46),
+    0 1px 0 rgba(0, 0, 0, 0.28);
+}
+
+.defense-health-track em,
+.defense-health-track i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  border-radius: inherit;
+  transform-origin: left center;
+}
+
+.defense-health-track em {
+  background: rgba(255, 255, 255, 0.62);
+  transform: scaleX(calc(var(--defense-health-value, 0) / 100));
+}
+
+.defense-health-track i {
+  transform: scaleX(calc(var(--defense-health-value, 0) / 100));
+  background: linear-gradient(#ff6d5c, #b72d2b);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 0 7px rgba(255, 72, 54, 0.48);
+}
+
+.defense-hud-health.is-chip-damage .defense-health-track em {
+  animation: defense-hud-health-chip 420ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.defense-hud-health.is-chip-damage .defense-health-track i {
+  animation: defense-hud-health-damage-fill 420ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.defense-hud-health.is-chip-heal .defense-health-track em {
+  background: linear-gradient(#b9ffbb, #48e16d);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    0 0 7px rgba(93, 255, 126, 0.5);
+  animation: defense-hud-health-heal-chip 520ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.defense-hud-health.is-chip-heal .defense-health-track i {
+  animation: defense-hud-health-heal-fill 520ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
+}
+
+.defense-hud-xp {
+  position: absolute;
+  z-index: 30;
+  left: calc(clamp(8px, 2cqw, 14px) + 8px);
+  top: calc(clamp(8px, 2cqw, 14px) + 8px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  color: #ffe6a8;
+  background: transparent;
+  box-shadow: none;
+}
+
+.defense-hud-xp .defense-xp-badge {
+  position: relative;
+  z-index: 31;
+  width: clamp(38px, 8.16cqw, 55px);
+  height: clamp(38px, 8.16cqw, 55px);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 4px;
+  border: 2px solid rgba(42, 28, 18, 0.92);
+  border-radius: 50%;
+  color: #ffe08a;
+  background:
+    conic-gradient(#ffdd6e var(--defense-xp-progress, 0%), rgba(36, 24, 18, 0.92) 0),
+    #2a1c12;
+  box-shadow:
+    0 0 0 2px rgba(224, 179, 79, 0.78),
+    inset 0 0 0 1px rgba(255, 244, 178, 0.18),
+    inset 0 0 8px rgba(0, 0, 0, 0.54),
+    0 1px 0 rgba(255, 244, 178, 0.16);
+}
+
+.defense-hud-xp .defense-level-glow {
+  position: absolute;
+  z-index: 1;
+  left: 50%;
+  top: 50%;
+  width: clamp(62px, 12cqw, 91px);
+  height: clamp(62px, 12cqw, 91px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 238, 154, 0.85) 0 18%, rgba(255, 210, 60, 0.32) 42%, transparent 72%);
+  filter: blur(1px);
+  opacity: 0;
+  pointer-events: none;
   transform: translate(-50%, -50%);
+}
+
+.defense-hud-xp .defense-level-spark {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  box-shadow: 0 0 7px currentColor;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.defense-hud-xp .defense-gold-boost-orbit {
+  position: absolute;
+  inset: -11px;
+  z-index: 32;
+  border-radius: 50%;
   pointer-events: none;
 }
 
-.defense-hud-wave {
-  justify-self: center;
-  color: #fff0a6;
+.defense-hud-xp .defense-gold-boost-orbit i {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: clamp(8px, 1.9cqw, 13px);
+  height: clamp(8px, 1.9cqw, 13px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, #fff8d8 0 16%, #ffe481 34%, #ffc43a 62%, #b97818 100%);
+  box-shadow:
+    0 0 8px rgba(255, 217, 88, 0.88),
+    inset 0 -2px 2px rgba(112, 68, 9, 0.58);
+  transform:
+    translate(-50%, -50%)
+    translate(calc(var(--boost-orb-x, 0) * clamp(27px, 5.8cqw, 40px)), calc(var(--boost-orb-y, -1) * clamp(27px, 5.8cqw, 40px)));
+  opacity: 0.94;
+}
+
+.defense-hud-xp .defense-gold-boost-label {
+  position: absolute;
+  z-index: 6;
+  left: calc(100% + 7px);
+  top: calc(100% - 4px);
+  min-width: max-content;
+  padding: 3px 7px 4px;
+  border: 1px solid rgba(255, 226, 134, 0.78);
+  border-radius: 999px;
+  color: #ffeaa8;
+  font-size: 12px;
+  line-height: 1;
+  background: rgba(42, 26, 10, 0.84);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    0 0 13px rgba(255, 202, 65, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.85);
+  transform: translate(-8px, -5px) scale(0.86);
+}
+
+.defense-hud-xp .defense-gold-boost-label.is-gold-boosting {
+  animation: defense-gold-boost-label 1350ms cubic-bezier(0.18, 0.86, 0.24, 1) both;
+}
+
+.defense-hud-xp .defense-gold-boost-arrival {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  width: clamp(13px, 2.45cqw, 18px);
+  height: clamp(13px, 2.45cqw, 18px);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, #fff8d8 0 16%, #ffe481 34%, #ffc43a 62%, #b97818 100%);
+  box-shadow:
+    0 0 13px rgba(255, 226, 120, 0.95),
+    0 0 22px rgba(255, 183, 35, 0.48);
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  animation: defense-gold-boost-arrival 920ms cubic-bezier(0.15, 0.82, 0.22, 1) both;
+}
+
+.defense-hud-xp .defense-gold-boost-spark {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 50%;
+  width: 5px;
+  height: 5px;
+  border-radius: 2px;
+  box-shadow: 0 0 7px currentColor;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+.defense-hud-xp .defense-xp-badge.is-gold-boosting {
+  animation: defense-gold-boost-badge-pop 760ms cubic-bezier(0.17, 0.86, 0.24, 1) both;
+}
+
+.defense-hud-xp .defense-xp-badge::before {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  border-radius: 50%;
+  background: #2a1c12;
+  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.58);
+}
+
+.defense-hud-xp .defense-xp-badge strong {
+  position: relative;
+  color: inherit;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.defense-hud-xp .defense-xp-body {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 190px;
+  padding: 4px 9px 6px;
+  border: 1px solid rgba(224, 179, 79, 0.66);
+  border-radius: 8px;
+  background: rgba(20, 14, 10, 0.88);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 235, 170, 0.12),
+    0 5px 12px rgba(0, 0, 0, 0.32);
+  opacity: 0;
+  transform: translate(-4px, -50%);
+  transition:
+    opacity 120ms ease,
+    transform 120ms ease;
+  pointer-events: none;
+}
+
+.defense-hud-xp:hover .defense-xp-body,
+.defense-hud-xp:focus-visible .defense-xp-body {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.defense-hud-xp .defense-xp-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 0;
+  min-width: 0;
+  text-align: left;
+  color: #e5c98a;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.defense-hud-xp .defense-xp-top span {
+  display: none;
+}
+
+.defense-hud-xp .defense-xp-top strong {
+  min-width: 0;
+  color: #fff0af;
+  font-size: 1em;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-align: left;
+}
+
+.defense-hud-xp .defense-xp-effect {
+  color: #9cff74;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  text-align: left;
+  text-transform: none;
+  text-shadow: none;
 }
 
 .defense-hud-money {
-  justify-self: end;
+  justify-self: center;
   position: relative;
-  color: #ffe18a;
+  color: #fff0a4;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.96),
+    0 0 6px rgba(0, 0, 0, 0.78),
+    0 0 7px rgba(255, 224, 84, 0.32);
 }
 
 .defense-hud-money strong {
@@ -7250,6 +9755,10 @@ button.blackjack-chip-token {
 .defense-hud-money .defense-money-pulse {
   position: absolute;
   z-index: 2;
+  left: 50%;
+  top: 18%;
+  min-width: 6ch;
+  translate: -50% -100%;
   pointer-events: none;
   text-align: center;
   color: #fff8c8;
@@ -7267,10 +9776,36 @@ button.blackjack-chip-token {
   min-width: 3ch;
   justify-content: center;
   font-family: inherit;
+  font-size: 32px;
   cursor: pointer;
 }
 
+.defense-base-speed-toggle {
+  position: absolute;
+  z-index: 11;
+  top: clamp(42px, 7.2cqw, 54px);
+  right: clamp(48px, 8cqw, 62px);
+  min-width: 3ch;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: rgba(255, 181, 158, 0.72);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.defense-base-speed-toggle.is-active {
+  color: #fff8c8;
+}
+
 .defense-speed-toggle:hover {
+  color: #ffffff;
+}
+
+.defense-base-speed-toggle:hover {
   color: #ffffff;
 }
 
@@ -7283,8 +9818,8 @@ button.blackjack-chip-token {
 .defense-wave-chooser {
   position: absolute;
   z-index: 15;
-  left: clamp(8px, 2cqw, 14px);
-  top: clamp(8px, 2cqw, 14px);
+  right: clamp(8px, 2cqw, 14px);
+  bottom: clamp(4px, 1cqw, 8px);
   display: grid;
   grid-template-columns: 22px auto 22px;
   align-items: center;
@@ -7365,9 +9900,9 @@ button.blackjack-chip-token {
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-mini-stats span,
-.book-overlay[data-book-id="defense"].panel-size-small .defense-speed-toggle {
+.book-overlay[data-book-id="defense"].panel-size-small .defense-speed-toggle,
+.book-overlay[data-book-id="defense"].panel-size-small .defense-base-speed-toggle {
   gap: 3px;
-  font-size: 12px;
   text-shadow:
     0 1px 0 rgba(34, 25, 20, 0.76),
     0 0 3px rgba(34, 25, 20, 0.7);
@@ -7495,7 +10030,7 @@ button.blackjack-chip-token {
   border-radius: 50%;
   color: #47352d;
   background: #ffe28a;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   box-shadow:
@@ -7504,6 +10039,20 @@ button.blackjack-chip-token {
   transform: translate(-50%, -50%);
   transition: left 520ms cubic-bezier(0.22, 0.74, 0.22, 1);
   will-change: left;
+}
+
+.defense-wave-markers span strong {
+  display: block;
+  min-width: 1ch;
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  text-align: center;
+  transform: translate(0, -1px);
+}
+
+.defense-wave-markers span:not(.is-current):not(.is-final) strong {
+  transform: translate(1px, -1px);
 }
 
 .defense-wave-markers span.is-past {
@@ -7528,14 +10077,14 @@ button.blackjack-chip-token {
   color: #7cff58;
   background: #b62425;
   border-color: #ffe1b0;
-  font-size: 10px;
+  font-size: 16px;
   text-shadow:
     0 1px 0 rgba(29, 21, 13, 0.86),
     0 0 5px rgba(124, 255, 88, 0.48);
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-wave-markers span {
-  font-size: 8px;
+  font-size: 16px;
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-wave-markers span {
@@ -7551,21 +10100,17 @@ button.blackjack-chip-token {
 .book-overlay[data-book-id="defense"].panel-size-small .defense-wave-markers span.is-final {
   width: 22px;
   height: 22px;
-  font-size: 8px;
+  font-size: 16px;
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-hud-health {
-  width: 82px;
-  height: 14px;
-}
-
-.book-overlay[data-book-id="defense"].panel-size-small .defense-hp-sprite {
-  transform: scale(1.15);
+  width: 118px;
+  min-height: 14px;
+  gap: 5px;
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-hp-value {
-  left: 41px;
-  font-size: 9px;
+  font-size: 16px;
 }
 
 .defense-health i {
@@ -7586,11 +10131,11 @@ button.blackjack-chip-token {
   z-index: 7;
   width: min(calc(100cqw - 6px), calc(100cqh - 6px));
   aspect-ratio: 1;
-  border: 3px solid rgba(255, 245, 205, 0.72);
+  border: 3px solid rgba(255, 245, 205, 0.23);
   border-radius: 50%;
   box-shadow:
-    0 0 24px rgba(255, 231, 154, 0.28),
-    inset 0 0 22px rgba(255, 231, 154, 0.18);
+    0 0 18px rgba(255, 231, 154, 0.08),
+    inset 0 0 16px rgba(255, 231, 154, 0.06);
   transform: translate(-50%, -50%) scale(var(--defense-range-scale, 1));
   pointer-events: none;
 }
@@ -7603,28 +10148,174 @@ button.blackjack-chip-token {
   width: min(calc(100cqw - 6px), calc(100cqh - 6px));
   aspect-ratio: 1;
   border-radius: 50%;
-  overflow: hidden;
-  opacity: 0.5;
-  mix-blend-mode: screen;
-  filter:
-    drop-shadow(0 0 7px rgba(219, 248, 255, 0.72))
-    drop-shadow(0 0 16px rgba(115, 181, 255, 0.34));
+  opacity: 0.56;
+  contain: layout paint style;
   transform: translate(-50%, -50%) scale(var(--defense-ice-range-scale, 0.15));
   transform-origin: 50% 50%;
   pointer-events: none;
 }
 
-.defense-ice-aura::before {
-  content: "";
+.defense-ice-aura > * {
   position: absolute;
-  inset: -21%;
-  background-image: url("/assets/td/ice/ice-aura-strip.png");
-  background-repeat: no-repeat;
-  background-size: 6100% 100%;
-  background-position: 0% 0;
-  image-rendering: pixelated;
-  transform: translate(-18px, -18px);
-  animation: defense-ice-aura-frames calc(3355ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.defense-ice-bloom {
+  inset: -16%;
+  background: radial-gradient(circle, rgba(150, 220, 255, 0.28) 40%, rgba(120, 200, 255, 0.12) 62%, transparent 72%);
+}
+
+.defense-ice-body {
+  background: radial-gradient(
+    circle,
+    rgba(225, 247, 255, 0.34) 0%,
+    rgba(160, 224, 255, 0.18) 50%,
+    rgba(120, 200, 255, 0.06) 74%,
+    rgba(180, 235, 255, 0.26) 83%,
+    transparent 86%
+  );
+}
+
+.defense-ice-veins,
+.defense-ice-ring {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.defense-ice-veins {
+  transform: rotate(10deg);
+}
+
+.defense-ice-sweep {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    rgba(255, 255, 255, 0.22) 35deg,
+    transparent 85deg,
+    rgba(200, 240, 255, 0.15) 210deg,
+    transparent 270deg
+  );
+  -webkit-mask: radial-gradient(circle, #000000 55%, transparent 85%);
+  mask: radial-gradient(circle, #000000 55%, transparent 85%);
+}
+
+.defense-ice-sweep-1 {
+  transform: rotate(18deg);
+}
+
+.defense-ice-sweep-2 {
+  opacity: 0.7;
+  transform: rotate(196deg);
+}
+
+.defense-ice-ring-1 {
+  transform: rotate(12deg);
+}
+
+.defense-ice-ring-2 {
+  transform: rotate(33deg);
+}
+
+.defense-ice-rim {
+  box-shadow:
+    inset 0 0 14px 2px rgba(210, 244, 255, 0.5),
+    inset 0 0 3px rgba(255, 255, 255, 0.6),
+    0 0 12px rgba(160, 220, 255, 0.4);
+  opacity: 0.86;
+}
+
+.defense-ice-flake {
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  color: rgba(234, 250, 255, 0.92);
+  margin: -11px;
+}
+
+.defense-ice-flake svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+.defense-ice-flake-1 {
+  transform: translate(26.4%, -25.6%) rotate(0deg);
+}
+
+.defense-ice-flake-2 {
+  transform: translate(-33.6%, -9.6%) rotate(0deg);
+}
+
+.defense-ice-flake-2 svg {
+  width: 15px;
+  height: 15px;
+}
+
+.defense-ice-flake-3 {
+  transform: translate(32%, 17.6%) rotate(0deg);
+}
+
+.defense-ice-flake-4 {
+  transform: translate(-24%, 28%) rotate(0deg);
+}
+
+.defense-ice-flake-4 svg {
+  width: 17px;
+  height: 17px;
+}
+
+.defense-ice-flake-5 {
+  transform: translate(-5.6%, -36.8%) rotate(0deg);
+}
+
+.defense-ice-flake-5 svg {
+  width: 13px;
+  height: 13px;
+}
+
+.defense-ice-glint {
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+}
+
+.defense-ice-glint > i {
+  display: block;
+  width: 10px;
+  height: 10px;
+  margin: -5px;
+  background:
+    linear-gradient(45deg, transparent 44%, #ffffff 44% 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #ffffff 44% 56%, transparent 56%);
+  opacity: 0.7;
+}
+
+.defense-ice-glint-1 {
+  transform: translate(25.6%, -18.4%);
+}
+
+.defense-ice-glint-1 > i {
+  opacity: 0.78;
+}
+
+.defense-ice-glint-2 {
+  transform: translate(-28.8%, 12%);
+}
+
+.defense-ice-glint-2 > i {
+  opacity: 0.56;
+}
+
+.defense-ice-glint-3 {
+  transform: translate(8%, 29.6%);
+}
+
+.defense-ice-glint-3 > i {
+  opacity: 0.66;
 }
 
 .defense-ice-range {
@@ -7665,6 +10356,7 @@ button.blackjack-chip-token {
   background-position: var(--defense-orb-frame-1) 0;
   image-rendering: pixelated;
   pointer-events: none;
+  will-change: transform, translate, background-position;
   filter:
     drop-shadow(0 0 5px rgba(234, 248, 255, 0.86))
     drop-shadow(0 0 11px rgba(161, 213, 255, 0.5));
@@ -7673,6 +10365,44 @@ button.blackjack-chip-token {
   animation:
     defense-orb-idle 2400ms steps(1, end) infinite,
     defense-orb-float 1500ms ease-in-out infinite alternate;
+}
+
+.defense-panel.is-defeated .defense-orb {
+  z-index: 18;
+  background-image: url("/assets/td/orb/orb-td-destroy.png");
+  animation:
+    defense-orb-destroy 3000ms steps(1, end) both,
+    defense-orb-death-zoom 3000ms cubic-bezier(0.16, 0.88, 0.2, 1) both;
+}
+
+.defense-panel.is-defeated .defense-orb::after {
+  content: "";
+  position: absolute;
+  inset: -42%;
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  image-rendering: auto;
+}
+
+.defense-panel.is-defeated .defense-orb::after {
+  inset: -72%;
+  background:
+    conic-gradient(
+      from 8deg,
+      transparent 0deg 18deg,
+      rgba(255, 255, 255, 0.82) 20deg 22deg,
+      transparent 24deg 74deg,
+      rgba(132, 220, 255, 0.72) 76deg 78deg,
+      transparent 80deg 153deg,
+      rgba(255, 246, 164, 0.7) 156deg 158deg,
+      transparent 160deg 246deg,
+      rgba(255, 255, 255, 0.76) 249deg 251deg,
+      transparent 253deg 360deg
+    );
+  opacity: 0;
+  transform: scale(0.28) rotate(-18deg);
+  animation: defense-orb-light-burst 2100ms steps(14, end) both;
 }
 
 .defense-lanes {
@@ -7710,76 +10440,64 @@ button.blackjack-chip-token {
 }
 
 .defense-shot {
-  --defense-fire-frame-1: 0%;
-  --defense-fire-frame-2: 25%;
-  --defense-fire-frame-3: 50%;
-  --defense-fire-frame-4: 75%;
-  --defense-fire-frame-5: 100%;
+  --shot-source-x: var(--defense-shot-origin-cqw-x, calc(50cqw - 1px));
+  --shot-source-y: var(--defense-shot-origin-cqw-y, 50cqw);
   position: absolute;
-  left: var(--defense-shot-origin-x, 50%);
-  top: var(--defense-shot-origin-y, 50%);
+  left: 0;
+  top: 0;
   z-index: 6;
   width: clamp(32px, 6.2cqw, 50px);
   aspect-ratio: 1;
-  background-image: url("/assets/td/Attaque%20TD/Fire%20attack%20TD%20outlined.png");
+  background-image: url("/assets/td/Attaque%20TD/Fire%20attack%20TD%20glow.png");
   background-repeat: no-repeat;
   background-size: 500% 100%;
   background-position: 0 0;
   image-rendering: pixelated;
-  filter:
-    drop-shadow(0 0 3px rgba(255, 225, 136, 0.95))
-    drop-shadow(0 0 7px rgba(255, 76, 32, 0.75));
+  filter: none;
   pointer-events: none;
-  transform: translate(-50%, -50%) rotate(var(--shot-angle)) scale(0.88);
+  translate: calc(var(--shot-source-x) - 50%) calc(var(--shot-source-y) - 50%);
+  rotate: var(--shot-angle);
+  scale: 0.88;
+  transform: none;
   transform-origin: 50% 50%;
-  will-change: left, top, opacity, transform, background-position;
-  animation:
-    defense-fire-shot-travel var(--shot-duration, 520ms) cubic-bezier(0.16, 0.72, 0.22, 1) both,
-    defense-fire-shot-frames var(--shot-duration, 520ms) steps(1, end) both;
+  will-change: opacity, translate, scale;
+  animation: defense-fire-shot-travel var(--shot-duration, 520ms) cubic-bezier(0.16, 0.72, 0.22, 1) both;
 }
 
 .defense-shot::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  top: 58%;
-  width: 46%;
-  height: 70%;
-  border-radius: 999px;
-  background: linear-gradient(180deg, rgba(255, 231, 150, 0.52), rgba(255, 57, 31, 0));
-  filter: blur(1px);
-  transform: translate(-50%, -50%);
-  opacity: 0.76;
-  mix-blend-mode: screen;
+  content: none;
 }
 
 .defense-lightning-strike {
   --lightning-visible-bottom: -96.875%;
   --lightning-target-bottom-offset: calc(var(--defense-slime-height, var(--defense-enemy-size)) * 0.5);
+  --lightning-visual-scale: 1;
   position: absolute;
   left: var(--lightning-x);
   top: calc(var(--lightning-y) + var(--lightning-target-bottom-offset));
   z-index: 9;
   width: clamp(58px, 10cqw, 92px);
   aspect-ratio: 1;
-  background-image: url("/assets/td/lightning/lightning-strike.png");
+  background-image: url("/assets/td/lightning/lightning-strike-glow.png");
   background-repeat: no-repeat;
   background-size: 600% 100%;
   background-position: 0 0;
   image-rendering: pixelated;
   pointer-events: none;
   opacity: 0;
-  filter:
-    drop-shadow(0 0 4px rgba(205, 250, 255, 0.96))
-    drop-shadow(0 0 10px rgba(91, 219, 255, 0.72));
+  filter: none;
   transform:
     translate(-50%, var(--lightning-visible-bottom))
-    scale(1);
+    scale(var(--lightning-visual-scale));
   transform-origin: 50% 96.875%;
   will-change: opacity, transform, background-position;
   animation:
     defense-lightning-flash var(--lightning-duration, 420ms) linear both,
     defense-lightning-frames var(--lightning-duration, 420ms) steps(1, end) both;
+}
+
+.book-overlay[data-book-id="defense"].panel-size-large .defense-lightning-strike {
+  --lightning-visual-scale: 1.6;
 }
 
 .defense-lightning-strike.is-target-skeleton-mage {
@@ -7795,38 +10513,51 @@ button.blackjack-chip-token {
 }
 
 .defense-enemy-projectile {
-  --defense-fire-frame-1: 0%;
-  --defense-fire-frame-2: 25%;
-  --defense-fire-frame-3: 50%;
-  --defense-fire-frame-4: 75%;
-  --defense-fire-frame-5: 100%;
+  --enemy-shot-target-x: var(--defense-shot-origin-cqw-x, calc(50cqw - 1px));
+  --enemy-shot-target-y: var(--defense-shot-origin-cqw-y, 50cqw);
   position: absolute;
-  left: var(--enemy-shot-x);
-  top: var(--enemy-shot-y);
+  left: 0;
+  top: 0;
   z-index: 6;
   width: clamp(20px, 4.2cqw, 34px);
   aspect-ratio: 1;
-  background-image: url("/assets/td/Attaque%20TD/Fire%20attack%20TD.png");
+  background-image: url("/assets/td/Attaque%20TD/Fire%20attack%20TD%20enemy%20glow.png");
   background-repeat: no-repeat;
   background-size: 500% 100%;
   background-position: 0 0;
   image-rendering: pixelated;
-  filter:
-    drop-shadow(0 0 3px rgba(255, 216, 128, 0.8))
-    drop-shadow(0 0 6px rgba(255, 78, 32, 0.62));
+  filter: none;
   pointer-events: none;
-  transform: translate(-50%, -50%) rotate(var(--enemy-shot-angle)) scale(0.92);
+  translate: calc(var(--enemy-shot-x) - 50%) calc(var(--enemy-shot-y) - 50%);
+  rotate: var(--enemy-shot-angle);
+  scale: 0.92;
+  transform: none;
   transform-origin: 50% 50%;
-  will-change: left, top, opacity, transform, background-position;
-  animation:
-    defense-enemy-fireball-travel var(--enemy-shot-duration, 580ms) cubic-bezier(0.2, 0.78, 0.24, 1) both,
-    defense-fire-shot-frames var(--enemy-shot-duration, 580ms) steps(1, end) both;
+  will-change: opacity, translate, scale;
+  animation: defense-enemy-fireball-travel var(--enemy-shot-duration, 580ms) cubic-bezier(0.2, 0.78, 0.24, 1) both;
 }
 
 .defense-actors {
   position: absolute;
   inset: 0;
   pointer-events: none;
+}
+
+.defense-effects-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 17;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+}
+
+.defense-pooled-effect.is-pooled-hidden,
+.defense-pooled-effect.is-pooled-hidden * {
+  display: none !important;
+  animation: none !important;
+  transition: none !important;
 }
 
 .defense-enemy-health-bar {
@@ -7845,6 +10576,18 @@ button.blackjack-chip-token {
   pointer-events: none;
 }
 
+.defense-enemy-health-bar em {
+  position: absolute;
+  inset: 0;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(255, 246, 165, 0.95), rgba(255, 255, 255, 0.86));
+  opacity: 0;
+  transform: scaleX(calc(var(--enemy-health-value, 100) / 100));
+  transform-origin: left center;
+  pointer-events: none;
+}
+
 .defense-enemy-health-bar b {
   display: block;
   width: 100%;
@@ -7852,7 +10595,11 @@ button.blackjack-chip-token {
   border-radius: inherit;
   background: #ff705d;
   transform: scaleX(calc(var(--enemy-health-value, 100) / 100));
-  transform-origin: center center;
+  transform-origin: left center;
+}
+
+.defense-enemy-health-bar.is-chip-damage em {
+  animation: defense-enemy-health-chip 420ms cubic-bezier(0.18, 0.9, 0.24, 1) both;
 }
 
 .defense-enemy-health-bar.is-skeleton-mage {
@@ -7881,16 +10628,14 @@ button.blackjack-chip-token {
   z-index: 14;
   pointer-events: none;
   color: #ffffff;
-  font-size: clamp(18px, 5.4cqw, 36px);
+  font-size: 32px;
   font-weight: 900;
   line-height: 1;
   --damage-popup-opacity: 0.75;
   opacity: var(--damage-popup-opacity);
   contain: layout paint style;
-  -webkit-text-stroke: 0.55px rgba(41, 28, 24, 0.9);
-  text-shadow:
-    0 3px 0 rgba(0, 0, 0, 0.62),
-    0 0 10px rgba(255, 255, 255, 0.72);
+  -webkit-text-stroke: 0;
+  text-shadow: none;
   transform: translate(
     calc(-50% + var(--damage-offset-x, 0px)),
     calc(-88% + var(--damage-offset-y, -20px))
@@ -7899,27 +10644,24 @@ button.blackjack-chip-token {
   animation: defense-damage-pop 1500ms cubic-bezier(0.16, 0.86, 0.3, 1) forwards;
 }
 
+.book-overlay .defense-damage-popup.is-source-ice {
+  color: #5aa0ff;
+}
+
+.book-overlay .defense-damage-popup.is-source-lightning {
+  color: #ff5ce0;
+}
+
 .book-overlay .defense-damage-popup.is-critical {
-  color: #ffe45e;
-  text-shadow:
-    0 2px 0 rgba(72, 39, 17, 0.62),
-    0 0 9px rgba(255, 228, 94, 0.82);
+  color: #ffd23c;
+  font-size: 48px;
+  text-shadow: none;
 }
 
 .book-overlay .defense-damage-popup.is-superCritical {
-  color: #ff8b30;
-  font-size: clamp(23px, 6.8cqw, 46px);
-  text-shadow:
-    0 2px 0 rgba(72, 26, 9, 0.72),
-    0 0 12px rgba(255, 139, 48, 0.86);
-}
-
-.book-overlay[data-book-id="defense"].panel-size-small .defense-damage-popup {
-  font-size: clamp(14px, 4.9cqw, 24px);
-}
-
-.book-overlay[data-book-id="defense"].panel-size-small .defense-damage-popup.is-superCritical {
-  font-size: clamp(16px, 5.4cqw, 28px);
+  color: #ff8a3c;
+  font-size: 64px;
+  text-shadow: none;
 }
 
 .book-overlay .defense-money-popup {
@@ -7929,32 +10671,36 @@ button.blackjack-chip-token {
   pointer-events: none;
 }
 
+.book-overlay .defense-money-popup .defense-money-coins {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+
 .book-overlay .defense-money-popup i {
   position: absolute;
-  left: var(--money-x);
-  top: calc(var(--money-y) + 4.5%);
+  left: 0;
+  top: 0;
   z-index: 11;
   display: block;
-  width: 9.6px;
-  height: 9.6px;
-  background-image: url("/assets/td/hud/money.png");
+  width: 11.52px;
+  height: 11.52px;
+  background-image: url("/assets/td/hud/money-glow.png");
   background-repeat: no-repeat;
-  background-size: 57.6px 9.6px;
+  background-size: 69.12px 11.52px;
   image-rendering: pixelated;
-  filter:
-    drop-shadow(0 1px 0 rgba(57, 32, 8, 0.82))
-    drop-shadow(0 0 5px rgba(255, 224, 84, 0.62));
+  filter: none;
+  translate: calc(var(--money-x) + var(--coin-x, 0px)) calc(var(--money-y) + 4.5cqw + var(--coin-y, 0px));
   transform: translate(-50%, -50%);
-  will-change: left, top, opacity, transform, background-position;
-  animation:
-    defense-money-coin-flight 1450ms cubic-bezier(0.16, 0.76, 0.22, 1) forwards,
-    defense-money-frames 520ms steps(6, end) infinite;
+  will-change: opacity, translate, transform;
+  animation: defense-money-coin-flight 1450ms cubic-bezier(0.16, 0.76, 0.22, 1) forwards;
+  animation-delay: var(--money-coin-delay, 0ms);
 }
 
 .book-overlay .defense-money-popup b {
   position: absolute;
-  right: clamp(28px, 5.8cqw, 42px);
-  bottom: calc(clamp(26px, 5cqw, 36px) + var(--money-stack, 0) * 3px);
+  left: var(--money-goal-x, 50%);
+  top: var(--money-goal-y, 96.2%);
   z-index: 15;
   max-width: min(10ch, calc(100% - clamp(56px, 11cqw, 84px)));
   overflow: hidden;
@@ -7963,18 +10709,17 @@ button.blackjack-chip-token {
   font-size: clamp(16px, 4.2cqw, 28px);
   font-weight: 900;
   line-height: 1;
-  text-align: right;
+  text-align: center;
   text-overflow: clip;
   white-space: nowrap;
-  transform-origin: right center;
-  -webkit-text-stroke: 0.55px rgba(54, 24, 9, 0.86);
-  text-shadow:
-    0 2px 0 rgba(65, 35, 8, 0.9),
-    0 0 8px hsl(calc(56deg - 44deg * var(--money-heat, 0)) 100% 68% / 0.82),
-    0 0 13px hsl(calc(56deg - 44deg * var(--money-heat, 0)) 100% 60% / 0.42);
+  transform-origin: center;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
+  opacity: 0;
   transform: translate(0, 0);
   will-change: opacity, transform;
   animation: defense-money-rise 760ms cubic-bezier(0.13, 0.92, 0.22, 1) forwards;
+  animation-delay: var(--money-counter-delay, 0ms);
 }
 
 .book-overlay[data-book-id="defense"].panel-size-small .defense-money-popup b {
@@ -8046,24 +10791,22 @@ button.blackjack-chip-token {
   --slime-frame-5: 80%;
   --slime-frame-6: 100%;
   position: absolute;
-  left: var(--enemy-x);
-  top: var(--enemy-y);
+  left: 0;
+  top: 0;
   z-index: 4;
   width: var(--defense-slime-width, calc(var(--defense-enemy-size) * 1.5));
   height: var(--defense-slime-height, var(--defense-enemy-size));
-  background-image: url("/assets/td/enemies/blue-slime/walk-compact.png");
+  background-image: url("/assets/td/enemies/blue-slime/walk-compact-outlined.png");
   background-repeat: no-repeat;
   background-size: 600% 100%;
   background-position: 0 0;
   image-rendering: pixelated;
   filter: none;
-  transform: translate(-50%, -50%) scaleX(var(--enemy-facing-scale));
+  transform: translate(var(--enemy-x-px, 0px), var(--enemy-y-px, 0px)) translate(-50%, -50%) scaleX(var(--enemy-facing-scale));
   transform-origin: center;
-  transition:
-    left 140ms linear,
-    top 140ms linear;
-  animation: defense-enemy-walk calc(1586ms * var(--defense-time-scale, 1)) linear infinite;
-  animation-delay: var(--enemy-walk-offset, 0ms);
+  transition: none;
+  animation: defense-enemy-walk calc(520ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation-delay: 0ms;
 }
 
 .defense-enemy.is-idle {
@@ -8075,9 +10818,9 @@ button.blackjack-chip-token {
   --slime-frame-6: 71.429%;
   --slime-frame-7: 85.714%;
   --slime-frame-8: 100%;
-  background-image: url("/assets/td/enemies/blue-slime/idle-compact.png");
+  background-image: url("/assets/td/enemies/blue-slime/idle-compact-outlined.png");
   background-size: 800% 100%;
-  animation: defense-enemy-idle calc(1080ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation: defense-enemy-idle calc(880ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
   animation-delay: 0ms;
 }
 
@@ -8095,9 +10838,9 @@ button.blackjack-chip-token {
   --slime-frame-11: 90.909%;
   --slime-frame-12: 100%;
   width: calc(var(--defense-slime-width, calc(var(--defense-enemy-size) * 1.5)) * 2);
-  background-image: url("/assets/td/enemies/blue-slime/attack-compact.png");
+  background-image: url("/assets/td/enemies/blue-slime/attack-compact-outlined.png");
   background-size: 1200% 100%;
-  animation: defense-enemy-attack calc(840ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-enemy-attack calc(760ms * var(--defense-time-scale, 1)) steps(1, end) both;
   animation-delay: 0ms;
 }
 
@@ -8112,9 +10855,9 @@ button.blackjack-chip-token {
   --slime-frame-8: 77.778%;
   --slime-frame-9: 88.889%;
   --slime-frame-10: 100%;
-  background-image: url("/assets/td/enemies/blue-slime/death-compact.png");
+  background-image: url("/assets/td/enemies/blue-slime/death-compact-outlined.png");
   background-size: 1000% 100%;
-  animation: defense-enemy-death calc(620ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-enemy-death calc(720ms * var(--defense-time-scale, 1)) steps(1, end) both;
   animation-delay: 0ms;
   transition: none;
 }
@@ -8127,28 +10870,28 @@ button.blackjack-chip-token {
   width: calc(var(--defense-enemy-size) * 0.667);
   height: var(--defense-enemy-size);
   aspect-ratio: 32 / 48;
-  background-image: url("/assets/td/enemies/skeleton-mage-centered.png");
+  background-image: url("/assets/td/enemies/skeleton-mage-centered-outlined.png");
   background-size: 2100% 400%;
   background-position: 0 var(--mage-row-walk);
-  transform: translate(-50%, -100%) scaleX(var(--enemy-facing-scale));
+  transform: translate(var(--enemy-x-px, 0px), var(--enemy-y-px, 0px)) translate(-50%, -100%) scaleX(var(--enemy-facing-scale));
   transform-origin: center bottom;
-  animation: defense-skeleton-mage-walk calc(912ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation: defense-skeleton-mage-walk calc(620ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
 }
 
 .defense-enemy.is-skeleton-mage.is-idle {
   background-position: 0 var(--mage-row-idle);
-  animation: defense-skeleton-mage-idle calc(1080ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation: defense-skeleton-mage-idle calc(920ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
 }
 
 .defense-enemy.is-skeleton-mage.is-attacking {
   background-position: 0 var(--mage-row-attack);
-  animation: defense-skeleton-mage-attack calc(1080ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-skeleton-mage-attack calc(820ms * var(--defense-time-scale, 1)) steps(1, end) both;
 }
 
 .defense-enemy.is-skeleton-mage.is-dying {
-  background-image: url("/assets/td/enemies/skeleton-mage-centered.png");
+  background-image: url("/assets/td/enemies/skeleton-mage-centered-outlined.png");
   background-position: 0 var(--mage-row-death);
-  animation: defense-skeleton-mage-death calc(988ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-skeleton-mage-death calc(760ms * var(--defense-time-scale, 1)) steps(1, end) both;
 }
 
 .defense-enemy.is-goblin-king {
@@ -8160,48 +10903,47 @@ button.blackjack-chip-token {
   width: calc(var(--defense-enemy-size) * 1.08);
   height: calc(var(--defense-enemy-size) * 1.38);
   aspect-ratio: auto;
-  background-image: url("/assets/td/enemies/goblin-king/goblin-king.png");
+  background-image: url("/assets/td/enemies/goblin-king/goblin-king-outlined.png");
   background-size: 1600% 1100%;
   background-position: 0 var(--goblin-row-walk);
-  animation: defense-goblin-king-walk calc(980ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation: defense-goblin-king-walk calc(680ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
   animation-delay: 0ms;
 }
 
 .defense-enemy.is-goblin-king.is-idle {
   background-position: 0 var(--goblin-row-idle);
-  animation: defense-goblin-king-idle calc(920ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
+  animation: defense-goblin-king-idle calc(940ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
 }
 
 .defense-enemy.is-goblin-king.is-attacking {
   background-position: 0 var(--goblin-row-attack-a);
-  animation: defense-goblin-king-attack calc(1040ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-goblin-king-attack calc(780ms * var(--defense-time-scale, 1)) steps(1, end) both;
 }
 
 .defense-enemy.is-goblin-king.is-dying {
-  background-image: url("/assets/td/enemies/goblin-king/goblin-king.png");
+  background-image: url("/assets/td/enemies/goblin-king/goblin-king-outlined.png");
   background-position: 0 var(--goblin-row-death);
-  animation: defense-goblin-king-death calc(880ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-goblin-king-death calc(820ms * var(--defense-time-scale, 1)) steps(1, end) both;
   transition: none;
 }
 
 .defense-enemy.is-bat {
   width: var(--defense-bat-size, calc(var(--defense-enemy-size) * 0.92));
   aspect-ratio: 1;
-  background-image: url("/assets/td/enemies/bat/bat-sheet.png");
+  background-image: url("/assets/td/enemies/bat/bat-sheet-outlined.png");
   background-size: 1100% 300%;
   background-position: 0 0;
   animation: defense-bat-fly calc(520ms * var(--defense-time-scale, 1)) steps(1, end) infinite;
-  filter: none;
 }
 
 .defense-enemy.is-bat.is-attacking {
   background-position: 0 100%;
-  animation: defense-bat-attack calc(580ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-bat-attack calc(620ms * var(--defense-time-scale, 1)) steps(1, end) both;
 }
 
 .defense-enemy.is-bat.is-dying {
   background-position: 0 50%;
-  animation: defense-bat-death calc(620ms * var(--defense-time-scale, 1)) steps(1, end) both;
+  animation: defense-bat-death calc(700ms * var(--defense-time-scale, 1)) steps(1, end) both;
 }
 
 .defense-enemy.is-bat::before {
@@ -8212,7 +10954,86 @@ button.blackjack-chip-token {
   animation: none;
 }
 
-.defense-panel.is-paused .defense-enemy {
+.defense-enemy.is-lightning-hitstop {
+  animation-play-state: paused !important;
+}
+
+.defense-impact-burst {
+  position: absolute;
+  left: var(--impact-x);
+  top: var(--impact-y);
+  z-index: 16;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
+}
+
+.defense-impact-burst i {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: clamp(3px, 0.9cqw, 6px);
+  height: clamp(3px, 0.9cqw, 6px);
+  border-radius: 999px;
+  background: #fff7bf;
+  box-shadow:
+    0 0 5px rgba(255, 244, 164, 0.72),
+    0 1px 0 rgba(91, 44, 16, 0.5);
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(0.4);
+  animation: defense-impact-spark 330ms cubic-bezier(0.17, 0.86, 0.26, 1) both;
+  animation-delay: var(--impact-delay, 0ms);
+}
+
+.defense-impact-burst.is-fireball-impact {
+  --fireball-impact-scale: 1.2;
+  width: clamp(28px, 5cqw, 46px);
+  aspect-ratio: 1;
+  height: auto;
+  background-image: url("/assets/td/effects/fireball-impact.png");
+  background-repeat: no-repeat;
+  background-size: 800% 100%;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  opacity: 0.6;
+  transform: translate(-50%, -50%) scale(var(--fireball-impact-scale));
+  will-change: opacity, transform, background-position;
+  animation: defense-fireball-impact calc(360ms * var(--defense-time-scale, 1)) steps(1, end) both;
+}
+
+.defense-impact-burst.is-source-lightning i {
+  background: #e7fbff;
+  box-shadow:
+    0 0 6px rgba(145, 230, 255, 0.88),
+    0 0 12px rgba(72, 171, 255, 0.46);
+}
+
+.defense-impact-burst.is-ice-contact {
+  width: clamp(38px, 8cqw, 72px);
+  aspect-ratio: 1;
+  height: auto;
+  background-image: url("/assets/td/ice/ice-aura-strip.png");
+  background-repeat: no-repeat;
+  background-size: 6100% 100%;
+  background-position: 0 0;
+  image-rendering: pixelated;
+  opacity: 0.72;
+  transform: translate(-50%, -50%) scale(1);
+  will-change: opacity, transform, background-position;
+  animation:
+    defense-ice-aura-frames calc(560ms * var(--defense-time-scale, 1)) steps(1, end) both,
+    defense-ice-contact-fade calc(560ms * var(--defense-time-scale, 1)) cubic-bezier(0.16, 0.82, 0.24, 1) both;
+}
+
+.defense-impact-burst.is-source-ice i {
+  background: #dff9ff;
+  box-shadow:
+    0 0 5px rgba(138, 229, 255, 0.78),
+    0 0 9px rgba(121, 185, 255, 0.36);
+}
+
+.defense-panel.is-paused .defense-enemy,
+.defense-panel.is-defeated .defense-enemy {
   transition: none;
   animation-play-state: paused;
 }
@@ -8222,13 +11043,13 @@ button.blackjack-chip-token {
 }
 
 .defense-panel.is-paused .defense-enemy:not(.is-skeleton-mage):not(.is-bat):not(.is-goblin-king):not(.is-dying) {
-  background-image: url("/assets/td/enemies/blue-slime/idle-compact.png");
+  background-image: url("/assets/td/enemies/blue-slime/idle-compact-outlined.png");
   background-size: 800% 100%;
   background-position: 0 0;
 }
 
 .defense-panel.is-paused .defense-enemy.is-skeleton-mage:not(.is-dying) {
-  background-image: url("/assets/td/enemies/skeleton-mage-centered.png");
+  background-image: url("/assets/td/enemies/skeleton-mage-centered-outlined.png");
   background-position: 0 var(--mage-row-idle);
 }
 
@@ -8237,19 +11058,42 @@ button.blackjack-chip-token {
 }
 
 .defense-panel.is-paused .defense-enemy.is-goblin-king:not(.is-dying) {
-  background-image: url("/assets/td/enemies/goblin-king/goblin-king.png");
+  background-image: url("/assets/td/enemies/goblin-king/goblin-king-outlined.png");
   background-position: 0 var(--goblin-row-idle);
 }
 
 .defense-panel.is-paused .defense-shot,
 .defense-panel.is-paused .defense-orb,
-.defense-panel.is-paused .defense-ice-aura::before,
+.defense-panel.is-paused .defense-ice-aura,
+.defense-panel.is-paused .defense-ice-aura *,
 .defense-panel.is-paused .defense-enemy-projectile,
 .defense-panel.is-paused .defense-lightning-strike,
 .defense-panel.is-paused .defense-damage-popup,
+.defense-panel.is-paused .defense-impact-burst i,
+.defense-panel.is-paused .defense-impact-burst.is-fireball-impact,
+.defense-panel.is-paused .defense-impact-burst.is-ice-contact,
 .defense-panel.is-paused .defense-money-popup i,
-.defense-panel.is-paused .defense-money-popup b {
+.defense-panel.is-paused .defense-money-popup b,
+.defense-panel.is-defeated .defense-shot,
+.defense-panel.is-defeated .defense-ice-aura,
+.defense-panel.is-defeated .defense-ice-aura *,
+.defense-panel.is-defeated .defense-enemy-projectile,
+.defense-panel.is-defeated .defense-lightning-strike,
+.defense-panel.is-defeated .defense-damage-popup,
+.defense-panel.is-defeated .defense-impact-burst i,
+.defense-panel.is-defeated .defense-impact-burst.is-fireball-impact,
+.defense-panel.is-defeated .defense-impact-burst.is-ice-contact,
+.defense-panel.is-defeated .defense-money-popup i,
+.defense-panel.is-defeated .defense-money-popup b {
   animation-play-state: paused;
+}
+
+.book-overlay[data-book-id="defense"] .defense-panel,
+.book-overlay[data-book-id="defense"] .defense-panel *,
+.book-overlay[data-book-id="defense"] .defense-panel *::before,
+.book-overlay[data-book-id="defense"] .defense-panel *::after {
+  -webkit-text-stroke: 0;
+  text-shadow: none;
 }
 
 .defense-mini-stats {
@@ -8305,48 +11149,33 @@ button.blackjack-chip-token {
 @keyframes defense-money-number-pulse {
   0% {
     opacity: 0;
-    transform: scale(1);
+    transform: translate3d(0, 8px, 0) scale(1);
   }
 
   14% {
     opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1.18);
   }
 
   36% {
     opacity: 1;
-    transform: scale(1.5);
+    transform: translate3d(0, -10px, 0) scale(1.5);
   }
 
   68% {
     opacity: 0.72;
-    transform: scale(1.12);
+    transform: translate3d(0, -20px, 0) scale(1.12);
   }
 
   100% {
     opacity: 0;
-    transform: scale(1);
+    transform: translate3d(0, -32px, 0) scale(1);
   }
 }
 
 @keyframes defense-skill-hover-bounce {
   0% {
     transform: translateY(var(--td-skill-base-y)) scale(1);
-  }
-
-  28% {
-    transform: translateY(var(--td-skill-base-y)) scale(1.05);
-  }
-
-  48% {
-    transform: translateY(var(--td-skill-base-y)) scale(1.025);
-  }
-
-  68% {
-    transform: translateY(var(--td-skill-base-y)) scale(1.042);
-  }
-
-  84% {
-    transform: translateY(var(--td-skill-base-y)) scale(1.034);
   }
 
   100% {
@@ -8373,6 +11202,18 @@ button.blackjack-chip-token {
 
   100% {
     transform: translateY(var(--td-skill-base-y)) scale(0.96);
+  }
+}
+
+@keyframes defense-skill-tab-enter {
+  0% {
+    opacity: 0.78;
+    transform: translateY(calc(var(--td-skill-base-y) + 12px)) scale(0.96);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(var(--td-skill-base-y)) scale(1);
   }
 }
 
@@ -8436,6 +11277,175 @@ button.blackjack-chip-token {
 
   to {
     transform: translate(-50%, calc(-50% + 1px)) scale(1.03);
+  }
+}
+
+@keyframes defense-orb-destroy {
+  0%,
+  12.499% {
+    background-position: var(--defense-orb-frame-1) 0;
+  }
+
+  12.5%,
+  24.999% {
+    background-position: var(--defense-orb-frame-2) 0;
+  }
+
+  25%,
+  37.499% {
+    background-position: var(--defense-orb-frame-3) 0;
+  }
+
+  37.5%,
+  49.999% {
+    background-position: var(--defense-orb-frame-4) 0;
+  }
+
+  50%,
+  62.499% {
+    background-position: var(--defense-orb-frame-5) 0;
+  }
+
+  62.5%,
+  74.999% {
+    background-position: var(--defense-orb-frame-6) 0;
+  }
+
+  75%,
+  87.499% {
+    background-position: var(--defense-orb-frame-7) 0;
+  }
+
+  87.5%,
+  100% {
+    background-position: var(--defense-orb-frame-8) 0;
+  }
+}
+
+@keyframes defense-orb-death-zoom {
+  0% {
+    filter:
+      drop-shadow(0 0 5px rgba(234, 248, 255, 0.86))
+      drop-shadow(0 0 11px rgba(161, 213, 255, 0.5));
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  12.5% {
+    filter:
+      drop-shadow(0 0 7px rgba(234, 248, 255, 0.9))
+      drop-shadow(0 0 15px rgba(161, 213, 255, 0.56));
+    transform: translate(calc(-50% - 1px), calc(-50% + 0.5px)) scale(1.34) rotate(-0.6deg);
+  }
+
+  25% {
+    filter:
+      drop-shadow(0 0 9px rgba(255, 255, 255, 0.92))
+      drop-shadow(0 0 20px rgba(121, 205, 255, 0.62));
+    transform: translate(calc(-50% + 1.5px), calc(-50% - 1px)) scale(1.86) rotate(0.9deg);
+  }
+
+  37.5% {
+    filter:
+      drop-shadow(0 0 11px rgba(255, 255, 255, 0.94))
+      drop-shadow(0 0 25px rgba(121, 205, 255, 0.68));
+    transform: translate(calc(-50% - 2px), calc(-50% + 1.5px)) scale(2.62) rotate(-1.25deg);
+  }
+
+  50% {
+    filter:
+      drop-shadow(0 0 12px rgba(255, 255, 255, 0.95))
+      drop-shadow(0 0 30px rgba(121, 205, 255, 0.74));
+    transform: translate(calc(-50% + 2.5px), calc(-50% - 2px)) scale(3.74) rotate(1.55deg);
+  }
+
+  62.5% {
+    filter:
+      drop-shadow(0 0 15px rgba(255, 255, 255, 0.97))
+      drop-shadow(0 0 36px rgba(121, 205, 255, 0.8));
+    transform: translate(calc(-50% - 3px), calc(-50% + 2.5px)) scale(4.34) rotate(-1.9deg);
+  }
+
+  75% {
+    filter:
+      drop-shadow(0 0 17px rgba(255, 255, 255, 0.98))
+      drop-shadow(0 0 39px rgba(121, 205, 255, 0.84));
+    transform: translate(calc(-50% + 3.5px), calc(-50% - 3px)) scale(4.82) rotate(2.25deg);
+  }
+
+  87.5% {
+    filter:
+      drop-shadow(0 0 18px rgba(255, 255, 255, 0.98))
+      drop-shadow(0 0 42px rgba(121, 205, 255, 0.86));
+    transform: translate(calc(-50% - 4px), calc(-50% + 3.5px)) scale(5.12) rotate(-2.55deg);
+  }
+
+  100% {
+    filter:
+      drop-shadow(0 0 18px rgba(255, 255, 255, 0.98))
+      drop-shadow(0 0 42px rgba(121, 205, 255, 0.86));
+    transform: translate(-50%, -50%) scale(5.25);
+  }
+}
+
+@keyframes defense-orb-light-burst {
+  0% {
+    opacity: 0;
+    transform: scale(0.28) rotate(-18deg);
+  }
+
+  24% {
+    opacity: 0.08;
+    transform: scale(0.48) rotate(-2deg);
+  }
+
+  36% {
+    opacity: 0.16;
+    transform: scale(0.68) rotate(18deg);
+  }
+
+  48% {
+    opacity: 0.28;
+    transform: scale(0.86) rotate(39deg);
+  }
+
+  58% {
+    opacity: 0.42;
+    transform: scale(1.05) rotate(61deg);
+  }
+
+  68% {
+    opacity: 0.52;
+    transform: scale(1.24) rotate(84deg);
+  }
+
+  76% {
+    opacity: 0.72;
+    transform: scale(1.46) rotate(108deg);
+  }
+
+  84% {
+    opacity: 0.9;
+    transform: scale(1.68) rotate(132deg);
+  }
+
+  92% {
+    opacity: 0.92;
+    transform: scale(1.94) rotate(160deg);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(2.34) rotate(198deg);
+  }
+}
+
+@keyframes defense-defeat-focus {
+  0% {
+    filter: brightness(1) saturate(1);
+  }
+
+  100% {
+    filter: brightness(0.76) saturate(0.72);
   }
 }
 
@@ -8747,6 +11757,28 @@ button.blackjack-chip-token {
 
 }
 
+@keyframes defense-ice-contact-fade {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.72);
+  }
+
+  18% {
+    opacity: 0.72;
+    transform: translate(-50%, -50%) scale(1.08);
+  }
+
+  72% {
+    opacity: 0.52;
+    transform: translate(-50%, -50%) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+}
+
 @keyframes defense-stats-skill-shake {
   0%,
   100% {
@@ -8799,6 +11831,71 @@ button.blackjack-chip-token {
   }
 }
 
+@keyframes defense-hud-health-chip {
+  0% {
+    opacity: 0.92;
+    transform: scaleX(calc(var(--defense-health-chip-from, var(--defense-health-value, 0)) / 100));
+  }
+
+  44% {
+    opacity: 0.82;
+    transform: scaleX(calc(var(--defense-health-chip-from, var(--defense-health-value, 0)) / 100));
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(calc(var(--defense-health-chip-to, var(--defense-health-value, 0)) / 100));
+  }
+}
+
+@keyframes defense-hud-health-damage-fill {
+  0%,
+  42% {
+    background: linear-gradient(#fff287, #f4b132);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.55),
+      0 0 8px rgba(255, 211, 75, 0.58);
+  }
+
+  100% {
+    background: linear-gradient(#ff6d5c, #b72d2b);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.35),
+      0 0 7px rgba(255, 72, 54, 0.48);
+  }
+}
+
+@keyframes defense-hud-health-heal-chip {
+  0% {
+    opacity: 0.9;
+    transform: scaleX(calc(var(--defense-health-chip-to, var(--defense-health-value, 0)) / 100));
+  }
+
+  62% {
+    opacity: 0.82;
+    transform: scaleX(calc(var(--defense-health-chip-to, var(--defense-health-value, 0)) / 100));
+  }
+
+  100% {
+    opacity: 0;
+    transform: scaleX(calc(var(--defense-health-chip-to, var(--defense-health-value, 0)) / 100));
+  }
+}
+
+@keyframes defense-hud-health-heal-fill {
+  0% {
+    transform: scaleX(calc(var(--defense-health-chip-from, var(--defense-health-value, 0)) / 100));
+  }
+
+  38% {
+    transform: scaleX(calc(var(--defense-health-chip-from, var(--defense-health-value, 0)) / 100));
+  }
+
+  100% {
+    transform: scaleX(calc(var(--defense-health-chip-to, var(--defense-health-value, 0)) / 100));
+  }
+}
+
 @keyframes defense-stats-skill-pop {
   0%,
   100% {
@@ -8814,6 +11911,69 @@ button.blackjack-chip-token {
   70% {
     filter: brightness(1.1);
     transform: scale(0.99);
+  }
+}
+
+@keyframes defense-gold-boost-arrival {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(46px, 58px) scale(0.48);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(36px, 48px) scale(0.82);
+  }
+
+  72% {
+    opacity: 1;
+    transform: translate(-50%, -50%) translate(7px, 8px) scale(1.1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) translate(0, 0) scale(0.62);
+  }
+}
+
+@keyframes defense-gold-boost-badge-pop {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  22% {
+    transform: scale(0.94);
+  }
+
+  48% {
+    transform: scale(1.22);
+  }
+
+  76% {
+    transform: scale(0.98);
+  }
+}
+
+@keyframes defense-gold-boost-label {
+  0% {
+    opacity: 0;
+    transform: translate(-8px, -5px) scale(0.86);
+  }
+
+  18% {
+    opacity: 1;
+    transform: translate(0, -7px) scale(1.08);
+  }
+
+  66% {
+    opacity: 1;
+    transform: translate(0, -7px) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(6px, -15px) scale(0.9);
   }
 }
 
@@ -8929,67 +12089,46 @@ button.blackjack-chip-token {
 }
 
 @keyframes defense-fire-shot-travel {
-  from {
-    left: var(--defense-shot-origin-x, 50%);
-    top: var(--defense-shot-origin-y, 50%);
+  0% {
+    translate: calc(var(--shot-source-x) - 50%) calc(var(--shot-source-y) - 50%);
+    opacity: 0;
+    scale: 0.46;
+  }
+  8% {
+    translate: calc(var(--shot-source-x) - 50%) calc(var(--shot-source-y) - 50%);
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--shot-angle)) scale(0.72);
+    scale: 0.76;
+  }
+  16% {
+    translate: calc(var(--shot-source-x) - 50%) calc(var(--shot-source-y) - 50%);
+    opacity: 1;
+    scale: 0.82;
   }
   68% {
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--shot-angle)) scale(1.04);
+    scale: 1.04;
   }
   to {
-    left: var(--shot-target-x);
-    top: var(--shot-target-y);
+    translate: calc(var(--shot-target-x) - 50%) calc(var(--shot-target-y) - 50%);
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--shot-angle)) scale(0.88);
+    scale: 0.88;
   }
 }
 
 @keyframes defense-enemy-fireball-travel {
   from {
-    left: var(--enemy-shot-x);
-    top: var(--enemy-shot-y);
+    translate: calc(var(--enemy-shot-x) - 50%) calc(var(--enemy-shot-y) - 50%);
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--enemy-shot-angle)) scale(0.92);
+    scale: 0.92;
   }
   72% {
     opacity: 1;
-    transform: translate(-50%, -50%) rotate(var(--enemy-shot-angle)) scale(1.16);
+    scale: 1.16;
   }
   to {
-    left: 50%;
-    top: 50%;
+    translate: calc(var(--enemy-shot-target-x, 50cqw) - 50%) calc(var(--enemy-shot-target-y, 50cqw) - 50%);
     opacity: 0;
-    transform: translate(-50%, -50%) rotate(var(--enemy-shot-angle)) scale(0.82);
-  }
-}
-
-@keyframes defense-fire-shot-frames {
-  0%,
-  19.999% {
-    background-position: var(--defense-fire-frame-1) 0;
-  }
-
-  20%,
-  39.999% {
-    background-position: var(--defense-fire-frame-2) 0;
-  }
-
-  40%,
-  59.999% {
-    background-position: var(--defense-fire-frame-3) 0;
-  }
-
-  60%,
-  79.999% {
-    background-position: var(--defense-fire-frame-4) 0;
-  }
-
-  80%,
-  100% {
-    background-position: var(--defense-fire-frame-5) 0;
+    scale: 0.82;
   }
 }
 
@@ -8998,25 +12137,25 @@ button.blackjack-chip-token {
     opacity: 0;
     transform:
       translate(-50%, var(--lightning-visible-bottom))
-      scale(1);
+      scale(var(--lightning-visual-scale));
   }
   8% {
     opacity: 1;
     transform:
       translate(-50%, var(--lightning-visible-bottom))
-      scale(1);
+      scale(var(--lightning-visual-scale));
   }
   72% {
     opacity: 1;
     transform:
       translate(-50%, var(--lightning-visible-bottom))
-      scale(1);
+      scale(var(--lightning-visual-scale));
   }
   100% {
     opacity: 0;
     transform:
       translate(-50%, var(--lightning-visible-bottom))
-      scale(1);
+      scale(var(--lightning-visual-scale));
   }
 }
 
@@ -9109,39 +12248,121 @@ button.blackjack-chip-token {
 @keyframes defense-money-rise {
   0% {
     opacity: 0;
-    transform: translate3d(6px, 7px, 0) scale(0.64) rotate(0deg);
+    transform: translate3d(calc(-50% + 6px), calc(-50% + 7px), 0) scale(0.64) rotate(0deg);
   }
   10% {
     opacity: 1;
-    transform: translate3d(var(--money-kick-x, 0px), -2px, 0) scale(1.68) rotate(var(--money-rotate-a, -8deg));
+    transform: translate3d(calc(-50% + var(--money-kick-x, 0px)), calc(-50% - 2px), 0) scale(1.68) rotate(var(--money-rotate-a, -8deg));
   }
   28% {
     opacity: 1;
-    transform: translate3d(calc(var(--money-drift-x, -8px) * 0.34 - var(--money-stack, 0) * 2px), -8px, 0) scale(1.16) rotate(var(--money-rotate-b, 5deg));
+    transform: translate3d(calc(-50% + var(--money-drift-x, -8px) * 0.34 - var(--money-stack, 0) * 2px), calc(-50% - 8px), 0) scale(1.16) rotate(var(--money-rotate-b, 5deg));
   }
   64% {
     opacity: 1;
-    transform: translate3d(calc(var(--money-drift-x, -16px) * 0.68 - var(--money-stack, 0) * 3px), calc(var(--money-drift-y, -28px) * 0.64), 0) scale(1) rotate(calc(var(--money-rotate-c, -3deg) * -0.5));
+    transform: translate3d(calc(-50% + var(--money-drift-x, -16px) * 0.68 - var(--money-stack, 0) * 3px), calc(-50% + var(--money-drift-y, -28px) * 0.64 - 18px), 0) scale(1) rotate(calc(var(--money-rotate-c, -3deg) * -0.5));
   }
   100% {
     opacity: 0;
-    transform: translate3d(calc(var(--money-drift-x, -28px) - var(--money-stack, 0) * 4px), var(--money-drift-y, -31px), 0) scale(0.82) rotate(var(--money-rotate-c, 7deg));
+    transform: translate3d(calc(-50% + var(--money-drift-x, -28px) - var(--money-stack, 0) * 4px), calc(-50% + var(--money-drift-y, -31px) - 26px), 0) scale(0.82) rotate(var(--money-rotate-c, 7deg));
   }
 }
 
-@keyframes defense-money-frames {
-  from {
-    background-position: 0 0;
+@keyframes defense-impact-spark {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
   }
-  to {
-    background-position: -57.6px 0;
+  12% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  62% {
+    opacity: 0.9;
+    transform: translate3d(calc(-50% + var(--impact-spark-x, 10px) * 0.75), calc(-50% + var(--impact-spark-y, 8px) * 0.54), 0) scale(0.78);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(calc(-50% + var(--impact-spark-x, 12px)), calc(-50% + var(--impact-spark-y, 10px)), 0) scale(0.22);
+  }
+}
+
+@keyframes defense-fireball-impact {
+  0%,
+  12.499% {
+    opacity: 0.6;
+    background-position: 0% 0;
+    transform: translate(-50%, -50%) scale(0.984);
+  }
+
+  12.5%,
+  24.999% {
+    opacity: 0.6;
+    background-position: 14.286% 0;
+    transform: translate(-50%, -50%) scale(1.128);
+  }
+
+  25%,
+  37.499% {
+    opacity: 0.6;
+    background-position: 28.571% 0;
+    transform: translate(-50%, -50%) scale(1.248);
+  }
+
+  37.5%,
+  49.999% {
+    opacity: 0.6;
+    background-position: 42.857% 0;
+    transform: translate(-50%, -50%) scale(1.344);
+  }
+
+  50%,
+  62.499% {
+    opacity: 0.6;
+    background-position: 57.143% 0;
+    transform: translate(-50%, -50%) scale(1.344);
+  }
+
+  62.5%,
+  74.999% {
+    opacity: 0.52;
+    background-position: 71.429% 0;
+    transform: translate(-50%, -50%) scale(1.272);
+  }
+
+  75%,
+  87.499% {
+    opacity: 0.36;
+    background-position: 85.714% 0;
+    transform: translate(-50%, -50%) scale(1.2);
+  }
+
+  87.5%,
+  100% {
+    opacity: 0;
+    background-position: 100% 0;
+    transform: translate(-50%, -50%) scale(1.104);
+  }
+}
+
+@keyframes defense-enemy-health-chip {
+  0% {
+    opacity: 0.92;
+    transform: scaleX(calc(var(--enemy-health-chip-from, var(--enemy-health-value, 100)) / 100));
+  }
+  44% {
+    opacity: 0.82;
+    transform: scaleX(calc(var(--enemy-health-chip-from, var(--enemy-health-value, 100)) / 100));
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(calc(var(--enemy-health-chip-to, var(--enemy-health-value, 100)) / 100));
   }
 }
 
 @keyframes defense-money-coin-flight {
   0% {
-    left: var(--money-x);
-    top: calc(var(--money-y) + 4.5%);
+    translate: calc(var(--money-x) + var(--coin-x, 0px)) calc(var(--money-y) + 4.5cqw + var(--coin-y, 0px));
     opacity: 0;
     transform: translate(-50%, calc(-50% - 18px)) scale(0.72) rotate(-14deg);
   }
@@ -9154,8 +12375,7 @@ button.blackjack-chip-token {
     transform: translate(calc(-50% + var(--money-kick-x, 0px) * 0.35), calc(-50% - 5px)) scale(1.06) rotate(var(--money-rotate-b, 5deg));
   }
   34.5% {
-    left: var(--money-x);
-    top: calc(var(--money-y) + 4.5%);
+    translate: calc(var(--money-x) + var(--coin-x, 0px)) calc(var(--money-y) + 4.5cqw + var(--coin-y, 0px));
     opacity: 1;
     transform: translate(-50%, -50%) scale(0.96) rotate(0deg);
   }
@@ -9164,8 +12384,7 @@ button.blackjack-chip-token {
     transform: translate(-50%, -50%) scale(0.9);
   }
   100% {
-    left: 96.6%;
-    top: 96.2%;
+    translate: var(--money-goal-x, 50cqw) var(--money-goal-y, 96.2cqw);
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.5);
   }
@@ -9173,31 +12392,31 @@ button.blackjack-chip-token {
 
 @keyframes defense-enemy-walk {
   0%,
-  59.999% {
+  16.665% {
     background-position: var(--slime-frame-1) 0;
   }
 
-  60%,
-  67.999% {
+  16.666%,
+  33.332% {
     background-position: var(--slime-frame-2) 0;
   }
 
-  68%,
-  75.999% {
+  33.333%,
+  49.999% {
     background-position: var(--slime-frame-3) 0;
   }
 
-  76%,
-  83.999% {
+  50%,
+  66.665% {
     background-position: var(--slime-frame-4) 0;
   }
 
-  84%,
-  91.999% {
+  66.666%,
+  83.332% {
     background-position: var(--slime-frame-5) 0;
   }
 
-  92%,
+  83.333%,
   100% {
     background-position: var(--slime-frame-6) 0;
   }
@@ -9595,26 +12814,34 @@ button.blackjack-chip-token {
 
 @container book-panel (max-width: 420px) {
   .mana-orb {
-    width: clamp(170px, 60%, 260px);
+    --mana-orb-size: clamp(112px, 36%, 168px);
   }
 }
 
 @container book-panel (min-width: 620px) {
   .mana-orb {
-    width: clamp(270px, 52%, 430px);
+    --mana-orb-size: clamp(155px, 37%, 245px);
   }
 }
 
 @container book-panel (min-width: 780px) {
   .mana-orb {
-    width: clamp(340px, 50%, 500px);
+    --mana-orb-size: clamp(170px, 36%, 280px);
   }
 }
 
 @container book-panel (min-width: 960px) {
   .mana-orb {
-    width: clamp(410px, 47%, 580px);
+    --mana-orb-size: clamp(190px, 35%, 320px);
   }
+}
+
+.book-overlay[data-book-id="mana"].panel-size-medium .mana-orb {
+  --mana-orb-size: clamp(120px, 34%, 182px);
+}
+
+.book-overlay[data-book-id="mana"].panel-size-large .mana-orb {
+  --mana-orb-size: clamp(150px, 38%, 260px);
 }
 
 @media (max-width: 920px) {

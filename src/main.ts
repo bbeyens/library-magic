@@ -21,10 +21,14 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
+let latestFps = 0;
 
 mountHud(document.querySelector<HTMLDivElement>('#hud-root'));
+installDevProbeHooks();
 installFrameCounter();
+installDebugMonitor(game);
 installBurstClickHotkey();
+installHoverAutoClickHotkey();
 installDebugResourceHotkey();
 installDebugManaSkillHotkeys();
 installResetMiniGameHotkey();
@@ -32,6 +36,22 @@ installResetMiniGameHotkey();
 window.addEventListener('beforeunload', () => {
   game.destroy(true);
 });
+
+function installDevProbeHooks(): void {
+  if (!import.meta.env.DEV) {
+    return;
+  }
+
+  Object.defineProperty(window, '__libraryMagicDebug', {
+    configurable: true,
+    value: {
+      get snapshot() {
+        return gameStore.snapshot;
+      },
+      dispatch: gameStore.dispatch.bind(gameStore),
+    },
+  });
+}
 
 function installFrameCounter(): void {
   const gameShell = document.querySelector<HTMLElement>('#game-shell');
@@ -52,7 +72,9 @@ function installFrameCounter(): void {
     const elapsed = now - lastSampleTime;
     if (elapsed >= 500) {
       const fps = Math.round((frameCount * 1000) / elapsed);
+      latestFps = fps;
       frameCounter.textContent = `FPS ${fps}`;
+      frameCounter.dataset.fps = String(fps);
       frameCounter.dataset.status = fps < 45 ? 'low' : fps < 55 ? 'warn' : 'ok';
       frameCount = 0;
       lastSampleTime = now;
@@ -61,6 +83,115 @@ function installFrameCounter(): void {
   };
 
   window.requestAnimationFrame(update);
+}
+
+type PerformanceMemory = {
+  usedJSHeapSize: number;
+  totalJSHeapSize: number;
+  jsHeapSizeLimit: number;
+};
+
+type PerformanceWithMemory = Performance & {
+  memory?: PerformanceMemory;
+};
+
+type PhaserTextureManagerWithList = Phaser.Textures.TextureManager & {
+  list?: Record<string, unknown>;
+};
+
+function installDebugMonitor(gameInstance: Phaser.Game): void {
+  const gameShell = document.querySelector<HTMLElement>('#game-shell');
+  if (!gameShell || gameShell.querySelector('#debug-monitor')) {
+    return;
+  }
+
+  const debugMonitor = document.createElement('section');
+  debugMonitor.id = 'debug-monitor';
+  debugMonitor.hidden = true;
+  debugMonitor.setAttribute('aria-label', 'Debug performance monitor');
+  gameShell.appendChild(debugMonitor);
+
+  let visible = false;
+  let lastUpdate = 0;
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key !== 'F3' || event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    visible = !visible;
+    debugMonitor.hidden = !visible;
+    if (visible) {
+      lastUpdate = 0;
+      window.requestAnimationFrame(updateDebugMonitor);
+    }
+  });
+
+  const updateDebugMonitor = (now: number) => {
+    if (!visible) {
+      return;
+    }
+
+    if (now - lastUpdate >= 250) {
+      debugMonitor.innerHTML = debugMonitorMarkup(gameInstance);
+      lastUpdate = now;
+    }
+
+    window.requestAnimationFrame(updateDebugMonitor);
+  };
+}
+
+function debugMonitorMarkup(gameInstance: Phaser.Game): string {
+  const state = gameStore.snapshot;
+  const heap = (performance as PerformanceWithMemory).memory;
+  const phaserStats = phaserDebugStats(gameInstance);
+  const heapValue = heap ? `${formatDebugMegabytes(heap.usedJSHeapSize)} / ${formatDebugMegabytes(heap.jsHeapSizeLimit)}` : 'n/a';
+  const totalHeapValue = heap ? formatDebugMegabytes(heap.totalJSHeapSize) : 'n/a';
+
+  return `
+    <header>
+      <strong>DEBUG F3</strong>
+      <span>watch growth</span>
+    </header>
+    <div class="debug-monitor-grid">
+      ${debugMetric('FPS', latestFps > 0 ? String(latestFps) : '--')}
+      ${debugMetric('Heap', heapValue)}
+      ${debugMetric('Heap total', totalHeapValue)}
+      ${debugMetric('DOM', document.querySelectorAll('*').length)}
+      ${debugMetric('Animations', document.getAnimations().length)}
+      ${debugMetric('Phaser children', phaserStats.children)}
+      ${debugMetric('Textures', phaserStats.textures)}
+      ${debugMetric('Scenes', phaserStats.scenes)}
+      ${debugMetric('TD enemies', state.defense.enemies.length)}
+      ${debugMetric('TD shots', state.defense.shots.length)}
+      ${debugMetric('TD projectiles', state.defense.enemyProjectiles.length)}
+      ${debugMetric('TD lightning', state.defense.lightningStrikes.length)}
+      ${debugMetric('TD damage', state.defense.damagePopups.length)}
+      ${debugMetric('TD money', state.defense.moneyPopups.length)}
+      ${debugMetric('TD queued', state.defense.queuedShots.length)}
+      ${debugMetric('TD next enemy id', state.defense.nextEnemyId)}
+    </div>
+  `;
+}
+
+function debugMetric(label: string, value: string | number): string {
+  return `<span class="debug-monitor-label">${label}</span><b>${value}</b>`;
+}
+
+function formatDebugMegabytes(bytes: number): string {
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+}
+
+function phaserDebugStats(gameInstance: Phaser.Game): { children: number; textures: number; scenes: number } {
+  const scenes = gameInstance.scene.getScenes(false);
+  const children = scenes.reduce((total, scene) => total + (scene.children?.list.length ?? 0), 0);
+  const textureList = (gameInstance.textures as PhaserTextureManagerWithList).list;
+  return {
+    children,
+    textures: textureList ? Object.keys(textureList).length : 0,
+    scenes: scenes.length,
+  };
 }
 
 function installBurstClickHotkey(): void {
@@ -85,6 +216,49 @@ function installBurstClickHotkey(): void {
     void runClickBurst(lastPointerPosition, () => {
       isBursting = false;
     });
+  });
+}
+
+function installHoverAutoClickHotkey(): void {
+  const gameShell = document.querySelector<HTMLElement>('#game-shell');
+  let lastPointerPosition: { x: number; y: number } | null = null;
+  let hoverAutoClickInterval: number | null = null;
+
+  const stopHoverAutoClick = () => {
+    if (hoverAutoClickInterval === null) {
+      return;
+    }
+    window.clearInterval(hoverAutoClickInterval);
+    hoverAutoClickInterval = null;
+  };
+
+  window.addEventListener('pointermove', (event) => {
+    lastPointerPosition = { x: event.clientX, y: event.clientY };
+  });
+
+  window.addEventListener('blur', stopHoverAutoClick);
+
+  window.addEventListener('keydown', (event) => {
+    if (event.key.toLowerCase() !== 't' || event.repeat || isTypingTarget(event.target)) {
+      return;
+    }
+
+    event.preventDefault();
+    if (hoverAutoClickInterval !== null) {
+      stopHoverAutoClick();
+      return;
+    }
+    if (!gameShell || !lastPointerPosition || !isInsideElement(gameShell, lastPointerPosition)) {
+      return;
+    }
+
+    hoverAutoClickInterval = window.setInterval(() => {
+      if (!lastPointerPosition || !isInsideElement(gameShell, lastPointerPosition)) {
+        stopHoverAutoClick();
+        return;
+      }
+      dispatchSyntheticClick(lastPointerPosition);
+    }, 100);
   });
 }
 

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "action": "use",
+  "direction": "s",
+  "mode": "svg",
+  "spritesheet": "spritesheet.transparent.svg",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "columns": 5,
+  "rows": 2,
+  "frames": 8,
+  "fps": 8,
+  "anchor": {
+    "x": 128,
+    "y": 210
+  },
+  "sourceRun": "local-spriterrific-compatible-use-s",
+  "publicAssetReady": true
+}

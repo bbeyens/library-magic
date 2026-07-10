@@ -6,14 +6,15 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 {
   const state = createInitialState();
 
-  assert.equal(state.books.mana.unlocked, true);
-  assert.equal(state.books.serpent.unlocked, false);
-  assert.equal(state.books.blackjack.unlocked, false);
+  for (const book of books) {
+    assert.equal(state.books[book.id].unlocked, true);
+  }
   assert.deepEqual(state.openBookPanels, []);
 }
 
 {
   const state = createInitialState();
+  state.books.serpent.unlocked = false;
 
   applyAction(state, { type: 'unlockBook', bookId: 'serpent' });
 
@@ -23,6 +24,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.serpent.unlocked = false;
   state.mana = 70;
   state.forbiddenGrimoire.keys = 1;
 
@@ -37,6 +39,7 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
 {
   const state = createInitialState();
+  state.books.typing.unlocked = false;
   state.mana = 180;
   state.resources.scales = 9;
   state.forbiddenGrimoire.keys = 1;
@@ -113,13 +116,11 @@ import { createInitialState } from '../src/game/simulation/state.ts';
 
   assert.equal(state.books.mana.level, 2);
   assert.equal(state.books.mana.automation, 0);
-  assert.equal(state.manaSkills.automation, 0);
 
   const manaAfterUpgrade = state.mana;
   tickState(state, 1000);
 
   assert.equal(state.mana, manaAfterUpgrade);
-  assert.equal(state.manaSkills.autoCastCount, 0);
 }
 
 console.log('bookProgression ok');

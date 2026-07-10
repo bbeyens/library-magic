@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="21 plus 3">
+  <rect x="14" y="27" width="28" height="44" rx="6" fill="#fff4d8" stroke="#d2a454" stroke-width="4" transform="rotate(-12 28 49)"/>
+  <rect x="34" y="20" width="28" height="52" rx="6" fill="#fff4d8" stroke="#d2a454" stroke-width="4"/>
+  <rect x="54" y="27" width="28" height="44" rx="6" fill="#fff4d8" stroke="#d2a454" stroke-width="4" transform="rotate(12 68 49)"/>
+  <text x="25" y="55" font-family="Georgia,serif" font-size="22" font-weight="900" fill="#176981">2</text>
+  <text x="44" y="53" font-family="Georgia,serif" font-size="24" font-weight="900" fill="#9b6a22">1</text>
+  <text x="63" y="55" font-family="Georgia,serif" font-size="22" font-weight="900" fill="#176981">3</text>
+</svg>

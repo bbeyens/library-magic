@@ -5,12 +5,14 @@ import {
   blackjackCurrentActionMaxLevel,
   blackjackCurrentBonusMaxLevel,
   blackjackCurrentUpgradeCellMaxLevel,
+  defenseMaxTowerHealth,
   defenseSkillMaxLevel,
   defenseTowerRange,
   miningSkillMaxLevel,
   snakeSkillMaxLevel,
   targetSkillMaxLevel,
   type DefenseSkillId,
+  type ManaSkillId,
   type MiningSkillId,
   type SnakeSkillId,
   type TargetSkillId,
@@ -29,10 +31,36 @@ for (const book of books) {
 applyAction(state, { type: 'maxAllSkills' });
 
 assert.equal(state.manaSkills.power, 50);
-assert.equal(state.manaSkills.automation, 50);
-assert.equal(state.manaSkills.criticalHit, 20);
-assert.equal(state.manaSkills.criticalEffect, 40);
-assert.equal(state.manaSkills.extraWands, 9);
+
+const manaSkillIds: ManaSkillId[] = [
+  'power',
+  'clickMultiplier',
+  'xpOrbChance',
+  'yellowOrbChance',
+  'greenOrbChance',
+  'blueOrbChance',
+  'xpValue',
+  'levelUpEffect',
+  'holdClick',
+  'criticalHit',
+  'criticalEffect',
+];
+for (const skillId of manaSkillIds) {
+  const debugMax: Record<ManaSkillId, number> = {
+    power: 50,
+    clickMultiplier: 40,
+    xpOrbChance: 20,
+    yellowOrbChance: 20,
+    greenOrbChance: 20,
+    blueOrbChance: 20,
+    xpValue: 20,
+    levelUpEffect: 30,
+    holdClick: 16,
+    criticalHit: 50,
+    criticalEffect: 40,
+  };
+  assert.equal(state.manaSkills[skillId], debugMax[skillId]);
+}
 
 const snakeSkillIds: SnakeSkillId[] = ['speed', 'gridSize', 'automation', 'baseMultiplier', 'bonusFruit', 'extraLife', 'edgeWrap'];
 for (const skillId of snakeSkillIds) {
@@ -47,6 +75,7 @@ for (const skillId of targetSkillIds) {
 
 const defenseSkillIds: DefenseSkillId[] = [
   'damage',
+  'damageMultiplier',
   'attackSpeed',
   'range',
   'criticalChance',
@@ -56,10 +85,15 @@ const defenseSkillIds: DefenseSkillId[] = [
   'lightningDamage',
   'lightningSpeed',
   'lightningCount',
+  'iceDamage',
+  'iceSpeed',
+  'iceRange',
+  'iceSlow',
   'health',
   'healthRegen',
   'moneyPerEnemy',
   'goldMultiplier',
+  'baseSpeed',
 ];
 for (const skillId of defenseSkillIds) {
   assert.equal(state.defenseSkills[skillId], defenseSkillMaxLevel(skillId));
@@ -85,18 +119,18 @@ for (const cellId of BLACKJACK_UPGRADE_CELL_IDS) {
 
 const debugResourceState = createInitialState();
 applyAction(debugResourceState, { type: 'grantDebugResources' });
-assert.equal(debugResourceState.mana, 100_000);
-assert.equal(debugResourceState.resources.scales, 100_000);
-assert.equal(debugResourceState.resources.runes, 100_000);
-assert.equal(debugResourceState.resources.spores, 100_000);
-assert.equal(debugResourceState.resources.sigils, 100_000);
-assert.equal(debugResourceState.resources.chips, 100_050);
-assert.equal(debugResourceState.resources.fragments, 100_000);
-assert.equal(debugResourceState.resources.marks, 100_000);
-assert.equal(debugResourceState.resources.minerals, 100_000);
-assert.equal(debugResourceState.resources.gels, 100_000);
+assert.equal(debugResourceState.mana, 100_000_000);
+assert.equal(debugResourceState.resources.scales, 100_000_000);
+assert.equal(debugResourceState.resources.runes, 100_000_000);
+assert.equal(debugResourceState.resources.spores, 100_000_000);
+assert.equal(debugResourceState.resources.sigils, 100_000_000);
+assert.equal(debugResourceState.resources.chips, 100_000_050);
+assert.equal(debugResourceState.resources.fragments, 100_000_000);
+assert.equal(debugResourceState.resources.marks, 100_000_000);
+assert.equal(debugResourceState.resources.minerals, 100_000_000);
+assert.equal(debugResourceState.resources.gels, 100_000_000);
 for (const amount of Object.values(debugResourceState.mining.materials)) {
-  assert.equal(amount, 100_000);
+  assert.equal(amount, 100_000_000);
 }
 
 applyAction(state, { type: 'resetAllSkills' });
@@ -106,10 +140,12 @@ for (const book of books) {
 }
 
 assert.equal(state.manaSkills.power, 0);
-assert.equal(state.manaSkills.automation, 0);
-assert.equal(state.manaSkills.criticalHit, 0);
-assert.equal(state.manaSkills.criticalEffect, 0);
-assert.equal(state.manaSkills.extraWands, 0);
+for (const skillId of manaSkillIds) {
+  assert.equal(state.manaSkills[skillId], 0);
+}
+assert.equal(state.manaCrystal.xp, 0);
+assert.equal(state.manaCrystal.xpOrb, null);
+assert.equal(state.manaCrystal.holdClickActive, false);
 
 for (const skillId of snakeSkillIds) {
   assert.equal(state.snakeSkills[skillId], 0);
@@ -125,7 +161,7 @@ for (const skillId of defenseSkillIds) {
   assert.equal(state.defenseSkills[skillId], 0);
 }
 assert.equal(state.defense.tower.range, defenseTowerRange(state));
-assert.equal(state.defense.towerHealth, 10);
+assert.equal(state.defense.towerHealth, defenseMaxTowerHealth(state));
 
 for (const skillId of miningSkillIds) {
   assert.equal(state.miningSkills[skillId], 0);

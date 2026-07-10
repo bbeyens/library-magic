@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "action": "idle",
+  "direction": "s",
+  "frameWidth": 256,
+  "frameHeight": 256,
+  "frames": 1,
+  "publicAssetReady": true,
+  "source": "local Spriterrific fallback because no FAL key was available"
+}

@@ -1,0 +1,58 @@
+{
+  "generatedAt": "2026-07-10T14:13:26.934Z",
+  "source": {
+    "content": [
+      "src/game/content/books.ts",
+      "src/game/content/forbiddenGrimoire.ts",
+      "src/game/content/runeWords.ts"
+    ],
+    "assets": "public/assets"
+  },
+  "target": {
+    "data": "godot/data",
+    "assets": "godot/assets"
+  },
+  "renderer": "mobile",
+  "note": "The TypeScript game remains the source of truth until each Godot subsystem reaches parity.",
+  "copiedRuntimePaths": [
+    "library",
+    "fonts",
+    "blackjack",
+    "Crystal/Crystal.png",
+    "Crystal/Crystal.json",
+    "Crystal/crystal-cover-rock.png",
+    "Crystal/companions",
+    "Crystal/cursors",
+    "Crystal/gems",
+    "Crystal/orbs",
+    "Snake dragon/Snake sprite.png",
+    "Snake dragon/crops",
+    "Snake dragon/food",
+    "td/Map TD .png",
+    "td/Map TD .tmj",
+    "td/effects",
+    "td/enemies",
+    "td/hud",
+    "td/ice",
+    "td/icons",
+    "td/lightning",
+    "td/orb",
+    "td/tiled/exports",
+    "td/tiled/reference",
+    "td/tiles"
+  ],
+  "spriterrificRuntimeExports": [
+    "crystal/idle-s/export",
+    "crystal/relic-idle-s/export",
+    "crystal/relic-use-s/export",
+    "crystal/use-s-v2/export",
+    "slime-trainer/monsters/dust-imp/export",
+    "slime-trainer/monsters/ink-mite/export",
+    "slime-trainer/monsters/moss-spine/export",
+    "slime-trainer/monsters/thorn-blob/export",
+    "slime-trainer/slime/idle/export",
+    "snake/idle-s/export",
+    "snake/use-s/export",
+    "wand/arcane-wand/export"
+  ]
+}
