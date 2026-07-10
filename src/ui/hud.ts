@@ -50,6 +50,7 @@ import {
   manaCrystalResourceMultiplier,
   manaGreenOrbChance,
   manaAllyFindOrbChance,
+  manaAutoClickerCapacity,
   manaAutoClickerCount,
   manaAutoClickerInterval,
   manaCanResearch,
@@ -69,6 +70,7 @@ import {
   manaResearchUnlocked,
   manaSkillCost,
   manaSkillMaxLevel,
+  manaSkillUpgradeEffectDelta,
   manaYellowOrbChance,
   manaXpOrbChance,
   manaXpOrbValue,
@@ -2157,7 +2159,7 @@ function manaSkillDockSignature(state: GameState): string {
 function manaSkillCardDynamicSignature(state: GameState): string {
   const activeResearch = state.manaSkills.activeResearch;
   const researchProgress = activeResearch ? `${activeResearch.skillId}:${Math.floor(activeResearch.elapsed * 10)}` : 'none';
-  return `${manaSkillDockSignature(state)}/${Math.floor(state.mana)}/${researchProgress}`;
+  return `${manaSkillDockSignature(state)}/${Math.floor(state.mana)}/${manaCrystalLevel(state)}/${manaCrystalDiscoveredGemCount(state)}/${researchProgress}`;
 }
 
 function manaSkillShopCardSnapshot(state: GameState, skillId: ManaSkillId): SkillShopCard | undefined {
@@ -2231,7 +2233,7 @@ function updateDynamicSnakeSkillCards(state: GameState): void {
   }
   lastSnakeSkillCardDynamicSignature = signature;
 
-  const currentMana = Math.floor(state.mana);
+  const currentScales = Math.floor(state.resources.scales);
   rootElement?.querySelectorAll<HTMLButtonElement>('.snake-skill-dock .skill-shop-card[data-skill-id]').forEach((card) => {
     const skillId = card.dataset.skillId;
     if (!isSnakeSkillId(skillId)) {
@@ -2252,7 +2254,7 @@ function updateDynamicSnakeSkillCards(state: GameState): void {
     }
 
     const isMaxed = state.snakeSkills[skillId] >= snakeSkillMaxLevel(skillId);
-    const isUnaffordable = !isMaxed && currentMana < snakeSkillCost(state, skillId);
+    const isUnaffordable = !isMaxed && currentScales < snakeSkillCost(state, skillId);
     const canBuy = !isMaxed && !isUnaffordable;
     card.classList.toggle('is-unaffordable', isUnaffordable);
     card.classList.toggle('is-maxed', isMaxed);
@@ -2324,7 +2326,7 @@ function snakeSkillDockSignature(state: GameState): string {
 }
 
 function snakeSkillCardDynamicSignature(state: GameState): string {
-  return `${snakeSkillDockSignature(state)}/${Math.floor(state.mana)}`;
+  return `${snakeSkillDockSignature(state)}/${Math.floor(state.resources.scales)}`;
 }
 
 function snakeSkillShopCardSnapshot(state: GameState, skillId: SnakeSkillId): SkillShopCard | undefined {
@@ -4285,6 +4287,10 @@ function miningSkillShopCostHtml(cost: number): string {
   return `<b>${compactHudNumber(cost)}</b>`;
 }
 
+function snakeSkillShopCostHtml(cost: number): string {
+  return `<span class="blackjack-cost-resource"><img class="blackjack-upgrade-icon is-cost-icon" src="/assets/library/resources/scales.svg" alt="Ecailles" loading="lazy" decoding="async"><b>${compactHudNumber(cost)}</b></span>`;
+}
+
 type SkillShopTheme = 'attack' | 'defense' | 'utility' | 'research';
 type ManaSkillShopTabId = 'click' | 'auto' | 'xp' | 'research';
 type DefenseSkillShopTabId = SkillShopTheme;
@@ -4536,13 +4542,13 @@ function manaSkillShopTabs(state: GameState): Array<SkillShopTab<ManaSkillShopTa
       icon: '▲',
       theme: 'attack',
       cards: [
-        manaSkillShopCard(state, 'power', 'Power +', `+${state.manaSkills.power + 1}`, '+1 flat click'),
-        manaSkillShopCard(state, 'clickMultiplier', 'Click x', `x${formatGameNumber(manaClickMultiplier(state), { forceDecimal: true })}`, '+25% click'),
+        manaSkillShopCard(state, 'power', 'Power +', `${formatOneDecimalGameNumber(manaClickGainPreview(state))}`, 'current click power'),
+        manaSkillShopCard(state, 'clickMultiplier', 'Click x', `x${formatTwoDecimalGameNumber(manaClickMultiplier(state))}`, 'click multiplier'),
         clickResearchCard,
         manaSkillShopCard(state, 'autoClicker', 'Auto Clicker', manaAutoClickerCount(state) > 0 ? `${formatGameNumber(manaAutoClickerInterval(state), { forceDecimal: true })}s` : 'Off', '-0.2s'),
-        manaSkillShopCard(state, 'multiAutoClicker', 'Multi Auto Clicker', `x${manaAutoClickerCount(state) || 1}`, '+1 auto'),
+        manaSkillShopCard(state, 'multiAutoClicker', 'Multi Auto Clicker', `x${manaAutoClickerCapacity(state)}`, 'autoclicker capacity'),
         manaSkillShopCard(state, 'criticalHit', 'Critical Chance', `${formatGameNumber(state.manaSkills.criticalHit)}%`, '+1% old crit'),
-        manaSkillShopCard(state, 'criticalEffect', 'Critical Multiplier', `x${formatGameNumber(manaCriticalMultiplier(state), { forceDecimal: true })}`, '+0.1x old crit'),
+        manaSkillShopCard(state, 'criticalEffect', 'Critical Multiplier', `x${formatTwoDecimalGameNumber(manaCriticalMultiplier(state))}`, 'critical damage'),
         manaSkillShopCard(state, 'holdClick', 'Click Holder', manaHoldClickUnlocked(state) ? `${formatGameNumber(manaHoldClickRate(state))}/s` : 'Off', '+1 click/s'),
       ],
     },
@@ -4552,14 +4558,14 @@ function manaSkillShopTabs(state: GameState): Array<SkillShopTab<ManaSkillShopTa
       icon: '⌁',
       theme: 'utility',
       cards: [
-        manaSkillShopCard(state, 'meowKnight', 'Meow Knight', `${formatGameNumber(manaMeowKnightDamage(state), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleBow', 'Bow', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleBow'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleGlock', 'Glock', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleGlock'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idlePickaxe', 'Pickaxe', `${formatGameNumber(manaIdleCompanionDamage(state, 'idlePickaxe'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleBazooka', 'Bazooka', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleBazooka'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleAk47', 'AK47', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleAk47'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleSword', 'Sword', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleSword'), { forceDecimal: true })}/s`, '+1 attack'),
-        manaSkillShopCard(state, 'idleOrangeCat', 'Ultimate Orange Cat', `${formatGameNumber(manaIdleCompanionDamage(state, 'idleOrangeCat'), { forceDecimal: true })}/s`, '+1 attack'),
+        manaSkillShopCard(state, 'meowKnight', 'Meow Knight', `${formatOneDecimalGameNumber(manaMeowKnightDamage(state))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleBow', 'Bow', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleBow'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleGlock', 'Glock', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleGlock'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idlePickaxe', 'Pickaxe', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idlePickaxe'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleBazooka', 'Bazooka', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleBazooka'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleAk47', 'AK47', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleAk47'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleSword', 'Sword', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleSword'))}/s`, 'effective ally damage'),
+        manaSkillShopCard(state, 'idleOrangeCat', 'Ultimate Orange Cat', `${formatOneDecimalGameNumber(manaIdleCompanionDamage(state, 'idleOrangeCat'))}/s`, 'effective ally damage'),
       ],
     },
     {
@@ -4572,8 +4578,8 @@ function manaSkillShopTabs(state: GameState): Array<SkillShopTab<ManaSkillShopTa
         manaSkillShopCard(state, 'yellowOrbChance', 'Yellow Orb', `${formatGameNumber(manaYellowOrbChance(state) * 100)}%`, 'drops Mana orb'),
         manaSkillShopCard(state, 'greenOrbChance', 'Green Orb', `${formatGameNumber(manaGreenOrbChance(state) * 100)}%`, 'drops double XP orb'),
         manaSkillShopCard(state, 'blueOrbChance', 'Blue Orb', `${formatGameNumber(manaBlueOrbChance(state) * 100)}%`, 'drops mixed orb'),
-        manaSkillShopCard(state, 'xpValue', 'Exp x', `x${formatGameNumber(manaXpOrbValue(state))}`, '+1 XP multiplier'),
-        manaSkillShopCard(state, 'levelUpEffect', 'Level Up Effect', `x${formatGameNumber(manaLevelUpEffectMultiplier(state), { forceDecimal: true })}`, '+10% level up'),
+        manaSkillShopCard(state, 'xpValue', 'Exp x', `x${formatOneDecimalGameNumber(manaXpOrbValue(state))}`, 'effective XP value'),
+        manaSkillShopCard(state, 'levelUpEffect', 'Level Up Effect', `x${formatTwoDecimalGameNumber(manaLevelUpEffectMultiplier(state))}`, 'level-up reward multiplier'),
         manaSkillShopCard(state, 'allyFindOrb', 'Ally Find Orb', `${formatGameNumber(manaAllyFindOrbChance(state) * 100)}%`, 'on ally attack'),
       ],
     },
@@ -4586,15 +4592,15 @@ function manaSkillShopTabs(state: GameState): Array<SkillShopTab<ManaSkillShopTa
       icon: '◉',
       theme: 'research',
       cards: [
-        manaResearchSkillShopCard(state, 'researchClickPower', 'Click Power', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchClickPower'), { forceDecimal: true })}`, '+10% click'),
-        manaResearchSkillShopCard(state, 'researchMeowKnight', 'Meow Knight', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchMeowKnight'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleBow', 'Bow', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleBow'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleGlock', 'Glock', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleGlock'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdlePickaxe', 'Pickaxe', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdlePickaxe'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleBazooka', 'Bazooka', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleBazooka'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleAk47', 'AK47', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleAk47'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleSword', 'Sword', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleSword'), { forceDecimal: true })}`, '+10% ally'),
-        manaResearchSkillShopCard(state, 'researchIdleOrangeCat', 'Ultimate Orange Cat', `x${formatGameNumber(manaResearchMultiplierForHud(state, 'researchIdleOrangeCat'), { forceDecimal: true })}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchClickPower', 'Click Power', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchClickPower'))}`, '+10% click'),
+        manaResearchSkillShopCard(state, 'researchMeowKnight', 'Meow Knight', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchMeowKnight'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleBow', 'Bow', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleBow'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleGlock', 'Glock', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleGlock'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdlePickaxe', 'Pickaxe', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdlePickaxe'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleBazooka', 'Bazooka', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleBazooka'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleAk47', 'AK47', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleAk47'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleSword', 'Sword', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleSword'))}`, '+10% ally'),
+        manaResearchSkillShopCard(state, 'researchIdleOrangeCat', 'Ultimate Orange Cat', `x${formatTwoDecimalGameNumber(manaResearchMultiplierForHud(state, 'researchIdleOrangeCat'))}`, '+10% ally'),
       ],
     });
   }
@@ -4624,7 +4630,7 @@ function manaSkillShopCard(
     icon: manaSkillIcon(skillId),
     title,
     value,
-    delta: isMaxed ? '' : manaSkillDeltaLabel(skillId),
+    delta: isMaxed ? '' : manaSkillDeltaLabel(state, skillId),
     detail,
     level,
     maxLevel,
@@ -4744,33 +4750,36 @@ function manaSkillIcon(skillId: ManaSkillId): string {
   return '';
 }
 
-function manaSkillDeltaLabel(skillId: ManaSkillId): string {
+function manaSkillDeltaLabel(state: GameState, skillId: ManaSkillId): string {
+  const delta = manaSkillUpgradeEffectDelta(state, skillId);
   switch (skillId) {
     case 'power':
-      return '(+1)';
+      return `(+${formatOneDecimalGameNumber(delta)})`;
     case 'clickMultiplier':
-      return '(+25%)';
+      return `(+${formatTwoDecimalGameNumber(delta)}x)`;
     case 'research':
       return '(unlock)';
     case 'clickResearch':
       return '(+1s / 5 clicks)';
     case 'autoClicker':
-      return '(-0.2s)';
+      return state.manaSkills.autoClicker <= 0
+        ? `(${formatOneDecimalGameNumber(delta)}s)`
+        : `(${delta >= 0 ? '+' : ''}${formatOneDecimalGameNumber(delta)}s)`;
     case 'multiAutoClicker':
-      return '(+1)';
+      return `(+${formatGameNumber(delta)})`;
     case 'xpOrbChance':
     case 'yellowOrbChance':
     case 'greenOrbChance':
     case 'blueOrbChance':
-      return '(+5%)';
+      return `(+${formatGameNumber(delta)}%)`;
     case 'xpValue':
-      return '(+1)';
+      return `(+${formatOneDecimalGameNumber(delta)})`;
     case 'levelUpEffect':
-      return '(+10%)';
+      return `(+${formatTwoDecimalGameNumber(delta)}x)`;
     case 'holdClick':
-      return '(10/s)';
+      return `(+${formatGameNumber(delta)}/s)`;
     case 'allyFindOrb':
-      return '(+5%)';
+      return `(+${formatGameNumber(delta)}%)`;
     case 'meowKnight':
     case 'idleGlock':
     case 'idleAk47':
@@ -4779,7 +4788,7 @@ function manaSkillDeltaLabel(skillId: ManaSkillId): string {
     case 'idleSword':
     case 'idleOrangeCat':
     case 'idlePickaxe':
-      return '(+1/s)';
+      return `(+${formatOneDecimalGameNumber(delta)}/s)`;
     case 'researchClickPower':
     case 'researchMeowKnight':
     case 'researchIdleGlock':
@@ -4789,11 +4798,11 @@ function manaSkillDeltaLabel(skillId: ManaSkillId): string {
     case 'researchIdleSword':
     case 'researchIdleOrangeCat':
     case 'researchIdlePickaxe':
-      return '(+10%)';
+      return `(+${formatTwoDecimalGameNumber(delta)}x)`;
     case 'criticalHit':
-      return '(+1%)';
+      return `(+${formatGameNumber(delta)}%)`;
     case 'criticalEffect':
-      return '(+0.1x)';
+      return `(+${formatTwoDecimalGameNumber(delta)}x)`;
   }
 }
 
@@ -5107,7 +5116,7 @@ function snakeSkillShopCard(
   const maxLevel = snakeSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = snakeSkillCost(state, skillId);
-  const isUnaffordable = !isMaxed && state.mana < cost;
+  const isUnaffordable = !isMaxed && state.resources.scales < cost;
   return {
     action: 'buySnakeSkill',
     skillId,
@@ -5118,8 +5127,8 @@ function snakeSkillShopCard(
     detail,
     level,
     maxLevel,
-    costHtml: isMaxed ? 'Max' : standardManaCostHtml(cost),
-    costText: isMaxed ? 'Max' : `${compactHudNumber(cost)} Mana`,
+    costHtml: isMaxed ? 'Max' : snakeSkillShopCostHtml(cost),
+    costText: isMaxed ? 'Max' : `${compactHudNumber(cost)} Ecailles`,
     isMaxed,
     isDisabled: isUnaffordable,
     isUnaffordable,

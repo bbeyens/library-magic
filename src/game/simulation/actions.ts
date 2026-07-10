@@ -180,7 +180,7 @@ const DEBUG_MANA_SKILL_MAX_LEVELS: Record<ManaSkillId, number> = {
   research: 1,
   clickResearch: 20,
   autoClicker: 26,
-  multiAutoClicker: 4,
+  multiAutoClicker: 3,
   xpOrbChance: 20,
   yellowOrbChance: 20,
   greenOrbChance: 20,
@@ -1001,6 +1001,83 @@ export function manaClickGainPreview(state: GameState): number {
   return roundManaAmount(directClickDamage + manaResearchAllyClickDamage(state));
 }
 
+export function manaSkillUpgradeEffectDelta(state: GameState, skillId: ManaSkillId): number {
+  const currentLevel = Math.max(0, state.manaSkills[skillId] ?? 0);
+  const maxLevel = manaSkillMaxLevel(skillId);
+  const nextLevel = maxLevel === null ? currentLevel + 1 : Math.min(maxLevel, currentLevel + 1);
+  if (nextLevel === currentLevel) {
+    return 0;
+  }
+
+  const nextState: GameState = {
+    ...state,
+    manaSkills: {
+      ...state.manaSkills,
+      [skillId]: nextLevel,
+    },
+  };
+
+  switch (skillId) {
+    case 'power':
+      return Number((manaClickGainPreview(nextState) - manaClickGainPreview(state)).toFixed(1));
+    case 'clickMultiplier':
+      return Number((manaClickMultiplier(nextState) - manaClickMultiplier(state)).toFixed(2));
+    case 'clickResearch':
+      return manaClickResearchSecondsPerFiveClicks(nextState) - manaClickResearchSecondsPerFiveClicks(state);
+    case 'autoClicker': {
+      const currentInterval = manaAutoClickerInterval(state);
+      const nextInterval = manaAutoClickerInterval(nextState);
+      return Number((Number.isFinite(currentInterval) ? nextInterval - currentInterval : nextInterval).toFixed(1));
+    }
+    case 'multiAutoClicker':
+      return manaAutoClickerCapacity(nextState) - manaAutoClickerCapacity(state);
+    case 'xpOrbChance':
+      return Number(((manaXpOrbChance(nextState) - manaXpOrbChance(state)) * 100).toFixed(1));
+    case 'yellowOrbChance':
+      return Number(((manaYellowOrbChance(nextState) - manaYellowOrbChance(state)) * 100).toFixed(1));
+    case 'greenOrbChance':
+      return Number(((manaGreenOrbChance(nextState) - manaGreenOrbChance(state)) * 100).toFixed(1));
+    case 'blueOrbChance':
+      return Number(((manaBlueOrbChance(nextState) - manaBlueOrbChance(state)) * 100).toFixed(1));
+    case 'xpValue':
+      return Number((manaXpOrbValue(nextState) - manaXpOrbValue(state)).toFixed(1));
+    case 'levelUpEffect':
+      return Number((manaLevelUpEffectMultiplier(nextState) - manaLevelUpEffectMultiplier(state)).toFixed(2));
+    case 'holdClick':
+      return manaHoldClickRate(nextState) - manaHoldClickRate(state);
+    case 'allyFindOrb':
+      return Number(((manaAllyFindOrbChance(nextState) - manaAllyFindOrbChance(state)) * 100).toFixed(1));
+    case 'meowKnight':
+      return Number((manaMeowKnightDamage(nextState) - manaMeowKnightDamage(state)).toFixed(1));
+    case 'idleGlock':
+    case 'idleAk47':
+    case 'idleBazooka':
+    case 'idleBow':
+    case 'idleSword':
+    case 'idleOrangeCat':
+    case 'idlePickaxe':
+      return Number((manaIdleCompanionDamage(nextState, skillId) - manaIdleCompanionDamage(state, skillId)).toFixed(1));
+    case 'researchClickPower':
+    case 'researchMeowKnight':
+    case 'researchIdleGlock':
+    case 'researchIdleAk47':
+    case 'researchIdleBazooka':
+    case 'researchIdleBow':
+    case 'researchIdleSword':
+    case 'researchIdleOrangeCat':
+    case 'researchIdlePickaxe':
+      return Number((manaResearchMultiplier(nextState, skillId) - manaResearchMultiplier(state, skillId)).toFixed(2));
+    case 'criticalHit':
+      return nextState.manaSkills.criticalHit - state.manaSkills.criticalHit;
+    case 'criticalEffect':
+      return Number((manaCriticalMultiplier(nextState) - manaCriticalMultiplier(state)).toFixed(2));
+    case 'research':
+      return nextState.manaSkills.research - state.manaSkills.research;
+    default:
+      return 0;
+  }
+}
+
 export function manaMeowKnightDamage(state: GameState): number {
   const level = Math.max(0, state.manaSkills.meowKnight ?? 0);
   return level <= 0 ? 0 : roundManaAmount(level * manaCrystalAllyAttackMultiplier(state) * manaResearchMultiplier(state, 'researchMeowKnight'));
@@ -1162,7 +1239,11 @@ export function manaAutoClickerCount(state: GameState): number {
   if ((state.manaSkills.autoClicker ?? 0) <= 0) {
     return 0;
   }
-  return Math.max(1, Math.min(4, state.manaSkills.multiAutoClicker || 1));
+  return manaAutoClickerCapacity(state);
+}
+
+export function manaAutoClickerCapacity(state: GameState): number {
+  return Math.min(4, 1 + Math.max(0, state.manaSkills.multiAutoClicker ?? 0));
 }
 
 export function manaResearchUnlocked(state: GameState): boolean {
@@ -1385,7 +1466,7 @@ export function manaSkillMaxLevel(skillId: ManaSkillId): number | null {
     case 'autoClicker':
       return 26;
     case 'multiAutoClicker':
-      return 4;
+      return 3;
     case 'xpOrbChance':
     case 'yellowOrbChance':
     case 'greenOrbChance':
@@ -2051,11 +2132,11 @@ function buySnakeSkill(state: GameState, skillId: SnakeSkillId): void {
   }
 
   const cost = snakeSkillCost(state, skillId);
-  if (state.mana < cost) {
+  if (state.resources.scales < cost) {
     return;
   }
 
-  state.mana -= cost;
+  state.resources.scales -= cost;
   state.snakeSkills[skillId] += 1;
   if (skillId === 'gridSize') {
     resizeSnakeGrid(state);

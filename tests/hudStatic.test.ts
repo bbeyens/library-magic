@@ -758,6 +758,11 @@ for (const requiredManaSkillTabLayout of [
   'scale(2.9)',
   'calc(var(--idle-companion-width, 52px) * 1.8)',
   'clamp(44px',
+  'formatOneDecimalGameNumber(manaClickGainPreview(state))',
+  'formatTwoDecimalGameNumber(manaClickMultiplier(state))',
+  'manaSkillUpgradeEffectDelta(state, skillId)',
+  'manaCrystalLevel(state)',
+  'manaCrystalDiscoveredGemCount(state)',
 ]) {
   assert.equal(
     `${manaSkillShopTabsSource}\n${hudSource}\n${styleSource}`.includes(requiredManaSkillTabLayout),

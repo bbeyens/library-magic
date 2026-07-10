@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { snakeTotalMultiplier, tickState } from '../src/game/simulation/actions.ts';
+import { applyAction, snakeSkillCost, snakeTotalMultiplier, tickState } from '../src/game/simulation/actions.ts';
 import {
   canQueueSnakeDirection,
   committedSnakeDirection,
@@ -83,5 +83,19 @@ assert.equal(multiplierFoodState.snake.score, 0);
 assert.equal(multiplierFoodState.resources.scales, multiplierFoodScalesBefore);
 assert.equal(multiplierFoodState.snake.comboSteps, 10);
 assert.equal(snakeTotalMultiplier(multiplierFoodState), 2);
+
+const snakeUpgradeCostState = createInitialState();
+const speedCost = snakeSkillCost(snakeUpgradeCostState, 'speed');
+snakeUpgradeCostState.mana = speedCost * 10;
+snakeUpgradeCostState.resources.scales = speedCost - 1;
+applyAction(snakeUpgradeCostState, { type: 'buySnakeSkill', skillId: 'speed' });
+assert.equal(snakeUpgradeCostState.snakeSkills.speed, 0);
+assert.equal(snakeUpgradeCostState.mana, speedCost * 10);
+
+snakeUpgradeCostState.resources.scales = speedCost;
+applyAction(snakeUpgradeCostState, { type: 'buySnakeSkill', skillId: 'speed' });
+assert.equal(snakeUpgradeCostState.snakeSkills.speed, 1);
+assert.equal(snakeUpgradeCostState.resources.scales, 0);
+assert.equal(snakeUpgradeCostState.mana, speedCost * 10);
 
 console.log('snakeRules ok');

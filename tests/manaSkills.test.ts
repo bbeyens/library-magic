@@ -5,6 +5,7 @@ import {
   MANA_CRYSTAL_GEM_THRESHOLDS,
   MANA_CRYSTAL_REVEAL_REQUIRED_MANA,
   manaBlueOrbChance,
+  manaAutoClickerCapacity,
   manaAutoClickerCount,
   manaAutoClickerInterval,
   manaClickGainPreview,
@@ -30,6 +31,7 @@ import {
   manaResearchProgress,
   manaResearchUnlocked,
   manaSkillMaxLevel,
+  manaSkillUpgradeEffectDelta,
   manaYellowOrbChance,
   manaXpOrbChance,
   manaXpOrbValue,
@@ -54,6 +56,56 @@ multiplierState.manaSkills.power = 4;
 multiplierState.manaSkills.clickMultiplier = 4;
 assert.equal(manaClickMultiplier(multiplierState), 2);
 assert.equal(manaClickGainPreview(multiplierState), 10);
+
+const powerUpgradePreviewState = createInitialState();
+powerUpgradePreviewState.manaSkills.power = 4;
+powerUpgradePreviewState.manaSkills.clickMultiplier = 1;
+powerUpgradePreviewState.manaSkills.researchClickPower = 2;
+powerUpgradePreviewState.manaCrystal.xp = 200;
+assert.equal(manaClickGainPreview(powerUpgradePreviewState), 8.3);
+assert.equal(
+  manaSkillUpgradeEffectDelta(powerUpgradePreviewState, 'power'),
+  1.7,
+  'Power + should preview the effective click gain after every Crystal multiplier.',
+);
+
+const allyUpgradePreviewState = createInitialState();
+allyUpgradePreviewState.manaSkills.idleBow = 4;
+allyUpgradePreviewState.manaSkills.researchIdleBow = 2;
+allyUpgradePreviewState.manaCrystal.xp = 200;
+allyUpgradePreviewState.manaCrystal.harvestedMana = MANA_CRYSTAL_GEM_THRESHOLDS[0];
+assert.equal(manaIdleCompanionDamage(allyUpgradePreviewState, 'idleBow'), 5.9);
+assert.equal(
+  manaSkillUpgradeEffectDelta(allyUpgradePreviewState, 'idleBow'),
+  1.4,
+  'Idle ally cards should preview their effective damage gain after level, gem, and research boosts.',
+);
+
+const utilityUpgradePreviewState = createInitialState();
+utilityUpgradePreviewState.manaCrystal.xp = 200;
+utilityUpgradePreviewState.manaSkills.xpValue = 4;
+utilityUpgradePreviewState.manaSkills.xpOrbChance = 4;
+utilityUpgradePreviewState.manaSkills.allyFindOrb = 1;
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'xpValue'), 1.1);
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'allyFindOrb'), 5);
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'holdClick'), 5);
+utilityUpgradePreviewState.manaSkills.holdClick = 1;
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'holdClick'), 1);
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'autoClicker'), 5);
+utilityUpgradePreviewState.manaSkills.autoClicker = 1;
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'autoClicker'), -0.2);
+assert.equal(manaSkillUpgradeEffectDelta(utilityUpgradePreviewState, 'clickMultiplier'), 0.25);
+
+const multiAutoPreviewState = createInitialState();
+assert.equal(manaAutoClickerCapacity(multiAutoPreviewState), 1);
+assert.equal(manaSkillUpgradeEffectDelta(multiAutoPreviewState, 'multiAutoClicker'), 1);
+multiAutoPreviewState.manaSkills.autoClicker = 1;
+assert.equal(manaAutoClickerCount(multiAutoPreviewState), 1);
+assert.equal(manaSkillUpgradeEffectDelta(multiAutoPreviewState, 'multiAutoClicker'), 1);
+multiAutoPreviewState.manaSkills.multiAutoClicker = 3;
+assert.equal(manaAutoClickerCapacity(multiAutoPreviewState), 4);
+assert.equal(manaAutoClickerCount(multiAutoPreviewState), 4);
+assert.equal(manaSkillMaxLevel('multiAutoClicker'), 3);
 
 withRandomSequence([0.99], () => {
   applyAction(multiplierState, { type: 'chargeMana' });
@@ -221,7 +273,7 @@ assert.equal(clickResearchState.manaSkills.activeResearch?.elapsed, 1, 'Click Re
 
 const autoClickState = createInitialState();
 autoClickState.manaSkills.autoClicker = 1;
-autoClickState.manaSkills.multiAutoClicker = 4;
+autoClickState.manaSkills.multiAutoClicker = 3;
 assert.equal(manaAutoClickerInterval(autoClickState), 5);
 assert.equal(manaAutoClickerCount(autoClickState), 4);
 assert.equal(autoClickState.manaSkills.lastAutoClickCount, 0);

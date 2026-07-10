@@ -60,6 +60,7 @@ const emptyMarkerColor = new Color('#14371f');
 const miningDamagePressMs = 90;
 const miningDamageReleaseMs = 150;
 const miningDamageCompression = 0.12;
+const miningBoardWidthTargetRatio = 0.88;
 let activeTerrain: MiningThreeTerrain | null = null;
 let activeDigHandler: ((blockId: number) => void) | null = null;
 let activePressedBlockId: number | null = null;
@@ -80,6 +81,14 @@ const miningPalettes: Record<MiningBlockMaterialId, MiningPalette> = {
   emerald: { top: '#54db7c', left: '#33af60', right: '#278e4d', bottom: '#1a6737' },
   obsidian: { top: '#3f3650', left: '#2e263d', right: '#231d31', bottom: '#171220' },
 };
+
+export function miningThreeCameraViewSize(
+  columns = MINING_GRID_COLUMNS,
+  rows = MINING_GRID_ROWS,
+): number {
+  const projectedBoardWidth = (Math.max(1, columns) + Math.max(1, rows)) / Math.SQRT2;
+  return projectedBoardWidth / miningBoardWidthTargetRatio;
+}
 
 export function syncMiningThreeTerrain(state: GameState, onDigBlock: (blockId: number) => void): void {
   disposeDetachedMiningTerrains();
@@ -419,7 +428,7 @@ function resizeMiningThreeTerrain(terrain: MiningThreeTerrain): void {
   }
 
   const aspect = width / height;
-  const viewSize = 6.3;
+  const viewSize = miningThreeCameraViewSize();
   terrain.camera.left = (-viewSize * aspect) / 2;
   terrain.camera.right = (viewSize * aspect) / 2;
   terrain.camera.top = viewSize / 2;

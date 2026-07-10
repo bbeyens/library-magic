@@ -7,10 +7,12 @@ const styleSource = readFileSync(new URL('../src/style.css', import.meta.url), '
 const snakePanelSource = hudSource.match(/function snakePanel[\s\S]*?\n}\n\nfunction snakeBoardShellContent/)?.[0];
 const snakeDockSignatureSource = hudSource.match(/function snakeSkillDockSignature[\s\S]*?\n}\n\nfunction snakeSkillCardDynamicSignature/)?.[0];
 const snakeDynamicUpdaterSource = hudSource.match(/function updateDynamicSnakeSkillCards[\s\S]*?\n}\n\nfunction refreshSnakeSkillDock/)?.[0];
+const snakeSkillCardSource = hudSource.match(/function snakeSkillShopCard[\s\S]*?\n}\n\nfunction snakeSkillIcon/)?.[0];
 
 assert.ok(snakePanelSource, 'snakePanel should exist.');
 assert.ok(snakeDockSignatureSource, 'snakeSkillDockSignature should exist.');
 assert.ok(snakeDynamicUpdaterSource, 'updateDynamicSnakeSkillCards should exist.');
+assert.ok(snakeSkillCardSource, 'snakeSkillShopCard should exist.');
 
 for (const requiredSnakeLayout of [
   '<div class="snake-board-shell">',
@@ -42,6 +44,7 @@ for (const forbiddenVolatileReference of [
 
 for (const requiredDynamicUpdaterRule of [
   "rootElement?.querySelectorAll<HTMLButtonElement>('.snake-skill-dock .skill-shop-card[data-skill-id]')",
+  'const currentScales = Math.floor(state.resources.scales);',
   'setTextContentIfChanged(card.querySelector<HTMLElement>(\'[data-skill-card-value]\'), snapshot.value);',
   'setInnerHTMLIfChanged(buyElement, snapshot.isMaxed ? \'<b>Max</b>\' : snapshot.costHtml);',
   'clearOneShotHoverTarget(card);',
@@ -52,6 +55,18 @@ for (const requiredDynamicUpdaterRule of [
     `Snake dynamic skill updates should patch cards in place: missing ${requiredDynamicUpdaterRule}`,
   );
 }
+
+assert.equal(
+  snakeSkillCardSource.includes('state.resources.scales < cost'),
+  true,
+  'Snake skill cards should use scales affordability, not mana.',
+);
+assert.equal(
+  snakeSkillCardSource.includes('snakeSkillShopCostHtml(cost)'),
+  true,
+  'Snake skill cards should display scale costs.',
+);
+assert.equal(snakeSkillCardSource.includes('standardManaCostHtml(cost)'), false, 'Snake skill cards must not display mana costs.');
 
 for (const requiredSnakeStyle of [
   '.book-overlay[data-book-id="serpent"]',

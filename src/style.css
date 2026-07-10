@@ -6838,7 +6838,7 @@ button.blackjack-chip-token {
 
 .mining-grid-shell .mining-three-frame {
   overflow: hidden;
-  background: transparent;
+  background: linear-gradient(180deg, #2c2438 0%, #1b1626 52%, #0f0c17 100%);
 }
 
 .mining-grid-shell .mining-three-board {
