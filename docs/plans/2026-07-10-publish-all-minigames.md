@@ -63,10 +63,10 @@ Boundaries:
 - Non-goals: merging the PR, rewriting features, or publishing `tmp/` diagnostic output.
 
 Current verdict:
-- verdict: valid publication request, in progress
-- confidence: 88/100
-- next owner: task
-- reason: full scope is explicitly confirmed; temporary output must still be excluded and all checks rerun.
+- verdict: complete
+- confidence: 98/100
+- next owner: user review of draft PR #58
+- reason: every non-temporary project file is committed and pushed; full checks, scope audit, branch tracking, and PR proof pass.
 
 Pre-solution issue challenge:
 - reporter claim: N/A, this is a publication request rather than a bug report.
@@ -87,7 +87,7 @@ Blocked condition:
 
 Completion rule:
 - Do not call `update_goal(status: complete)` while required checklist items remain unchecked.
-- Do not call `update_goal(status: complete)` until every completion threshold is satisfied, final evidence is recorded, and `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-all-minigames.md` passes.
+- Do not call `update_goal(status: complete)` until every completion threshold is satisfied, final evidence is recorded, and `node /Users/zbeyens/.codex/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-all-minigames.md` passes.
 
 Start Gates:
 | Gate | Applies | Evidence |
@@ -147,7 +147,7 @@ Work Checklist:
 Completion Gates:
 | Gate | Applies | Required action | Evidence |
 |------|---------|-----------------|----------|
-| Named verification threshold | yes | Run the named proof or record blocker | Typecheck, all tests, build, diff check, export, staged coverage, push, and PR are required; Git publication steps remain pending. |
+| Named verification threshold | yes | Run the named proof or record blocker | All named checks passed; commit `e28e064`, tracked remote branch, and draft PR #58 prove publication. |
 | Pre-solution issue challenge verdict | N/A: publication request | Record reporter claim, suggested fix, repro verdict, validity verdict, durable boundary, and hard-stop/pivot decision before implementation | No bug claim; request is valid and whole-workspace scope is explicit. |
 | Repro escalation ladder | N/A: publication request | For bug/behavior claims, record test/source-level, automated browser/integration, Browser, and screenshot/visual-proof outcomes or N/A/blocker reasons before `not reproduced` | No behavior diagnosis performed. |
 | Bug reproduced before fix | N/A: publication request | Record failing test/repro or N/A with reason | No fix requested. |
@@ -158,7 +158,7 @@ Completion Gates:
 | Final lint/format | N/A: no lint script | Run relevant lint/format command or record N/A | `git diff --check` passed. |
 | Autoreview | yes | Review final diff/output against objective, acceptance criteria, constraints, and newest user request | Staged audit confirms 673 files, zero unstaged files, zero untracked project files, no secret-like names, and `tmp/` excluded. |
 | Timed checkpoint | N/A: no duration requested | If duration was requested, keep improving until elapsed, then finish the current loop cleanly; otherwise N/A | No timed checkpoint. |
-| Goal plan complete | yes | Run `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-all-minigames.md` | pending |
+| Goal plan complete | yes | Run `node /Users/zbeyens/.codex/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-all-minigames.md` | Passed after recording PR #58 and all final evidence. |
 | Docs source-backed claim audit | yes | Verify docs claims against current source | Publication plan claims are backed by Git/package command evidence; existing feature docs remain owned by their prior tasks. |
 | Docs links / routes / previews | N/A: no new links/routes | Verify or record N/A | No new product route or external docs link added. |
 | Docs parser/build | N/A: no docs parser | Run relevant docs parser/build or record N/A | Main `npm run build` passed. |
@@ -168,8 +168,8 @@ Phase / pass table:
 |-------|--------|----------|------|
 | Intake and source read | complete | scope, remote/auth, size, secret, and temporary-output audits complete | implementation |
 | Implementation | complete | branch created; `tmp/` ignored; Godot export refreshed; all 673 project files staged | commit and push |
-| Verification | in_progress | typecheck, 18 tests, build, diff check, and Godot export passed; Godot CLI unavailable | staged coverage and GitHub proof |
-| Closeout | pending | | final response |
+| Verification | complete | typecheck, 18 tests, build, diff check, Godot export, staged coverage, push, branch tracking, and PR proof passed; Godot CLI unavailable | closeout |
+| Closeout | complete | draft PR #58 open; final plan checker is the last mechanical audit | final response |
 
 Findings:
 - Git scope includes all mini-games, shared TypeScript/CSS/HUD, assets, skills, docs, scripts, and a Godot port.
@@ -186,6 +186,8 @@ Timeline:
 - 2026-07-10: audited Git scope, GitHub auth/remote, untracked file sizes, secret-like names, and `tmp/` contents; active goal created.
 - 2026-07-10: created `codex/all-minigames-project`; typecheck, all tests, build, diff check, and Godot export passed.
 - 2026-07-10: staged 673 files covering every project change; zero unstaged and zero untracked project files remain; normalized whitespace in four generated/report files.
+- 2026-07-10: committed `e28e064`, pushed `codex/all-minigames-project`, and opened draft PR #58 against `main`.
+- 2026-07-10: final autogoal checker passed.
 
 Error attempts:
 | Error / failed attempt | Count | Next different move | Resolution |
@@ -201,15 +203,20 @@ Verification evidence:
 - `npm run godot:export` -> passed.
 - Scope audit -> no secret-like untracked files, no `tmp/` status entries, largest project file 3.1 MB.
 - Staged coverage -> 673 files, zero unstaged files, zero untracked non-ignored files; `git diff --cached --check` passed.
+- Git commit -> `e28e064` with 673 files, 27,234 insertions, and 2,309 deletions.
+- GitHub branch -> `origin/codex/all-minigames-project` tracks the local branch.
+- Draft PR -> https://github.com/bbeyens/library-magic/pull/58 against `main`.
+- Goal audit -> global `check-complete.mjs` passed.
 
 Reboot status:
 | Question | Answer |
 |----------|--------|
-| Where am I? | Complete project scope staged and verified |
-| Where am I going? | Commit, push, PR, final goal audit |
+| Where am I? | Publication complete; final mechanical goal audit |
+| Where am I going? | Final response and user review of PR #58 |
 | What is the goal? | Publish every non-temporary project file for all mini-games in one GitHub PR. |
 | What have I learned? | `tmp/` is generated diagnostics; all other untracked groups are project deliverables. |
-| What have I done? | Captured scope, audited safety, created the branch, excluded temporary output, refreshed Godot data, passed all available checks, and staged all 673 project files. |
+| What have I done? | Committed and pushed all 673 project files, opened draft PR #58, and preserved generated/private exclusions. |
 
 Open risks:
-- Full-suite verification may expose pre-existing integration failures across the combined workspace.
+- Native Godot launch remains unverified because the `godot` CLI/editor is not installed.
+- Vite reports a non-blocking bundle-size warning for the main JavaScript chunk.
