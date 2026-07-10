@@ -68,7 +68,7 @@ Output budget strategy:
 - Use bounded status, diff-stat, test, and ref commands; do not print full asset or generated-file contents.
 
 Current verdict:
-- verdict: valid
+- verdict: complete
 - confidence: 100
 - next owner: publication workflow
 - reason: local branch, remote branch, main, and uncommitted workspace are demonstrably out of sync
@@ -110,54 +110,54 @@ Start Gates:
 | Browser proof decision for browser surface | N/A | no browser behavior changed by publication |
 
 Work Checklist:
-- [ ] First checkpoint complete: every explicit prompt requirement, scope
+- [x] First checkpoint complete: every explicit prompt requirement, scope
       boundary, timing constraint, stop condition, deliverable, final handoff
       section, verification surface, and success criterion is copied into this
       plan as checkable checkpoints before implementation.
-- [ ] Short objective plus threshold, verification surface, constraints, boundaries, and blocked condition are concrete.
-- [ ] If a duration was requested, it is recorded as minimum active work unless
+- [x] Short objective plus threshold, verification surface, constraints, boundaries, and blocked condition are concrete.
+- [x] If a duration was requested, it is recorded as minimum active work unless
       explicitly marked hard stop; when no better metric exists, initial and
       final confidence scores are recorded.
-- [ ] Task source and acceptance criteria are captured.
-- [ ] For public tracker bug reports, behavior claims, technical diagnoses, or
+- [x] Task source and acceptance criteria are captured.
+- [x] For public tracker bug reports, behavior claims, technical diagnoses, or
       suggested fixes, reporter claims are challenged before implementation
       with a recorded verdict: `valid`, `not reproduced`, `invalid`,
       `wont-fix`, `partially valid`, or `platform limitation`. Feature, docs,
       support, or cleanup requests with no bug claim may mark reproduction
       `N/A` with reason.
-- [ ] Repro escalation ladder followed for bug/behavior claims: focused
+- [x] Repro escalation ladder followed for bug/behavior claims: focused
       test/source-level repro first when applicable; existing repo-owned
       automated browser or integration proof next when available and useful as
       executable coverage; the repo-approved Browser tool next when tests or
       automation cannot reproduce or cannot model the surface honestly;
       screenshot or explicit visual-proof waiver when visual/native state
       matters.
-- [ ] Hard-stop rule followed for bug/behavior claims: no code when the issue
+- [x] Hard-stop rule followed for bug/behavior claims: no code when the issue
       is not reproduced, invalid, or won't-fix; partial validity pivots to the
       best long-term fix and records what was wrong or incomplete in the
       issue's proposed path.
-- [ ] Nearby implementation patterns are read before edits.
-- [ ] Implementation fixes the right ownership boundary, or the narrower choice
+- [x] Nearby implementation patterns are read before edits.
+- [x] Implementation fixes the right ownership boundary, or the narrower choice
       is recorded with reason.
-- [ ] Review/autoreview target selected from actual diff state for non-trivial
+- [x] Review/autoreview target selected from actual diff state for non-trivial
       implementation work, or marked N/A with reason.
-- [ ] Verification evidence is recorded beside each relevant gate.
+- [x] Verification evidence is recorded beside each relevant gate.
 
 Completion Gates:
 | Gate | Applies | Required action | Evidence |
 |------|---------|-----------------|----------|
-| Named verification threshold | pending | Run the named proof or record blocker | pending |
-| Pre-solution issue challenge verdict | pending | Record reporter claim, suggested fix, repro verdict, validity verdict, durable boundary, and hard-stop/pivot decision before implementation | pending |
-| Repro escalation ladder | pending | For bug/behavior claims, record test/source-level, automated browser/integration, Browser, and screenshot/visual-proof outcomes or N/A/blocker reasons before `not reproduced` | pending |
-| Bug reproduced before fix | pending | Record failing test/repro or N/A with reason | pending |
-| Targeted behavior verification | pending | Run focused test/proof for changed behavior or record N/A | pending |
-| TypeScript or typed config changed | pending | Run relevant typecheck | pending |
-| Build-sensitive behavior changed | pending | Run relevant build/check | pending |
-| Browser surface changed | pending | Capture browser proof | pending |
-| Final lint/format | pending | Run relevant lint/format command or record N/A | pending |
-| Autoreview | pending | Review final diff/output against objective, acceptance criteria, constraints, and newest user request | pending |
-| Timed checkpoint | pending | If duration was requested, keep improving until elapsed, then finish the current loop cleanly; otherwise N/A | pending |
-| Goal plan complete | yes | Run `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-complete-local-work.md` | pending |
+| Named verification threshold | yes | Run the named proof or record blocker | tests/build passed; both remote refs matched `1412058`; worktree clean before closeout note |
+| Pre-solution issue challenge verdict | yes | Record reporter claim, suggested fix, repro verdict, validity verdict, durable boundary, and hard-stop/pivot decision before implementation | recorded above as valid and reproduced |
+| Repro escalation ladder | yes | For bug/behavior claims, record test/source-level, automated browser/integration, Browser, and screenshot/visual-proof outcomes or N/A/blocker reasons before `not reproduced` | Git refs authoritative; other surfaces N/A |
+| Bug reproduced before fix | yes | Record failing test/repro or N/A with reason | main behind branch and uncommitted files shown by Git |
+| Targeted behavior verification | yes | Run focused test/proof for changed behavior or record N/A | full test suite passed |
+| TypeScript or typed config changed | yes | Run relevant typecheck | `npm run build` includes `tsc` and passed |
+| Build-sensitive behavior changed | yes | Run relevant build/check | production build passed |
+| Browser surface changed | N/A | Capture browser proof | publication task; existing UI proof belongs to source tasks |
+| Final lint/format | yes | Run relevant lint/format command or record N/A | no lint script; `git diff --check` passed |
+| Autoreview | yes | Review final diff/output against objective, acceptance criteria, constraints, and newest user request | all staged files included; no force push; both branches share one commit |
+| Timed checkpoint | N/A | If duration was requested, keep improving until elapsed, then finish the current loop cleanly; otherwise N/A | no duration requested |
+| Goal plan complete | yes | Run `node .agents/skills/autogoal/scripts/check-complete.mjs docs/plans/2026-07-10-publish-complete-local-work.md` | global autogoal checker passed |
 
 Phase / pass table:
 | Phase | Status | Evidence | Next |
@@ -165,7 +165,7 @@ Phase / pass table:
 | Intake and source read | complete | Git status, refs, auth, diff stat inspected | verification |
 | Implementation | complete | existing current worktree retained in full | verification |
 | Verification | complete | `npm test` and retry of `npm run build` passed | commit and push |
-| Closeout | pending | | final response |
+| Closeout | complete | branch and main pushed to the same commit | final plan commit and response |
 
 Findings:
 - `main` and `origin/main` are at `a5bf628`; the current branch and its remote are at `a6bae99`.
@@ -181,20 +181,31 @@ Timeline:
 - 2026-07-10: confirmed origin/main is an ancestor of the current branch and GitHub auth is valid.
 - 2026-07-10: full `npm test` passed all 19 test files.
 - 2026-07-10: first concurrent build hit transient `dist/assets` ENOTEMPTY; isolated retry passed.
+- 2026-07-10: committed all 11 worktree files as `1412058` and pushed both `codex/all-minigames-project` and `main`.
+- 2026-07-10: verified both remote refs resolve to `1412058bac46214dd35de4a046c14480826e4300`.
 
 Verification evidence:
 - `git diff --check` -> pass.
 - `npm test` -> pass, including Crystal, Snake, Mine, TD, Blackjack, and other game suites.
 - `npm run build` retry -> pass; TypeScript and Vite production build succeeded.
+- `git push -u origin codex/all-minigames-project` -> `a6bae99..1412058`.
+- `git push origin HEAD:main` -> `a5bf628..1412058`.
+- `git ls-remote origin refs/heads/main refs/heads/codex/all-minigames-project` -> both `1412058bac46214dd35de4a046c14480826e4300`.
+
+Error attempts:
+| Error / failed attempt | Count | Next different move | Resolution |
+|------------------------|-------|---------------------|------------|
+| Autogoal helper missing from repo-local skill path | 1 | use the installed global skill path | plan created successfully |
+| Vite cleanup returned `ENOTEMPTY` during concurrent verification | 1 | rerun build separately | build passed |
 
 Reboot status:
 | Question | Answer |
 |----------|--------|
-| Where am I? | Verified worktree, ready to commit |
-| Where am I going? | Commit, branch push, main fast-forward, closeout |
+| Where am I? | Remote publication complete; recording final plan evidence |
+| Where am I going? | Final plan commit, remote ref recheck, final response |
 | What is the goal? | Publish all current local work so branch and main share one tested remote commit |
 | What have I learned? | See Findings |
-| What have I done? | Audited scope and refs; passed full tests and production build |
+| What have I done? | Committed every local file, passed all checks, and pushed branch plus main to one commit |
 
 Open risks:
-- Tests may expose unrelated unfinished work that must be fixed before publication.
+- None.
