@@ -49,6 +49,7 @@ import {
   MINING_GRID_COLUMNS,
   MINING_MATERIAL_RESOURCE_IDS,
   MINING_GRID_ROWS,
+  MINING_TERRAIN_LAYER_COUNT,
   randomSnakeFood,
   snakeGridSizeForLevel,
   type BlackjackCard,
@@ -1901,7 +1902,8 @@ function resetTargetRun(state: GameState): void {
 }
 
 function resetMiningRun(state: GameState): void {
-  state.mining.blocks = createInitialMiningBlocks();
+  state.mining.terrainCycle = 1;
+  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle);
   state.mining.totalMined = 0;
   state.mining.deepestLayer = 1;
   state.mining.lastReward = 0;
@@ -4014,7 +4016,7 @@ function digMiningBlock(state: GameState, blockId: number): void {
   }
 
   const block = state.mining.blocks.find((candidate) => candidate.id === blockId);
-  if (!block) {
+  if (!block || block.layersRemaining <= 0) {
     return;
   }
 
@@ -4033,11 +4035,13 @@ function digMiningBlock(state: GameState, blockId: number): void {
 
 function weakestMiningBlock(state: GameState): MiningBlock | null {
   return (
-    [...state.mining.blocks].sort((first, second) => {
-      const firstRatio = first.health / first.maxHealth;
-      const secondRatio = second.health / second.maxHealth;
-      return firstRatio - secondRatio || second.depth - first.depth || first.id - second.id;
-    })[0] ?? null
+    state.mining.blocks
+      .filter((block) => block.layersRemaining > 0)
+      .sort((first, second) => {
+        const firstRatio = first.health / first.maxHealth;
+        const secondRatio = second.health / second.maxHealth;
+        return firstRatio - secondRatio || second.depth - first.depth || first.id - second.id;
+      })[0] ?? null
   );
 }
 
@@ -4057,6 +4061,9 @@ function miningNeighbors(state: GameState, blockId: number): MiningBlock[] {
 }
 
 function applyMiningHit(state: GameState, block: MiningBlock, damage: number): void {
+  if (block.layersRemaining <= 0) {
+    return;
+  }
   state.mining.hitPulse += 1;
   block.lastHit = state.mining.hitPulse;
   block.health -= damage;
@@ -4076,14 +4083,34 @@ function breakMiningBlock(state: GameState, block: MiningBlock): void {
   state.mining.lastReward += reward;
   state.mining.lastBrokenDepth = brokenDepth;
 
-  const nextDepth = brokenDepth + 1;
-  const nextMaxHealth = miningBlockMaxHealth(nextDepth);
-  const nextMaterial = miningBlockMaterialForDepth(nextDepth);
-  block.depth = nextDepth;
-  block.material = nextMaterial.id;
-  block.maxHealth = nextMaxHealth;
-  block.health = nextMaxHealth;
-  state.mining.deepestLayer = Math.max(state.mining.deepestLayer, nextDepth);
+  block.layersRemaining = Math.max(0, block.layersRemaining - 1);
+  state.mining.deepestLayer = Math.max(state.mining.deepestLayer, brokenDepth);
+
+  if (block.layersRemaining > 0) {
+    const nextDepth = brokenDepth + 1;
+    const nextMaxHealth = miningBlockMaxHealth(nextDepth);
+    const nextMaterial = miningBlockMaterialForDepth(nextDepth);
+    block.depth = nextDepth;
+    block.material = nextMaterial.id;
+    block.maxHealth = nextMaxHealth;
+    block.health = nextMaxHealth;
+    state.mining.deepestLayer = Math.max(state.mining.deepestLayer, nextDepth);
+    return;
+  }
+
+  block.health = 0;
+  block.maxHealth = 0;
+
+  if (state.mining.blocks.every((candidate) => candidate.layersRemaining <= 0)) {
+    advanceMiningTerrainCycle(state);
+  }
+}
+
+function advanceMiningTerrainCycle(state: GameState): void {
+  state.mining.terrainCycle += 1;
+  const startDepth = (state.mining.terrainCycle - 1) * MINING_TERRAIN_LAYER_COUNT + 1;
+  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle);
+  state.mining.deepestLayer = Math.max(state.mining.deepestLayer, startDepth);
 }
 
 function miningBlockReward(state: GameState, block: MiningBlock): number {

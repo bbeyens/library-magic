@@ -101,19 +101,13 @@ import {
   type TargetSkillId,
 } from '../game/simulation/targetRules';
 import type { SlimeTrainerCommandId } from '../game/simulation/slimeTrainerRules';
+import { syncMiningThreeTerrain } from './miningThreeTerrain';
 import {
-  MINING_BLOCK_MATERIALS,
-  MINING_GRID_COLUMNS,
-  MINING_GRID_ROWS,
   MINING_MATERIAL_RESOURCE_IDS,
-  miningBlockCrackOverlayForDamage,
   miningBlockMaterialById,
-  miningBlockSpriteTierForDepth,
-  miningMaterialExchangeValue,
   type BlackjackCard,
   type BookPanelSlot,
   type GameState,
-  type MiningBlock,
   type SnakeCell,
   type SnakeDirection,
 } from '../game/simulation/state';
@@ -132,6 +126,7 @@ let lastRenderStructureSignature = '';
 let lastSnakeRewardMarker = '';
 let lastRuneTypingRewardMarker = '';
 let lastRenderStableSignature = '';
+let lastMiningSkillDockSignature = '';
 let lastBlackjackRewardMarker = '';
 let lastHundredRewardMarker = '';
 let lastTargetRewardMarker = '';
@@ -279,6 +274,16 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
   if (!options.forceFull && shouldPatchOpenDefensePanel(state, structureSignature)) {
     lastRenderSignature = signature;
     lastRenderStableSignature = stableSignature;
+    updateDynamicHudValues(state);
+    runHudTransientEffects(state);
+    scheduleBlackjackAutoDeal(state);
+    return;
+  }
+  if (!options.forceFull && shouldPatchOpenMiningPanel(state, structureSignature)) {
+    lastRenderSignature = signature;
+    lastRenderStableSignature = stableSignature;
+    refreshMiningBoard(state);
+    refreshMiningSkillDock(state);
     updateDynamicHudValues(state);
     runHudTransientEffects(state);
     scheduleBlackjackAutoDeal(state);
@@ -602,6 +607,8 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
   });
   installBookPanelFocus();
   installBookPanelDragging();
+  refreshMiningBoard(state);
+  refreshMiningSkillDock(state, { force: true });
 
   updateDynamicHudValues(state);
   runHudTransientEffects(state);
@@ -1913,7 +1920,7 @@ function bookOverlay(
     selectedBook.id === 'targets' ||
     selectedBook.id === 'mine' ||
     selectedBook.id === 'slimeTrainer';
-  const hasUpgradeControls = selectedBook.id !== 'typing' && selectedBook.id !== 'defense';
+  const hasUpgradeControls = selectedBook.id !== 'typing' && selectedBook.id !== 'defense' && selectedBook.id !== 'mine';
   const isCompactUpgradeOpen = openUpgradePanel === selectedBook.id && upgradePanelMode === 'compact';
   const miniSkillClass = isCompactUpgradeOpen ? ' has-mini-skills' : '';
   return `
@@ -2149,6 +2156,99 @@ function shouldPatchOpenDefensePanel(state: GameState, structureSignature: strin
     return false;
   }
   return Boolean(rootElement.querySelector('.book-overlay[data-book-id="defense"] .defense-panel'));
+}
+
+function shouldPatchOpenMiningPanel(state: GameState, structureSignature: string): boolean {
+  if (!rootElement || structureSignature !== lastRenderStructureSignature) {
+    return false;
+  }
+  if (state.openBookPanels.length !== 1 || state.openBookPanels[0]?.bookId !== 'mine') {
+    return false;
+  }
+  return Boolean(rootElement.querySelector('.book-overlay[data-book-id="mine"] .mining-panel'));
+}
+
+function refreshMiningBoard(state: GameState): void {
+  const playfield = rootElement?.querySelector<HTMLElement>('.book-overlay[data-book-id="mine"] .mining-playfield');
+  if (playfield) {
+    for (const block of state.mining.blocks) {
+      const button = playfield.querySelector<HTMLButtonElement>(`[data-mining-block-id="${block.id}"]`);
+      if (!button) {
+        continue;
+      }
+      const material = miningBlockMaterialById(block.material);
+      const title =
+        block.layersRemaining > 0
+          ? `${material.name} - profondeur ${block.depth}, ${block.health}/${block.maxHealth} PV`
+          : `Emplacement vide - profondeur ${block.depth}`;
+      button.dataset.material = material.id;
+      button.dataset.layerCount = String(block.layersRemaining);
+      button.disabled = block.layersRemaining <= 0;
+      button.title = title;
+      button.setAttribute(
+        'aria-label',
+        block.layersRemaining > 0
+          ? `Bloc de ${material.name} profondeur ${block.depth}, ${block.health} PV sur ${block.maxHealth}, ${block.layersRemaining} couches restantes`
+          : `Emplacement vide profondeur ${block.depth}`,
+      );
+      const materialLabel = button.querySelector<HTMLElement>('span');
+      const layerLabel = button.querySelector<HTMLElement>('i');
+      if (materialLabel) {
+        materialLabel.textContent = material.shortName;
+      }
+      if (layerLabel) {
+        layerLabel.textContent = String(block.layersRemaining);
+      }
+    }
+  }
+
+  syncMiningThreeTerrain(state, (blockId) => {
+    const board = rootElement?.querySelector<HTMLElement>('[data-mining-3d-board]');
+    if (board) {
+      focusBookPanelFromControl(board, 'mine');
+    }
+    gameStore.dispatch({ type: 'digMiningBlock', blockId });
+  });
+}
+
+function refreshMiningSkillDock(state: GameState, options: { force?: boolean } = {}): void {
+  if (!rootElement || !isBookPanelOpen(state, 'mine')) {
+    lastMiningSkillDockSignature = '';
+    return;
+  }
+
+  const dock = rootElement.querySelector<HTMLElement>('.book-overlay[data-book-id="mine"] .mining-skill-dock');
+  if (!dock) {
+    lastMiningSkillDockSignature = '';
+    return;
+  }
+
+  const signature = [
+    Math.floor(state.mana),
+    state.miningSkills.pickaxeForce,
+    state.miningSkills.splashDamage,
+    state.miningSkills.automation,
+  ].join('/');
+  if (!options.force && signature === lastMiningSkillDockSignature) {
+    return;
+  }
+
+  dock.innerHTML = miningSkillShop(state, false, { docked: true, showCompactButton: false });
+  lastMiningSkillDockSignature = signature;
+  dock.querySelectorAll<HTMLButtonElement>('[data-action="buyMiningSkill"][data-skill-id]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const skillId = button.dataset.skillId;
+      if (button.disabled || !isMiningSkillId(skillId)) {
+        return;
+      }
+      gameStore.dispatch({ type: 'buyMiningSkill', skillId });
+      refreshMiningSkillDock(gameStore.snapshot, { force: true });
+    });
+  });
+}
+
+function isMiningSkillId(value: string | undefined): value is MiningSkillId {
+  return value === 'pickaxeForce' || value === 'splashDamage' || value === 'automation';
 }
 
 function upgradePanel(bookId: BookId, state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
@@ -2858,6 +2958,75 @@ function snakeBonusFruitLabel(state: GameState): string {
   return 'Off';
 }
 
+function miningSkillShop(state: GameState, shouldAnimate = false, options: SkillShopPanelOptions = {}): string {
+  return skillShopPanel(
+    'mine',
+    shouldAnimate,
+    'Mine Skills',
+    'Mining upgrades',
+    'mine',
+    miningSkillShopTabs(state),
+    'setMiningSkillShopTab',
+    options,
+  );
+}
+
+function miningSkillShopTabs(state: GameState): Array<SkillShopTab<'mine'>> {
+  return [
+    {
+      id: 'mine',
+      label: 'Mine',
+      icon: 'Mine',
+      theme: 'utility',
+      cards: [
+        miningSkillShopCard(state, 'pickaxeForce', 'Pickaxe +', `${miningPickaxeDamage(state)} dmg`, '+1 damage'),
+        miningSkillShopCard(state, 'splashDamage', 'Splash', `${miningSplashDamage(state)} neighbor`, 'adjacent blocks'),
+        miningSkillShopCard(state, 'automation', 'Auto Dig', miningAutomationLabel(state), 'weakest block'),
+      ],
+    },
+  ];
+}
+
+function miningSkillShopCard(
+  state: GameState,
+  skillId: MiningSkillId,
+  title: string,
+  value: string,
+  detail: string,
+): SkillShopCard {
+  const level = state.miningSkills[skillId];
+  const maxLevel = miningSkillMaxLevel(skillId);
+  const isMaxed = level >= maxLevel;
+  const cost = miningSkillCost(state, skillId);
+  const isUnaffordable = !isMaxed && state.mana < cost;
+  return {
+    action: 'buyMiningSkill',
+    skillId,
+    title,
+    value,
+    delta: isMaxed ? '' : miningSkillDeltaLabel(skillId),
+    detail,
+    level,
+    maxLevel,
+    costHtml: isMaxed ? '<b>Max</b>' : `<b>${cost}</b>`,
+    costText: isMaxed ? 'Max' : `${cost} Mana`,
+    isMaxed,
+    isDisabled: isUnaffordable,
+    isUnaffordable,
+  };
+}
+
+function miningSkillDeltaLabel(skillId: MiningSkillId): string {
+  switch (skillId) {
+    case 'pickaxeForce':
+      return '(+1)';
+    case 'splashDamage':
+      return '(+1)';
+    case 'automation':
+      return '(-0.2s)';
+  }
+}
+
 function miningUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
   if (mode === 'compact') {
     return `
@@ -2872,39 +3041,7 @@ function miningUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'det
     `;
   }
 
-  return `
-    ${standardUpgradePanel('mine', shouldAnimate, 'Table des upgrades', 'Mine', [
-      miningSkillTrack(state, 'pickaxeForce', '▲', 'Force de pioche', `${miningPickaxeDamage(state)} degats`, '+1 degat par niveau'),
-      miningSkillTrack(state, 'splashDamage', '✣', 'Splash', `${miningSplashDamage(state)} voisin`, 'Tape les blocs adjacents'),
-      miningSkillTrack(state, 'automation', '⌁', 'Automatisation', miningAutomationLabel(state), 'Creuse le bloc le plus fragile'),
-    ])}
-  `;
-}
-
-function miningSkillTrack(
-  state: GameState,
-  skillId: MiningSkillId,
-  icon: string,
-  label: string,
-  value: string,
-  detail: string,
-): StandardUpgradeTrack {
-  const level = state.miningSkills[skillId];
-  const maxLevel = miningSkillMaxLevel(skillId);
-  const isMaxed = level >= maxLevel;
-  const cost = miningSkillCost(state, skillId);
-  return {
-    action: 'buyMiningSkill',
-    skillId,
-    icon,
-    title: label,
-    subtitle: value,
-    levelLabel: `Lv ${level}/${maxLevel}`,
-    detail,
-    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
-    costText: isMaxed ? 'MAX' : `${cost} Mana`,
-    isMaxed,
-  };
+  return miningSkillShop(state, shouldAnimate);
 }
 
 function miningSkillCompactButton(state: GameState, skillId: MiningSkillId, icon: string): string {
@@ -3736,105 +3873,69 @@ function isOppositeSnakeDirection(first: SnakeDirection, second: SnakeDirection)
 }
 
 function miningPanel(state: GameState): string {
-  const exchangeValue = miningMaterialExchangeTotal(state);
+  return `
+    <div class="mining-panel">
+      <div class="mining-playfield">
+        ${miningPlayfield(state)}
+      </div>
+      <div class="mining-skill-dock">
+        ${miningSkillShop(state, false, { docked: true, showCompactButton: false })}
+      </div>
+    </div>
+  `;
+}
+
+function miningPlayfield(state: GameState): string {
   const blocks = state.mining.blocks
     .map((block) => {
-      const health = Math.max(0, Math.round((block.health / block.maxHealth) * 100));
       const material = miningBlockMaterialById(block.material);
-      const spriteTier = miningBlockSpriteTierForDepth(block.depth);
-      const crackOverlay = miningBlockCrackOverlayForDamage(block.health, block.maxHealth, block.id);
-      const crackStyle = crackOverlay
-        ? `--crack-opacity:0.75; --crack-x:${crackOverlay.column - 1}; --crack-y:${crackOverlay.row - 1};`
-        : '--crack-opacity:0; --crack-x:0; --crack-y:0;';
+      const title =
+        block.layersRemaining > 0
+          ? `${material.name} - profondeur ${block.depth}, ${block.health}/${block.maxHealth} PV`
+          : `Emplacement vide - profondeur ${block.depth}`;
+      const ariaLabel =
+        block.layersRemaining > 0
+          ? `Bloc de ${material.name} profondeur ${block.depth}, ${block.health} PV sur ${block.maxHealth}, ${block.layersRemaining} couches restantes`
+          : `Emplacement vide profondeur ${block.depth}`;
       return `
         <button
-          class="${miningBlockClassNames(state, block)}"
+          type="button"
+          class="mining-keyboard-block"
           data-action="digMiningBlock"
           data-block-id="${block.id}"
+          data-mining-block-id="${block.id}"
+          role="gridcell"
           data-material="${material.id}"
-          data-sprite-index="${spriteTier.spriteIndex}"
-          data-shade-level="${spriteTier.shadeLevel}"
-          style="--block-health:${health}%; --block-depth:${Math.min(9, block.depth)}; --block-hit:${block.lastHit % 2}; --block-shade:${spriteTier.shadeLevel}; --block-sprite:url('${spriteTier.assetPath}'); ${crackStyle}"
-          title="${material.name} - profondeur ${block.depth}, ${block.health}/${block.maxHealth} PV"
-          aria-label="Bloc de ${material.name} profondeur ${block.depth}, ${block.health} PV sur ${block.maxHealth}"
+          data-layer-count="${block.layersRemaining}"
+          title="${title}"
+          aria-label="${ariaLabel}"
+          ${block.layersRemaining > 0 ? '' : 'disabled'}
         >
-          <b>${material.shortName}</b>
-          <i>${block.health}</i>
+          <span>${material.shortName}</span>
+          <i>${block.layersRemaining}</i>
         </button>
       `;
     })
     .join('');
 
   return `
-    <div class="mining-panel">
-      <div class="mining-grid-shell">
-        <div class="mining-material-bank" aria-label="Ressources de mine">
-          ${miningMaterialStocks(state)}
-          <button
-            class="mining-exchange"
-            data-action="exchangeMiningMaterials"
-            title="Echanger les ressources contre monnaie de mine"
-            aria-label="Echanger les ressources de mine contre ${exchangeValue} pieces de mine"
-            ${exchangeValue > 0 ? '' : 'disabled'}
-          >
-            <span>⇄</span>
-            <strong>${exchangeValue}</strong>
-          </button>
-        </div>
-        <div class="mining-grid" role="grid" aria-label="Mine des Profondeurs 7 par 7">
+    <div class="mining-grid-shell">
+      <div
+        class="mining-grid mining-three-frame"
+        role="application"
+        aria-label="Mine des Profondeurs 3D 6 par 6"
+      >
+        <canvas
+          class="mining-three-board"
+          data-mining-3d-board="true"
+          aria-label="Terrain 3D de mine en pixel art"
+        ></canvas>
+        <div class="mining-accessible-grid" role="grid" aria-label="Mine des Profondeurs 6 par 6">
           ${blocks}
-        </div>
-        <div class="mining-depth" aria-label="Profondeur">
-          <span>${state.mining.totalMined}</span>
-          <strong>${state.mining.deepestLayer}</strong>
         </div>
       </div>
     </div>
   `;
-}
-
-function miningMaterialStocks(state: GameState): string {
-  return MINING_MATERIAL_RESOURCE_IDS.map((resourceId) => {
-    const amount = Math.floor(state.mining.materials[resourceId]);
-    const material = MINING_BLOCK_MATERIALS[resourceId];
-    return `
-      <span class="mining-material-stock is-${resourceId}" title="${material.name}" aria-label="${material.name}: ${amount}">
-        <i></i>
-        <strong>${amount}</strong>
-      </span>
-    `;
-  }).join('');
-}
-
-function miningMaterialExchangeTotal(state: GameState): number {
-  return MINING_MATERIAL_RESOURCE_IDS.reduce((total, resourceId) => {
-    return total + Math.floor(state.mining.materials[resourceId]) * miningMaterialExchangeValue(resourceId);
-  }, 0);
-}
-
-function miningBlockClassNames(state: GameState, block: MiningBlock): string {
-  const spriteTier = miningBlockSpriteTierForDepth(block.depth);
-  const classes = ['mining-block', `is-${block.material}`, `is-shade-${spriteTier.shadeLevel}`, `is-sprite-${spriteTier.spriteIndex}`];
-  const x = block.id % MINING_GRID_COLUMNS;
-  const y = Math.floor(block.id / MINING_GRID_COLUMNS);
-  const neighbors: Array<[string, number, number]> = [
-    ['left', x - 1, y],
-    ['right', x + 1, y],
-    ['up', x, y - 1],
-    ['down', x, y + 1],
-  ];
-
-  for (const [side, neighborX, neighborY] of neighbors) {
-    if (neighborX < 0 || neighborX >= MINING_GRID_COLUMNS || neighborY < 0 || neighborY >= MINING_GRID_ROWS) {
-      continue;
-    }
-    const neighbor = state.mining.blocks[neighborY * MINING_GRID_COLUMNS + neighborX];
-    if (neighbor && block.depth > neighbor.depth) {
-      classes.push(`has-shadow-${side}`);
-    }
-  }
-
-  return classes.join(' ');
 }
 
 function slimeTrainerPanel(state: GameState): string {

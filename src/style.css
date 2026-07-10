@@ -9628,3 +9628,180 @@ button.blackjack-chip-token {
     width: min(78vw, 48vh, 360px);
   }
 }
+
+/* Mine uses a fixed square Three.js arena with its TD-style skill dock below. */
+.book-overlay[data-book-id="mine"] {
+  --mine-arena-size: 480px;
+  width: min(var(--mine-arena-size), calc(100cqw - 16px));
+  height: auto;
+  aspect-ratio: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.book-overlay[data-book-id="mine"] .book-page-body {
+  position: relative;
+  inset: auto;
+  width: 100%;
+}
+
+.book-overlay[data-book-id="mine"] .book-page-header {
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 9;
+}
+
+.mining-panel {
+  width: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  container-type: inline-size;
+  background: transparent;
+}
+
+.mining-playfield {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.mining-grid-shell,
+.mining-grid-shell .mining-grid {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+.mining-grid-shell .mining-grid {
+  display: block;
+  overflow: hidden;
+  image-rendering: pixelated;
+}
+
+.mining-grid-shell .mining-grid::before,
+.mining-grid-shell .mining-grid::after {
+  display: none;
+}
+
+.mining-three-board {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  image-rendering: pixelated;
+  outline: 0;
+}
+
+.mining-accessible-grid {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.mining-keyboard-block {
+  width: 1px;
+  height: 1px;
+}
+
+.mining-skill-dock {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: #102632;
+}
+
+.mining-skill-dock .upgrade-panel.is-skill-shop.is-docked,
+.mining-skill-dock .skill-shop-frame {
+  height: auto;
+}
+
+.mining-skill-dock .skill-shop-frame {
+  grid-template-rows: auto 30px;
+  gap: 4px;
+  padding: 4px 6px 5px;
+}
+
+.mining-skill-dock .skill-shop-header {
+  display: none;
+}
+
+.mining-skill-dock .skill-shop-card-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  max-height: 170px;
+  overflow-y: auto;
+}
+
+.mining-skill-dock .skill-shop-card {
+  min-height: 36px;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  grid-template-rows: auto auto;
+  gap: 2px 7px;
+  padding: 4px 7px;
+  border-width: 1px;
+  border-radius: 6px;
+}
+
+.mining-skill-dock .skill-shop-card-topline {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.mining-skill-dock .skill-shop-card-value {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.mining-skill-dock .skill-shop-card-detail {
+  display: none;
+}
+
+.mining-skill-dock .skill-shop-buy {
+  position: static;
+  grid-column: 2;
+  grid-row: 1 / 3;
+  align-self: center;
+  min-width: 52px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.32);
+}
+
+.mining-skill-dock .skill-shop-tabs {
+  grid-template-columns: 1fr;
+}
+
+.mining-skill-dock .skill-shop-tab {
+  min-height: 30px;
+  grid-template-columns: 1fr;
+  place-items: center;
+  padding: 4px 6px;
+  border-width: 1px;
+  border-radius: 6px;
+}
