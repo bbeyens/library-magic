@@ -13,10 +13,10 @@ import {
   miningMaterialExchangeValue,
 } from '../src/game/simulation/state.ts';
 
-assert.equal(MINING_GRID_COLUMNS, 6);
-assert.equal(MINING_GRID_ROWS, 6);
+assert.equal(MINING_GRID_COLUMNS, 5);
+assert.equal(MINING_GRID_ROWS, 5);
 assert.equal(MINING_TERRAIN_LAYER_COUNT, 5);
-assert.equal(createInitialMiningBlocks().length, 36);
+assert.equal(createInitialMiningBlocks().length, 25);
 assert.equal(createInitialMiningBlocks()[0]?.layersRemaining, 5);
 
 assert.equal(MINING_BLOCK_SPRITE_TIERS.length, 20);

@@ -108,11 +108,36 @@ import {
   defenseWaveProgress,
   hundredOptionRange,
   hundredTargetMax,
+  miningAutoClickerCapacity,
   miningAutomationInterval,
+  miningCriticalChance,
+  miningCriticalMultiplier,
+  miningHoloChance,
+  miningRainbowChance,
+  miningNegativeChance,
+  miningBombChance,
+  miningBombRange,
+  miningBombPower,
+  miningMeteoriteClickThreshold,
+  miningMeteoriteBonusFactor,
+  miningMeteoriteDamageBonus,
+  miningHoldClickRate,
+  MINING_MATERIAL_MAX_LEVEL,
+  MINING_MATERIAL_XP_PER_LEVEL,
+  miningActiveBlockTypeIndex,
+  miningAllGamesResourceMultiplier,
+  miningBlockTypeLevel,
+  miningLevelPreview,
+  miningBlockTypeLevelProgress,
+  miningBlockTypeXpCurrent,
+  miningMineResourceMultiplier,
+  miningMaterialTotal,
+  miningPickaxeMultiplier,
   miningPickaxeDamage,
+  miningResourceMultiplier,
   miningSkillCost,
   miningSkillMaxLevel,
-  miningSplashDamage,
+  miningAttackRangePixels,
   runeTypingCurrentWord,
   runeTypingRewardPreview,
   SLIME_TRAINER_COMMANDS,
@@ -123,7 +148,9 @@ import {
   snakeBaseMultiplier,
   snakeAutomationActive,
   snakeExtraLivesRemaining,
+  snakeFoodCapacity,
   snakeGridSize,
+  snakeGrowthFoodRequirement,
   snakeMoveInterval,
   snakeSkillCost,
   snakeSkillMaxLevel,
@@ -152,14 +179,22 @@ import type { SlimeTrainerCommandId } from '../game/simulation/slimeTrainerRules
 import { miningIsoBlockIdFromPoint, miningIsoBoardBounds } from './miningIsoGeometry';
 import { syncMiningThreeTerrain } from './miningThreeTerrain';
 import {
+  MINING_GRID_COLUMNS,
+  MINING_GRID_ROWS,
   MINING_MATERIAL_RESOURCE_IDS,
   miningBlockMaterialById,
+  miningLevelSpriteTier,
+  miningMaxReachedCycle,
+  miningIsFrontierWave,
+  MINING_FRONTIER_TIME_LIMIT,
+  MINING_MAX_CYCLE,
   type BlackjackCard,
   type BookPanelSlot,
   type GameState,
   type ManaIdleCompanionSkillId,
   type ManaOrbKind,
   type ManaXpOrb,
+  type SnakeBonusFruitType,
   type SnakeCell,
   type SnakeDirection,
 } from '../game/simulation/state';
@@ -180,6 +215,21 @@ const MANA_CRYSTAL_GEM_IMAGES = [
   '/assets/Crystal/gems/crystal-i.png',
   '/assets/Crystal/gems/crystal-j.png',
 ] as const;
+
+// Aura tint "R, G, B" per gem, matching each gem's dominant colour so the halo/glow
+// around the crystal (and the counter accent) shifts as new gems get revealed.
+const MANA_CRYSTAL_GEM_GLOWS = [
+  '176, 92, 208', // a — violet
+  '214, 222, 240', // b — argent
+  '150, 160, 184', // c — charbon (lueur ardoise froide)
+  '255, 150, 46', // d — orange
+  '74, 142, 255', // e — bleu
+  '255, 78, 82', // f — rouge
+  '42, 216, 168', // g — emeraude
+  '170, 84, 255', // h — violet vif
+  '96, 196, 255', // i — bleu ciel
+  '168, 200, 250', // j — opale
+] as const;
 const DEFENSE_WAVE_MARKER_STEP_PERCENT = 24;
 const DEFENSE_WAVE_RAIL_STEP_PERCENT = 33;
 const DEFENSE_MONEY_COUNTER_POPUP_DELAY_MS = 1000;
@@ -198,9 +248,10 @@ let openUpgradePanel: BookId | null = null;
 let upgradePanelMode: 'detail' | 'compact' = 'detail';
 let manaSkillShopTab: ManaSkillShopTabId = 'click';
 let lastManaSkillDockTab: ManaSkillShopTabId | null = null;
+let snakeSkillShopTab: SnakeSkillShopTabId = 'snake';
 let defenseSkillShopTab: DefenseSkillShopTabId = 'attack';
 let lastDefenseSkillDockTab: DefenseSkillShopTabId | null = null;
-let miningSkillShopTab: MiningSkillShopTabId = 'mine';
+let miningSkillShopTab: MiningSkillShopTabId = 'attack';
 let lastMiningSkillDockTab: MiningSkillShopTabId | null = null;
 let lastRenderSignature = '';
 let lastOpenPanelsSignature = '';
@@ -208,12 +259,14 @@ let lastOpenUpgradePanel: BookId | null = null;
 let lastUpgradePanelMode: 'detail' | 'compact' = 'detail';
 let lastRenderStructureSignature = '';
 let lastSnakeRewardMarker = '';
+// Tracks the bonus fruit seen on the previous frame so eaten-fruit colour survives its removal.
+let previousSnakeBonusFood: { key: string; type: SnakeBonusFruitType } | null = null;
 let lastRuneTypingRewardMarker = '';
 let lastRenderStableSignature = '';
 let lastBlackjackRewardMarker = '';
 let lastHundredRewardMarker = '';
 let lastTargetRewardMarker = '';
-let lastMiningRewardMarker = '';
+const lastMiningBlockTypeXp = new Map<number, number>();
 let lastSlimeTrainerRewardMarker = '';
 let lastBlackjackRenderedRound = -1;
 let lastBlackjackRenderedHands: Record<'dealer' | 'player' | 'split', string[]> = { dealer: [], player: [], split: [] };
@@ -547,7 +600,7 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
       const action = button.dataset.action;
       const bookId = button.dataset.bookId as BookId | undefined;
       focusBookPanelFromControl(button, bookId);
-      if (action === 'chargeMana') {
+      if (action === 'chargeMana' && !gameStore.snapshot.manaCrystal.revealAnimating) {
         const beforeMana = gameStore.snapshot.mana;
         gameStore.dispatch({ type: 'chargeMana' });
         const gainedMana = gameStore.snapshot.mana - beforeMana;
@@ -592,7 +645,11 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
         }
       }
       if (action === 'setSnakeSkillShopTab') {
-        refreshSnakeSkillDock(gameStore.snapshot, { force: true });
+        const tabId = button.dataset.skillShopTab;
+        if (isSnakeSkillShopTabId(tabId)) {
+          snakeSkillShopTab = tabId;
+          refreshSnakeSkillDock(gameStore.snapshot, { force: true });
+        }
       }
       if (action === 'buyDefenseSkill') {
         const skillId = button.dataset.skillId as DefenseSkillId | undefined;
@@ -810,12 +867,17 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
     });
   });
   installMiningIsoBoardHandlers();
-  syncMiningThreeTerrain(state, (blockId) => {
+  installMiningLevelStripHandlers();
+  const miningLevelStripElement = rootElement.querySelector<HTMLElement>('[data-mining-level-strip]');
+  if (miningLevelStripElement) {
+    scrollMiningLevelStripToActive(miningLevelStripElement);
+  }
+  syncMiningThreeTerrain(state, (blockIds) => {
     const board = rootElement?.querySelector<HTMLElement>('[data-mining-3d-board]');
     if (board) {
       focusBookPanelFromControl(board, 'mine');
     }
-    gameStore.dispatch({ type: 'digMiningBlock', blockId });
+    gameStore.dispatch({ type: 'digMiningArea', blockIds });
   });
 
   rootElement.querySelectorAll<HTMLInputElement>('[data-defense-wave-input]').forEach((input) => {
@@ -915,14 +977,143 @@ function installMiningIsoBoardHandlers(): void {
   });
 }
 
+function installMiningLevelStripHandlers(): void {
+  if (!rootElement) {
+    return;
+  }
+  rootElement.querySelectorAll<HTMLButtonElement>('[data-mining-level]').forEach((button) => {
+    if (button.dataset.miningLevelBound === '1') {
+      return;
+    }
+    button.dataset.miningLevelBound = '1';
+    button.addEventListener('click', () => {
+      if (button.disabled) {
+        return;
+      }
+      const cycle = Number(button.dataset.miningLevel);
+      if (!Number.isFinite(cycle)) {
+        return;
+      }
+      focusBookPanelFromControl(button, 'mine');
+      gameStore.dispatch({ type: 'selectMiningLevel', cycle });
+    });
+    button.addEventListener('mouseenter', () => showMiningLevelTip(button));
+    button.addEventListener('mouseleave', () => hideMiningLevelTip(button));
+    button.addEventListener('focus', () => showMiningLevelTip(button));
+    button.addEventListener('blur', () => hideMiningLevelTip(button));
+  });
+}
+
+// Rich hover panel for a level face: reward, block HP and current block level.
+function showMiningLevelTip(face: HTMLButtonElement): void {
+  const frame = face.closest<HTMLElement>('.mining-three-frame');
+  const tip = frame?.querySelector<HTMLElement>('[data-mining-level-tip]');
+  if (!frame || !tip) {
+    return;
+  }
+  const cycle = Number(face.dataset.miningLevel);
+  if (!Number.isFinite(cycle)) {
+    return;
+  }
+  if (face.disabled || face.classList.contains('is-locked')) {
+    tip.innerHTML = `
+      <strong>Niveau ${cycle}</strong>
+      <span class="mining-level-tip-locked">Verrouille - bats le niveau precedent</span>
+    `;
+  } else {
+    const preview = miningLevelPreview(gameStore.snapshot, cycle);
+    // Display the block level as 1..max (the internal material level is 0-based).
+    const levelLabel = preview.level >= preview.maxLevel
+      ? 'MAX'
+      : `${Math.max(1, preview.level)} / ${preview.maxLevel}`;
+    tip.innerHTML = `
+      <strong>Niveau ${cycle}</strong>
+      <span><i>Recompense</i><b>${formatGameNumber(preview.reward)}</b></span>
+      <span><i>PV du bloc</i><b>${formatGameNumber(preview.health)}</b></span>
+      <span><i>Niveau du bloc</i><b>${levelLabel}</b></span>
+    `;
+  }
+  tip.classList.add('is-shown');
+  tip.setAttribute('aria-hidden', 'false');
+  // Float above the hovered face, clamped inside the frame so it never leaves the panel.
+  const faceRect = face.getBoundingClientRect();
+  const frameRect = frame.getBoundingClientRect();
+  tip.style.bottom = `${frameRect.bottom - faceRect.top + 8}px`;
+  const half = tip.offsetWidth / 2;
+  const centerX = faceRect.left - frameRect.left + faceRect.width / 2;
+  tip.style.left = `${Math.max(half + 6, Math.min(frameRect.width - half - 6, centerX))}px`;
+}
+
+function hideMiningLevelTip(face: HTMLButtonElement): void {
+  const tip = face.closest<HTMLElement>('.mining-three-frame')?.querySelector<HTMLElement>('[data-mining-level-tip]');
+  if (!tip) {
+    return;
+  }
+  tip.classList.remove('is-shown');
+  tip.setAttribute('aria-hidden', 'true');
+}
+
+// Keep the blue "maxed" outline in sync as block types level up (the strip isn't rebuilt per frame).
+function updateMiningLevelStripMaxed(state: GameState): void {
+  const faces = rootElement?.querySelectorAll<HTMLButtonElement>('[data-mining-level]');
+  if (!faces) {
+    return;
+  }
+  faces.forEach((face) => {
+    if (face.disabled || face.classList.contains('is-locked')) {
+      return;
+    }
+    const cycle = Number(face.dataset.miningLevel);
+    if (!Number.isFinite(cycle)) {
+      return;
+    }
+    face.classList.toggle('is-maxed', miningLevelPreview(state, cycle).level >= MINING_MATERIAL_MAX_LEVEL);
+  });
+}
+
+function updateMiningLevelStrip(playfield: HTMLElement, state: GameState): void {
+  const strip = playfield.querySelector<HTMLElement>('[data-mining-level-strip]');
+  if (!strip) {
+    return;
+  }
+  const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+  const signature = `${maxReached}:${state.mining.terrainCycle}`;
+  if (strip.dataset.signature === signature && strip.childElementCount > 0) {
+    return;
+  }
+  strip.dataset.signature = signature;
+  strip.innerHTML = miningLevelFaces(state);
+  installMiningLevelStripHandlers();
+  scrollMiningLevelStripToActive(strip);
+}
+
+// Keep the current level visible when the strip scrolls beyond five faces.
+function scrollMiningLevelStripToActive(strip: HTMLElement): void {
+  const active = strip.querySelector<HTMLElement>('.mining-level-face.is-active');
+  if (!active) {
+    return;
+  }
+  const target = active.offsetLeft - (strip.clientWidth - active.clientWidth) / 2;
+  strip.scrollLeft = Math.max(0, target);
+}
+
 function runHudTransientEffects(state: GameState): void {
   if (isBookPanelOpen(state, 'serpent') && state.snake.lastReward > 0) {
     const marker = `${state.snake.score}:${Math.floor(state.resources.scales)}`;
     if (marker !== lastSnakeRewardMarker) {
       lastSnakeRewardMarker = marker;
       showFloatingGain(state.snake.lastReward, '.snake-board');
+      const headKey = cellKey(state.snake.body[0]);
+      const bonusColor =
+        previousSnakeBonusFood && previousSnakeBonusFood.key === headKey
+          ? snakeBonusFruitColor(previousSnakeBonusFood.type)
+          : SNAKE_FOOD_BUBBLE_COLOR;
+      spawnSnakeBubbles(state.snake.body[0], state.snake.gridSize, bonusColor);
     }
   }
+  previousSnakeBonusFood = state.snake.bonusFood
+    ? { key: cellKey(state.snake.bonusFood.cell), type: state.snake.bonusFood.type }
+    : null;
 
   if (isBookPanelOpen(state, 'typing') && state.runeTyping.lastReward > 0) {
     const marker = `${state.runeTyping.completedWords}:${Math.floor(state.resources.runes)}`;
@@ -956,13 +1147,8 @@ function runHudTransientEffects(state: GameState): void {
     }
   }
 
-  if (isBookPanelOpen(state, 'mine') && state.mining.lastReward > 0) {
-    const marker = `${state.mining.totalMined}:${state.mining.lastBrokenDepth}:${state.mining.hitPulse}`;
-    if (marker !== lastMiningRewardMarker) {
-      lastMiningRewardMarker = marker;
-      showFloatingGain(state.mining.lastReward, '.mining-grid');
-    }
-  }
+  // Mine resource gains float directly above the destroyed block (see updateMiningRewardPopups),
+  // not at a generic grid position, so no showFloatingGain here.
 
   if (isBookPanelOpen(state, 'slimeTrainer') && state.slimeTrainer.lastReward > 0) {
     const marker = `${state.slimeTrainer.victories}:${Math.floor(state.resources.gels)}:${state.slimeTrainer.hitPulse}`;
@@ -1109,6 +1295,14 @@ function updateDynamicHudValues(state: GameState): void {
     updateDynamicSnakeSkillCards(state);
   }
   if (miningPanelOpen) {
+    const miningTotal = miningMaterialTotal(state);
+    setDynamicText('mining-counter-total', compactHudNumber(miningTotal));
+    trackDynamicResourceGain('mining-counter-total', miningTotal);
+    updateMiningMaterialLevelHud(state);
+    updateMiningFrontierTimer(state);
+    updateMiningMeteoriteBar(state);
+    updateMiningDamageBadge(state);
+    updateMiningLevelStripMaxed(state);
     updateDynamicMiningSkillCards(state);
   }
   if (targetPanelOpen) {
@@ -2316,6 +2510,8 @@ function snakeSkillDockSignature(state: GameState): string {
   return [
     skills.speed,
     skills.gridSize,
+    skills.foodCount,
+    skills.growthThreshold,
     skills.automation,
     skills.automationEnabled ? 1 : 0,
     skills.baseMultiplier,
@@ -2347,6 +2543,11 @@ function bindSnakeSkillDockControls(dock: HTMLElement): void {
 
   dock.querySelectorAll<HTMLButtonElement>('[data-action="setSnakeSkillShopTab"]').forEach((button) => {
     button.addEventListener('click', () => {
+      const tabId = button.dataset.skillShopTab;
+      if (!isSnakeSkillShopTabId(tabId)) {
+        return;
+      }
+      snakeSkillShopTab = tabId;
       refreshSnakeSkillDock(gameStore.snapshot, { force: true });
     });
   });
@@ -2359,7 +2560,7 @@ function updateDynamicMiningSkillCards(state: GameState): void {
   }
   lastMiningSkillCardDynamicSignature = signature;
 
-  const currentMana = Math.floor(state.mana);
+  const currentMiningResources = Math.floor(miningMaterialTotal(state));
   rootElement?.querySelectorAll<HTMLButtonElement>('.mining-skill-dock .skill-shop-card[data-skill-id]').forEach((card) => {
     const skillId = card.dataset.skillId;
     if (!isMiningSkillId(skillId)) {
@@ -2381,7 +2582,7 @@ function updateDynamicMiningSkillCards(state: GameState): void {
     }
 
     const isMaxed = state.miningSkills[skillId] >= miningSkillMaxLevel(skillId);
-    const isUnaffordable = !isMaxed && currentMana < miningSkillCost(state, skillId);
+    const isUnaffordable = !isMaxed && currentMiningResources < miningSkillCost(state, skillId);
     const canBuy = !isMaxed && !isUnaffordable;
     card.classList.toggle('is-unaffordable', isUnaffordable);
     card.classList.toggle('is-maxed', isMaxed);
@@ -2445,11 +2646,32 @@ function refreshMiningSkillDock(state: GameState, options: { force?: boolean } =
 
 function miningSkillDockSignature(state: GameState): string {
   const skills = state.miningSkills;
-  return [miningSkillShopTab, skills.pickaxeForce, skills.splashDamage, skills.automation].join('/');
+  return [
+    miningSkillShopTab,
+    skills.pickaxeForce,
+    skills.pickaxeMultiplier,
+    skills.splashDamage,
+    skills.criticalChance,
+    skills.criticalMultiplier,
+    skills.holdClick,
+    skills.automation,
+    skills.multiAutoClicker,
+    skills.resourceBonus,
+    skills.resourceMultiplier,
+    skills.holoChance,
+    skills.rainbowChance,
+    skills.negativeChance,
+    skills.bombChance,
+    skills.bombRange,
+    skills.bombPower,
+    skills.meteorite,
+    skills.meteoriteBonus,
+  ].join('/');
 }
 
 function miningSkillCardDynamicSignature(state: GameState): string {
-  return `${miningSkillDockSignature(state)}/${Math.floor(state.mana)}`;
+  // Include the accumulated meteorite bonus so damage-based cards refresh as it ramps on each launch.
+  return `${miningSkillDockSignature(state)}/${Math.floor(miningMaterialTotal(state))}/${state.mining.meteoriteDamageBonus.toFixed(3)}`;
 }
 
 function miningSkillShopCardSnapshot(state: GameState, skillId: MiningSkillId): SkillShopCard | undefined {
@@ -3754,8 +3976,7 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
     state.snake.comboSteps,
     state.snake.direction,
     state.snake.nextDirection,
-    state.snake.food?.x ?? -1,
-    state.snake.food?.y ?? -1,
+    state.snake.foods.map((food) => `${food.x},${food.y}`).join(';'),
     state.snake.bonusFood?.type ?? 'none',
     state.snake.bonusFood?.cell.x ?? -1,
     state.snake.bonusFood?.cell.y ?? -1,
@@ -3958,13 +4179,14 @@ function refreshMiningBoard(state: GameState): void {
     playfield.innerHTML = miningPlayfield(state);
   }
   updateMiningPlayfieldDom(playfield, state);
+  updateMiningLevelStrip(playfield, state);
   installMiningIsoBoardHandlers();
-  syncMiningThreeTerrain(state, (blockId) => {
+  syncMiningThreeTerrain(state, (blockIds) => {
     const board = rootElement?.querySelector<HTMLElement>('[data-mining-3d-board]');
     if (board) {
       focusBookPanelFromControl(board, 'mine');
     }
-    gameStore.dispatch({ type: 'digMiningBlock', blockId });
+    gameStore.dispatch({ type: 'digMiningArea', blockIds });
   });
 }
 
@@ -4111,6 +4333,8 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
         <div class="mini-skill-scroll is-mana">
           ${snakeSkillCompactButton(state, 'speed', '↯')}
           ${snakeSkillCompactButton(state, 'gridSize', '▦')}
+          ${snakeSkillCompactButton(state, 'foodCount', '●')}
+          ${snakeSkillCompactButton(state, 'growthThreshold', '▰')}
           ${snakeSkillCompactButton(state, 'automation', '⌁')}
           ${snakeSkillCompactButton(state, 'baseMultiplier', '×')}
           ${snakeSkillCompactButton(state, 'bonusFruit', '◆')}
@@ -4284,7 +4508,7 @@ function manaSkillShopCostHtml(cost: number): string {
 }
 
 function miningSkillShopCostHtml(cost: number): string {
-  return `<b>${compactHudNumber(cost)}</b>`;
+  return `<span class="blackjack-cost-resource"><img class="blackjack-upgrade-icon is-cost-icon" src="/assets/library/resources/minerals.svg" alt="Ressources minieres" loading="lazy" decoding="async"><b>${compactHudNumber(cost)}</b></span>`;
 }
 
 function snakeSkillShopCostHtml(cost: number): string {
@@ -4294,8 +4518,8 @@ function snakeSkillShopCostHtml(cost: number): string {
 type SkillShopTheme = 'attack' | 'defense' | 'utility' | 'research';
 type ManaSkillShopTabId = 'click' | 'auto' | 'xp' | 'research';
 type DefenseSkillShopTabId = SkillShopTheme;
-type SnakeSkillShopTabId = 'snake';
-type MiningSkillShopTabId = 'mine';
+type SnakeSkillShopTabId = 'snake' | 'auto';
+type MiningSkillShopTabId = 'attack' | 'auto' | 'resource';
 type SkillShopElementKind = 'lightning' | 'ice';
 
 interface SkillShopCard {
@@ -4342,8 +4566,12 @@ function isManaSkillShopTabId(value: string | undefined): value is ManaSkillShop
   return value === 'click' || value === 'xp' || value === 'auto' || value === 'research';
 }
 
+function isSnakeSkillShopTabId(value: string | undefined): value is SnakeSkillShopTabId {
+  return value === 'snake' || value === 'auto';
+}
+
 function isMiningSkillShopTabId(value: string | undefined): value is MiningSkillShopTabId {
-  return value === 'mine';
+  return value === 'attack' || value === 'auto' || value === 'resource';
 }
 
 function isManaSkillId(value: string | undefined): value is ManaSkillId {
@@ -4399,13 +4627,34 @@ function isManaResearchSkillId(value: string | undefined): value is ManaResearch
 }
 
 function isMiningSkillId(value: string | undefined): value is MiningSkillId {
-  return value === 'pickaxeForce' || value === 'splashDamage' || value === 'automation';
+  return (
+    value === 'pickaxeForce' ||
+    value === 'pickaxeMultiplier' ||
+    value === 'splashDamage' ||
+    value === 'criticalChance' ||
+    value === 'criticalMultiplier' ||
+    value === 'holdClick' ||
+    value === 'automation' ||
+    value === 'multiAutoClicker' ||
+    value === 'resourceBonus' ||
+    value === 'resourceMultiplier' ||
+    value === 'holoChance' ||
+    value === 'rainbowChance' ||
+    value === 'negativeChance' ||
+    value === 'bombChance' ||
+    value === 'bombRange' ||
+    value === 'bombPower' ||
+    value === 'meteorite' ||
+    value === 'meteoriteBonus'
+  );
 }
 
 function isSnakeSkillId(value: string | undefined): value is SnakeSkillId {
   return (
     value === 'speed' ||
     value === 'gridSize' ||
+    value === 'foodCount' ||
+    value === 'growthThreshold' ||
     value === 'automation' ||
     value === 'baseMultiplier' ||
     value === 'bonusFruit' ||
@@ -5059,6 +5308,8 @@ function snakeUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'deta
         <div class="compact-upgrade-grid is-mana">
           ${snakeSkillCompactButton(state, 'speed', '↯')}
           ${snakeSkillCompactButton(state, 'gridSize', '▦')}
+          ${snakeSkillCompactButton(state, 'foodCount', '●')}
+          ${snakeSkillCompactButton(state, 'growthThreshold', '▰')}
           ${snakeSkillCompactButton(state, 'automation', '⌁')}
           ${snakeSkillCompactButton(state, 'baseMultiplier', '×')}
           ${snakeSkillCompactButton(state, 'bonusFruit', '◆')}
@@ -5078,7 +5329,7 @@ function snakeSkillShop(state: GameState, shouldAnimate = false, options: SkillS
     shouldAnimate,
     'Snake Skills',
     'Serpent upgrades',
-    'snake',
+    snakeSkillShopTab,
     snakeSkillShopTabs(state),
     'setSnakeSkillShopTab',
     options,
@@ -5095,12 +5346,20 @@ function snakeSkillShopTabs(state: GameState): Array<SkillShopTab<SnakeSkillShop
       cards: [
         snakeSkillShopCard(state, 'speed', 'Speed', `${formatGameNumber(snakeMoveInterval(state), { forceDecimal: true })}s`, '-0.022s'),
         snakeSkillShopCard(state, 'gridSize', 'Grid', `${snakeGridSize(state)}x${snakeGridSize(state)}`, '+1 axis'),
-        snakeSkillShopCard(state, 'automation', 'Auto', snakeAutomationActive(state) ? 'On' : 'Off', 'assist'),
+        snakeSkillShopCard(state, 'foodCount', 'Food Count', `${snakeFoodCapacity(state)}`, '+1 food'),
+        snakeSkillShopCard(state, 'growthThreshold', 'Growth', `${snakeGrowthFoodRequirement(state)} food`, '+1 food'),
         snakeSkillShopCard(state, 'baseMultiplier', 'Base x', `x${formatGameNumber(snakeBaseMultiplier(state), { forceDecimal: true })}`, '+0.1x'),
         snakeSkillShopCard(state, 'bonusFruit', 'Bonus Food', snakeBonusFoodLabel(state), 'unlock food'),
         snakeSkillShopCard(state, 'extraLife', 'Life +', `${state.snakeSkills.extraLife}`, '+1 life'),
         snakeSkillShopCard(state, 'edgeWrap', 'Wrap', state.snakeSkills.edgeWrap > 0 ? 'On' : 'Off', 'cross edge'),
       ],
+    },
+    {
+      id: 'auto',
+      label: 'Auto',
+      icon: '⌁',
+      theme: 'utility',
+      cards: [snakeSkillShopCard(state, 'automation', 'Auto', snakeAutomationActive(state) ? 'On' : 'Off', 'assist')],
     },
   ];
 }
@@ -5141,6 +5400,10 @@ function snakeSkillIcon(skillId: SnakeSkillId): string {
       return '↯';
     case 'gridSize':
       return '▦';
+    case 'foodCount':
+      return '●';
+    case 'growthThreshold':
+      return '▰';
     case 'automation':
       return '⌁';
     case 'baseMultiplier':
@@ -5160,6 +5423,10 @@ function snakeSkillDeltaLabel(skillId: SnakeSkillId): string {
       return '(-0.022s)';
     case 'gridSize':
       return '(+1)';
+    case 'foodCount':
+      return '(+1 food)';
+    case 'growthThreshold':
+      return '(+1 food)';
     case 'automation':
       return '(assist)';
     case 'baseMultiplier':
@@ -5267,14 +5534,45 @@ function miningSkillShop(state: GameState, shouldAnimate = false, options: Skill
 function miningSkillShopTabs(state: GameState): Array<SkillShopTab<MiningSkillShopTabId>> {
   return [
     {
-      id: 'mine',
-      label: 'Mine',
-      icon: '▰',
-      theme: 'utility',
+      id: 'attack',
+      label: 'Attack',
+      icon: '▲',
+      theme: 'attack',
       cards: [
         miningSkillShopCard(state, 'pickaxeForce', 'Pickaxe +', `${miningPickaxeDamage(state)} dmg`, '+1 damage'),
-        miningSkillShopCard(state, 'splashDamage', 'Splash', `${miningSplashDamage(state)} neighbor`, 'adjacent blocks'),
-        miningSkillShopCard(state, 'automation', 'Auto Dig', miningAutomationLabel(state), 'weakest block'),
+        miningSkillShopCard(state, 'pickaxeMultiplier', 'Pickaxe x', `x${formatTwoDecimalGameNumber(miningPickaxeMultiplier(state))}`, 'damage multiplier'),
+        miningSkillShopCard(state, 'splashDamage', 'Range', `${miningAttackRangePixels(state)} px`, 'attack radius'),
+        miningSkillShopCard(state, 'criticalChance', 'Crit', `${formatGameNumber(miningCriticalChance(state) * 100)}%`, 'critical chance'),
+        miningSkillShopCard(state, 'criticalMultiplier', 'Crit Mult', `x${formatTwoDecimalGameNumber(miningCriticalMultiplier(state))}`, 'critical damage'),
+        miningSkillShopCard(state, 'bombChance', 'Bombe', `${formatGameNumber(miningBombChance(state) * 100)}%`, 'chance de bombe'),
+        miningSkillShopCard(state, 'bombRange', 'Portée bombe', `${miningBombRange(state)}`, 'rayon du souffle'),
+        miningSkillShopCard(state, 'bombPower', 'Dégâts bombe', `x${miningBombPower(state)}`, 'x le click'),
+        miningSkillShopCard(state, 'meteorite', 'Météorite', `${compactHudNumber(miningMeteoriteClickThreshold(state))} clics`, 'tombe et frappe tout'),
+        miningSkillShopCard(state, 'meteoriteBonus', 'Bonus météorite', `x${formatTwoDecimalGameNumber(miningMeteoriteBonusFactor(state))}`, 'dmg permanents /☄️'),
+      ],
+    },
+    {
+      id: 'auto',
+      label: 'Auto',
+      icon: '⌁',
+      theme: 'utility',
+      cards: [
+        miningSkillShopCard(state, 'holdClick', 'Click Holder', miningHoldClickRate(state) > 0 ? `${formatGameNumber(miningHoldClickRate(state))}/s` : 'Off', 'survol pour miner'),
+        miningSkillShopCard(state, 'automation', 'Auto Clicker', miningAutomationLabel(state), 'weakest blocks'),
+        miningSkillShopCard(state, 'multiAutoClicker', 'Multi Auto Clicker', `x${miningAutoClickerCapacity(state)}`, 'autoclicker targets'),
+      ],
+    },
+    {
+      id: 'resource',
+      label: 'Resource',
+      icon: '◆',
+      theme: 'defense',
+      cards: [
+        miningSkillShopCard(state, 'resourceBonus', 'Resource +', `+${formatGameNumber(state.miningSkills.resourceBonus)}`, 'flat block reward'),
+        miningSkillShopCard(state, 'resourceMultiplier', 'Resource x', `x${formatTwoDecimalGameNumber(miningResourceMultiplier(state))}`, 'resource multiplier'),
+        miningSkillShopCard(state, 'holoChance', 'Holo', `${formatGameNumber(miningHoloChance(state) * 100)}%`, 'holo x5'),
+        miningSkillShopCard(state, 'rainbowChance', 'Arc-en-ciel', `${formatGameNumber(miningRainbowChance(state) * 100)}%`, 'holo -> x25'),
+        miningSkillShopCard(state, 'negativeChance', 'Négatif', `${formatGameNumber(miningNegativeChance(state) * 100)}%`, 'arc-en-ciel -> x100'),
       ],
     },
   ];
@@ -5291,7 +5589,7 @@ function miningSkillShopCard(
   const maxLevel = miningSkillMaxLevel(skillId);
   const isMaxed = level >= maxLevel;
   const cost = miningSkillCost(state, skillId);
-  const isUnaffordable = !isMaxed && state.mana < cost;
+  const isUnaffordable = !isMaxed && miningMaterialTotal(state) < cost;
   return {
     action: 'buyMiningSkill',
     skillId,
@@ -5303,7 +5601,7 @@ function miningSkillShopCard(
     level,
     maxLevel,
     costHtml: isMaxed ? 'Max' : miningSkillShopCostHtml(cost),
-    costText: isMaxed ? 'Max' : `${compactHudNumber(cost)} Mana`,
+    costText: isMaxed ? 'Max' : `${compactHudNumber(cost)} Ressources`,
     isMaxed,
     isDisabled: isUnaffordable,
     isUnaffordable,
@@ -5314,10 +5612,40 @@ function miningSkillIcon(skillId: MiningSkillId): string {
   switch (skillId) {
     case 'pickaxeForce':
       return '▲';
+    case 'pickaxeMultiplier':
+      return '×';
     case 'splashDamage':
       return '✣';
+    case 'criticalChance':
+      return '◎';
+    case 'criticalMultiplier':
+      return '✶';
+    case 'holdClick':
+      return '☝';
     case 'automation':
-      return '⌁';
+      return '<img class="skill-shop-png-icon is-mining-auto-clicker" src="/assets/Crystal/cursors/auto-click-hand.png" alt="" draggable="false">';
+    case 'multiAutoClicker':
+      return '▶▶';
+    case 'resourceBonus':
+      return '+';
+    case 'resourceMultiplier':
+      return '×';
+    case 'holoChance':
+      return '✦';
+    case 'rainbowChance':
+      return '🌈';
+    case 'negativeChance':
+      return '◑';
+    case 'bombChance':
+      return '💣';
+    case 'bombRange':
+      return '💥';
+    case 'bombPower':
+      return '🔥';
+    case 'meteorite':
+      return '☄️';
+    case 'meteoriteBonus':
+      return '⚡';
   }
 }
 
@@ -5325,10 +5653,40 @@ function miningSkillDeltaLabel(skillId: MiningSkillId): string {
   switch (skillId) {
     case 'pickaxeForce':
       return '(+1)';
+    case 'pickaxeMultiplier':
+      return '(+0.25x)';
     case 'splashDamage':
-      return '(+1)';
+      return '(+1px)';
+    case 'criticalChance':
+      return '(+1%)';
+    case 'criticalMultiplier':
+      return '(+0.1x)';
+    case 'holdClick':
+      return '(+1/s)';
     case 'automation':
       return '(-0.2s)';
+    case 'multiAutoClicker':
+      return '(+1)';
+    case 'resourceBonus':
+      return '(+1)';
+    case 'resourceMultiplier':
+      return '(+0.25x)';
+    case 'holoChance':
+      return '(+1%)';
+    case 'rainbowChance':
+      return '(+1%)';
+    case 'negativeChance':
+      return '(+1%)';
+    case 'bombChance':
+      return '(+1%)';
+    case 'bombRange':
+      return '(+1)';
+    case 'bombPower':
+      return '(+1x)';
+    case 'meteorite':
+      return '(-50)';
+    case 'meteoriteBonus':
+      return '(+0.01x)';
   }
 }
 
@@ -5650,7 +6008,7 @@ function manaPanel(state: GameState): string {
   const crystalGemIndex = manaCrystalDisplayGemIndex(state);
   return `
     <div class="mana-panel">
-      <div class="mana-crystal-arena">
+      <div class="mana-crystal-arena" style="--mana-crystal-glow:rgb(${manaCrystalGemGlow(crystalGemIndex)})">
         <div class="mana-counter-box" aria-label="Mana actuelle">
           <strong data-dynamic-value="mana-panel-total">${compactHudNumber(state.mana)}</strong>
           <span>per second: <b data-dynamic-value="mana-panel-rate">${formatManaPerSecond(manaPerSecond(state))}</b></span>
@@ -5850,6 +6208,11 @@ function manaCrystalGemImagePath(index: number): string {
   return MANA_CRYSTAL_GEM_IMAGES[safeIndex];
 }
 
+function manaCrystalGemGlow(index: number): string {
+  const safeIndex = Math.max(0, Math.min(MANA_CRYSTAL_GEM_GLOWS.length - 1, Math.floor(index)));
+  return MANA_CRYSTAL_GEM_GLOWS[safeIndex];
+}
+
 function manaCrystalDisplayGemIndex(state: GameState): number {
   if (manaCrystalRevealHold) {
     return manaCrystalRevealHold.gemIndex;
@@ -5871,6 +6234,8 @@ function holdManaCrystalNextGemDisplay(gemIndex: number): number {
     token: manaCrystalRevealHoldToken,
     gemIndex: Math.max(0, Math.min(MANA_CRYSTAL_GEM_IMAGES.length - 1, gemIndex)),
   };
+  // Freeze harvesting for every source until the animation releases (see grantManaCrystalHarvest).
+  gameStore.snapshot.manaCrystal.revealAnimating = true;
   return manaCrystalRevealHoldToken;
 }
 
@@ -5880,6 +6245,7 @@ function releaseManaCrystalNextGemDisplay(token: number): void {
   }
 
   manaCrystalRevealHold = null;
+  gameStore.snapshot.manaCrystal.revealAnimating = false;
   syncManaCrystalCover(gameStore.snapshot);
 }
 
@@ -5903,14 +6269,30 @@ function manaCrystalCoverMarkup(state: GameState): string {
   `;
 }
 
+// Stable per-cell pseudo-random in [0, 1) so the fly-off vectors vary from cell to cell
+// while the cover markup stays deterministic (no Math.random -> static tests hold).
+function manaCoverCellNoise(index: number, salt: number): number {
+  const n = Math.sin((index + 1) * salt) * 43758.5453;
+  return n - Math.floor(n);
+}
+
 function manaCrystalCoverCells(removedCells: number): string {
+  const center = (MANA_CRYSTAL_COVER_GRID_SIZE - 1) / 2;
   return Array.from({ length: MANA_CRYSTAL_COVER_CELL_COUNT }, (_, index) => {
     const x = index % MANA_CRYSTAL_COVER_GRID_SIZE;
     const y = Math.floor(index / MANA_CRYSTAL_COVER_GRID_SIZE);
     const rank = manaCrystalCoverCellRank(x, y);
     const positionX = MANA_CRYSTAL_COVER_GRID_SIZE <= 1 ? 0 : (x / (MANA_CRYSTAL_COVER_GRID_SIZE - 1)) * 100;
     const positionY = MANA_CRYSTAL_COVER_GRID_SIZE <= 1 ? 0 : (y / (MANA_CRYSTAL_COVER_GRID_SIZE - 1)) * 100;
-    return `<i class="${rank < removedCells ? 'is-removed' : ''}" data-cover-rank="${rank}" style="--cover-x:${positionX.toFixed(4)}%; --cover-y:${positionY.toFixed(4)}%;"></i>`;
+    // Fling each chip outward from the crystal centre, with jitter and a slight upward bias.
+    const dirX = x - center;
+    const dirY = y - center;
+    const length = Math.hypot(dirX, dirY) || 1;
+    const distance = 55 + manaCoverCellNoise(index, 12.9898) * 72;
+    const flyX = (dirX / length) * distance + (manaCoverCellNoise(index, 78.233) - 0.5) * 30;
+    const flyY = (dirY / length) * distance * 0.8 + (manaCoverCellNoise(index, 39.425) - 0.5) * 24 - 10;
+    const flyRot = (manaCoverCellNoise(index, 3.71) - 0.5) * 660;
+    return `<i class="${rank < removedCells ? 'is-removed' : ''}" data-cover-rank="${rank}" style="--cover-x:${positionX.toFixed(4)}%; --cover-y:${positionY.toFixed(4)}%; --fly-x:${flyX.toFixed(1)}px; --fly-y:${flyY.toFixed(1)}px; --fly-rot:${flyRot.toFixed(0)}deg;"></i>`;
   }).join('');
 }
 
@@ -5952,8 +6334,16 @@ function syncManaCrystalCover(state: GameState): void {
   const isRevealed = removedCells >= MANA_CRYSTAL_COVER_CELL_COUNT;
   orb?.classList.toggle('is-crystal-revealed', isRevealed);
   orb?.classList.toggle('is-crystal-hidden', !isRevealed);
+  // While a newly-discovered gem is flying out to the collection ring, the crystal
+  // sprite is held on that same gem — hide it so it doesn't double behind the clone.
+  orb?.classList.toggle('is-gem-revealing', manaCrystalRevealHold !== null);
+  const displayGemIndex = manaCrystalDisplayGemIndex(state);
   if (sprite) {
-    setStylePropertyIfChanged(sprite, '--mana-crystal-gem-image', `url('${manaCrystalGemImagePath(manaCrystalDisplayGemIndex(state))}')`);
+    setStylePropertyIfChanged(sprite, '--mana-crystal-gem-image', `url('${manaCrystalGemImagePath(displayGemIndex)}')`);
+  }
+  const arena = orb?.closest<HTMLElement>('.mana-crystal-arena');
+  if (arena) {
+    setStylePropertyIfChanged(arena, '--mana-crystal-glow', `rgb(${manaCrystalGemGlow(displayGemIndex)})`);
   }
   if (cover.dataset.removedCells === String(removedCells)) {
     return;
@@ -6552,8 +6942,6 @@ function showCrystalClickEffect(amount: number, origin?: ManaClickPoint): void {
     }
   }, 1000);
 
-  showManaClickParticles(manaOrb, amount, clickPoint);
-
   const sparkCount = manaSparkCount(amount);
   const gain = normalizedManaGain(amount);
   const orbRect = manaOrb.getBoundingClientRect();
@@ -6606,59 +6994,6 @@ function manaParticleUnitValue(gain: number, particleCount: number, index: numbe
 
 function manaSparkCount(amount: number): number {
   return manaParticleVisualCount(amount);
-}
-
-function showManaClickParticles(manaOrb: HTMLElement, amount: number, origin: ManaClickPoint): void {
-  const layer = rootElement?.querySelector<HTMLElement>('.mana-fall-layer');
-  const counter = rootElement?.querySelector<HTMLElement>('.mana-counter-box');
-  if (!layer || !counter) {
-    return;
-  }
-
-  const layerRect = layer.getBoundingClientRect();
-  const orbRect = manaOrb.getBoundingClientRect();
-  const counterRect = counter.getBoundingClientRect();
-  const startX = clamp(origin.clientX, orbRect.left, orbRect.right) - layerRect.left;
-  const startY = clamp(origin.clientY, orbRect.top, orbRect.bottom) - layerRect.top;
-  const endX = counterRect.left - layerRect.left + counterRect.width * 0.5 - startX;
-  const endY = counterRect.top - layerRect.top + counterRect.height * 0.5 - startY;
-  const gain = normalizedManaGain(amount);
-  const particleCount = manaParticleVisualCount(gain);
-
-  for (let index = 0; index < particleCount; index += 1) {
-    const particle = document.createElement('i');
-    const unitValue = manaParticleUnitValue(gain, particleCount, index);
-    const isCrystal = unitValue > 1 || index % 4 === 0;
-    const burstAngle = Math.random() * Math.PI * 2;
-    const burstDistance = Math.min(78, orbRect.width * 0.24) * (0.42 + Math.random() * 0.78);
-    const spreadX = Math.cos(burstAngle) * burstDistance;
-    const spreadY = Math.sin(burstAngle) * burstDistance;
-    const endJitterX = (Math.random() - 0.5) * 30;
-    const endJitterY = (Math.random() - 0.5) * 16;
-    const valueScale = Math.min(5, unitValue);
-    const size = Math.min(34, 15 + valueScale * 3.6 + (index % 3) * 2);
-    particle.className = isCrystal ? `mana-falling-crystal mana-crystal-tier-${index % 2 === 0 ? 'b' : 'a'}` : 'mana-falling-orb';
-    particle.dataset.gainValue = String(unitValue);
-    if (unitValue >= 4) {
-      particle.classList.add('is-critical');
-    }
-    if (unitValue >= 2) {
-      particle.classList.add('is-bundled');
-    }
-    particle.style.setProperty('--particle-start-x', `${startX + spreadX}px`);
-    particle.style.setProperty('--particle-start-y', `${startY + spreadY}px`);
-    particle.style.setProperty('--particle-early-x', `${spreadX * 0.62}px`);
-    particle.style.setProperty('--particle-early-y', `${spreadY * 0.62}px`);
-    particle.style.setProperty('--particle-mid-x', `${endX * 0.45 + spreadX * 0.4}px`);
-    particle.style.setProperty('--particle-mid-y', `${endY * 0.45 - 44 - Math.random() * 32}px`);
-    particle.style.setProperty('--particle-end-x', `${endX + endJitterX}px`);
-    particle.style.setProperty('--particle-end-y', `${endY + endJitterY}px`);
-    particle.style.setProperty('--particle-size', `${size}px`);
-    particle.style.setProperty('--fall-delay', `${index * 24}ms`);
-    particle.style.setProperty('--fall-duration', `${1040 + (index % 5) * 56}ms`);
-    layer.appendChild(particle);
-    particle.addEventListener('animationend', () => particle.remove(), { once: true });
-  }
 }
 
 function showManaLocalFloatingGain(amount: number, origin: ManaClickPoint | MouseEvent | HTMLElement, className?: string): void {
@@ -6723,7 +7058,9 @@ function appendFloatingGain(amount: number, targetSelector: string, className?: 
   }
 
   const rect = target.getBoundingClientRect();
-  const host = document.querySelector<HTMLElement>('#game-shell') ?? document.body;
+  const localClippingHost = target.closest<HTMLElement>('.mining-grid-shell .mining-grid');
+  const globalHost = document.querySelector<HTMLElement>('#game-shell') ?? document.body;
+  const host = localClippingHost ?? globalHost;
   const hostRect = host.getBoundingClientRect();
   const { x, y } = floatingGainOffset(rect);
   const pop = document.createElement('span');
@@ -6752,6 +7089,71 @@ function floatingGainOffset(rect: DOMRect): { x: number; y: number } {
     x: Math.cos(angle) * distance,
     y: Math.sin(angle) * distance * 0.72,
   };
+}
+
+// Bubble tint for the ordinary red food; bonus fruit override this via snakeBonusFruitColor.
+const SNAKE_FOOD_BUBBLE_COLOR = 'rgba(255, 120, 105, 0.72)';
+
+function snakeBonusFruitColor(type: SnakeBonusFruitType): string {
+  switch (type) {
+    case 'round-blue':
+    case 'diamond-blue':
+      return 'rgba(120, 190, 255, 0.72)';
+    case 'round-green':
+    case 'diamond-green':
+      return 'rgba(130, 235, 150, 0.72)';
+    case 'round-pink':
+    case 'diamond-pink':
+      return 'rgba(255, 150, 210, 0.72)';
+    case 'diamond-red':
+      return 'rgba(255, 110, 100, 0.72)';
+  }
+}
+
+// Rising carbonation bubbles that burst from a snake food cell when it is eaten.
+function spawnSnakeBubbles(
+  cell: SnakeCell | undefined,
+  gridSize: number,
+  color: string = SNAKE_FOOD_BUBBLE_COLOR,
+): void {
+  if (!cell || gridSize <= 0) {
+    return;
+  }
+  const board = rootElement?.querySelector<HTMLElement>(
+    '.book-overlay[data-book-id="serpent"] .snake-board',
+  );
+  if (!board) {
+    return;
+  }
+  const host = document.querySelector<HTMLElement>('#game-shell') ?? document.body;
+  const boardRect = board.getBoundingClientRect();
+  const hostRect = host.getBoundingClientRect();
+  const cellW = board.clientWidth / gridSize;
+  const cellH = board.clientHeight / gridSize;
+  const originX = boardRect.left - hostRect.left + board.clientLeft + (cell.x + 0.5) * cellW;
+  const originY = boardRect.top - hostRect.top + board.clientTop + (cell.y + 0.5) * cellH;
+
+  const count = 9 + Math.floor(Math.random() * 4);
+  for (let index = 0; index < count; index += 1) {
+    const bubble = document.createElement('span');
+    bubble.className = 'snake-bubble';
+    const size = 3 + Math.random() * 5;
+    const spread = (Math.random() - 0.5) * cellW * 0.52;
+    const drift = (Math.random() - 0.5) * 26;
+    const rise = Math.max(cellH * 0.9, 44) + Math.random() * 46;
+    const duration = 780 + Math.random() * 720;
+    const delay = Math.random() * 260;
+    bubble.style.left = `${(originX + spread).toFixed(1)}px`;
+    bubble.style.top = `${(originY + cellH * 0.18).toFixed(1)}px`;
+    bubble.style.setProperty('--bubble-size', `${size.toFixed(1)}px`);
+    bubble.style.setProperty('--bubble-drift', `${drift.toFixed(1)}px`);
+    bubble.style.setProperty('--bubble-rise', `${rise.toFixed(1)}px`);
+    bubble.style.setProperty('--bubble-color', color);
+    bubble.style.animationDuration = `${Math.round(duration)}ms`;
+    bubble.style.animationDelay = `${Math.round(delay)}ms`;
+    bubble.addEventListener('animationend', () => bubble.remove(), { once: true });
+    host.appendChild(bubble);
+  }
 }
 
 function snakePanel(state: GameState): string {
@@ -6786,7 +7188,7 @@ function snakeBoardShellContent(state: GameState): string {
     : '';
   const bodyKeys = new Set(snake.body.map(cellKey));
   const headKey = cellKey(snake.body[0]);
-  const foodKey = snake.food ? cellKey(snake.food) : null;
+  const foodKeys = new Set(snake.foods.map(cellKey));
   const bonusFoodKey = snake.bonusFood ? cellKey(snake.bonusFood.cell) : null;
   const snakeSegments = snakeAtlasSegments(snake.body, snake.gridSize, snake.direction, snake.moveFrame ?? 0);
   const cells = Array.from({ length: snake.gridSize * snake.gridSize }, (_, index) => {
@@ -6798,7 +7200,7 @@ function snakeBoardShellContent(state: GameState): string {
     } else if (bodyKeys.has(key)) {
       classNames.push('is-snake', 'is-body', ...snakeConnectionClasses(cell, snake.body));
     }
-    if (key === foodKey) {
+    if (foodKeys.has(key)) {
       classNames.push('is-food');
     }
     if (key === bonusFoodKey && snake.bonusFood) {
@@ -6815,7 +7217,6 @@ function snakeBoardShellContent(state: GameState): string {
         <span class="snake-hud-resource" title="Ecailles">◆ <strong data-dynamic-value="snake-scales">${compactHudNumber(state.resources.scales)}</strong></span>
         <span class="snake-hud-multiplier" style="--snake-multiplier-hue:${snakeMultiplierHue(multiplier)}deg" title="Multiplicateur"><strong data-dynamic-value="snake-multiplier">x${multiplier.toFixed(1).replace('.', ',')}</strong></span>
       </div>
-      <span class="snake-spriterrific-familiar" aria-hidden="true"></span>
       ${cells}
       ${snakeSegments}
     </div>
@@ -6988,18 +7389,308 @@ function miningPlayfield(state: GameState): string {
       <div
         class="mining-grid mining-three-frame"
         role="application"
-        aria-label="Mine des Profondeurs 3D 6 par 6"
+        aria-label="Mine des Profondeurs 3D ${MINING_GRID_COLUMNS} par ${MINING_GRID_ROWS}"
       >
+        ${miningMaterialLevelHud(state)}
+        <div class="mining-counter-box" aria-label="Ressources minieres actuelles">
+          <strong data-dynamic-value="mining-counter-total">${compactHudNumber(miningMaterialTotal(state))}</strong>
+        </div>
+        ${miningFrontierTimer(state)}
         <canvas
           class="mining-three-board"
           data-mining-3d-board="true"
           aria-label="Terrain 3D de mine en pixel art"
         ></canvas>
-        <div class="mining-accessible-grid" role="grid" aria-label="Mine des Profondeurs 6 par 6">
+        <div class="mining-attack-range" data-mining-attack-range aria-hidden="true"></div>
+        <div class="mining-accessible-grid" role="grid" aria-label="Mine des Profondeurs ${MINING_GRID_COLUMNS} par ${MINING_GRID_ROWS}">
         ${blocks}
         </div>
+        ${miningLevelStrip(state)}
+        <div class="mining-level-tip" data-mining-level-tip role="tooltip" aria-hidden="true"></div>
+        <div class="mining-meteorite-charge" data-mining-meteorite-bar title="Charge de la météorite">
+          <span class="mining-meteorite-charge-icon" aria-hidden="true">☄️</span>
+          <span class="mining-meteorite-charge-track"><i data-mining-meteorite-fill></i></span>
+          <b data-mining-meteorite-text></b>
+        </div>
+        ${miningDamageBadge(state)}
+        <div class="mining-meteorite-flash" data-mining-meteorite-flash aria-hidden="true"></div>
       </div>
     </div>
+  `;
+}
+
+function miningMaterialLevelHud(state: GameState): string {
+  const spriteIndex = miningActiveBlockTypeIndex(state);
+  const tier = miningLevelSpriteTier(state.mining.terrainCycle);
+  const material = miningBlockMaterialById(tier.materialId);
+  const level = miningBlockTypeLevel(state, spriteIndex);
+  const isMaxed = level >= MINING_MATERIAL_MAX_LEVEL;
+  const levelLabel = isMaxed ? 'MAX' : String(level);
+  const xpLabel = isMaxed ? 'MAX' : `${miningBlockTypeXpCurrent(state, spriteIndex)} / ${MINING_MATERIAL_XP_PER_LEVEL}`;
+  const typeBonusLabel = `+${level * 5}% Mine`;
+  const totalMineBonusLabel = `Total +${Math.round((miningMineResourceMultiplier(state) - 1) * 100)}%`;
+  const globalTotal = Math.round((miningAllGamesResourceMultiplier(state) - 1) * 100);
+  const globalBonusLabel = isMaxed ? `+5% tous jeux - Total +${globalTotal}%` : `MAX: +5% tous jeux - Total +${globalTotal}%`;
+  const title = `${material.name} #${spriteIndex} - Niveau ${levelLabel} - XP ${xpLabel} - ${typeBonusLabel} - ${totalMineBonusLabel} - ${globalBonusLabel}`;
+  return `
+    <button
+      type="button"
+      class="mining-material-level${isMaxed ? ' is-maxed' : ''}"
+      data-mining-material-level
+      data-material="${material.resourceId}"
+      data-block-type="${spriteIndex}"
+      aria-label="${title}"
+      style="--mining-level-progress:${miningBlockTypeLevelProgress(state, spriteIndex)}%"
+    >
+      <span class="mining-material-level-badge">
+        <strong data-dynamic-value="mining-material-level">${levelLabel}</strong>
+      </span>
+      <span class="mining-material-level-body">
+        <strong data-dynamic-value="mining-material-name">${material.name} #${spriteIndex}</strong>
+        <span>XP <b data-dynamic-value="mining-material-xp">${xpLabel}</b></span>
+        <span data-dynamic-value="mining-block-type-bonus">${typeBonusLabel}</span>
+        <span data-dynamic-value="mining-total-mine-bonus">${totalMineBonusLabel}</span>
+        <span data-dynamic-value="mining-global-bonus">${globalBonusLabel}</span>
+      </span>
+    </button>
+  `;
+}
+
+function updateMiningMaterialLevelHud(state: GameState): void {
+  const hud = rootElement?.querySelector<HTMLElement>('[data-mining-material-level]');
+  if (!hud) {
+    return;
+  }
+  const spriteIndex = miningActiveBlockTypeIndex(state);
+  const tier = miningLevelSpriteTier(state.mining.terrainCycle);
+  const material = miningBlockMaterialById(tier.materialId);
+  const level = miningBlockTypeLevel(state, spriteIndex);
+  const isMaxed = level >= MINING_MATERIAL_MAX_LEVEL;
+  const levelLabel = isMaxed ? 'MAX' : String(level);
+  const xpLabel = isMaxed ? 'MAX' : `${miningBlockTypeXpCurrent(state, spriteIndex)} / ${MINING_MATERIAL_XP_PER_LEVEL}`;
+  const typeBonusLabel = `+${level * 5}% Mine`;
+  const totalMineBonusLabel = `Total +${Math.round((miningMineResourceMultiplier(state) - 1) * 100)}%`;
+  const globalTotal = Math.round((miningAllGamesResourceMultiplier(state) - 1) * 100);
+  const globalBonusLabel = isMaxed ? `+5% tous jeux - Total +${globalTotal}%` : `MAX: +5% tous jeux - Total +${globalTotal}%`;
+  const title = `${material.name} #${spriteIndex} - Niveau ${levelLabel} - XP ${xpLabel} - ${typeBonusLabel} - ${totalMineBonusLabel} - ${globalBonusLabel}`;
+  const xp = Math.max(0, state.mining.blockTypeXp[spriteIndex - 1] ?? 0);
+  const previousXp = lastMiningBlockTypeXp.get(spriteIndex);
+
+  setDynamicText('mining-material-level', levelLabel);
+  setDynamicText('mining-material-name', `${material.name} #${spriteIndex}`);
+  setDynamicText('mining-material-xp', xpLabel);
+  setDynamicText('mining-block-type-bonus', typeBonusLabel);
+  setDynamicText('mining-total-mine-bonus', totalMineBonusLabel);
+  setDynamicText('mining-global-bonus', globalBonusLabel);
+  setAttributeIfChanged(hud, 'data-material', material.resourceId);
+  setAttributeIfChanged(hud, 'data-block-type', String(spriteIndex));
+  hud.removeAttribute('title');
+  setAttributeIfChanged(hud, 'aria-label', title);
+  setStylePropertyIfChanged(hud, '--mining-level-progress', `${miningBlockTypeLevelProgress(state, spriteIndex)}%`);
+  hud.classList.toggle('is-maxed', isMaxed);
+  if (previousXp !== undefined && xp > previousXp) {
+    restartTimedOneShotClass(hud, 'is-xp-gaining', 360);
+  }
+  lastMiningBlockTypeXp.set(spriteIndex, xp);
+}
+
+function formatMiningTimer(seconds: number): string {
+  return `${Math.max(0, Math.ceil(seconds))}`;
+}
+
+// Countdown badge for the timed frontier-wave challenge. Only meaningful on the frontier wave.
+function miningFrontierTimer(state: GameState): string {
+  const onFrontier = miningIsFrontierWave(state.mining.terrainCycle, state.mining.deepestLayer);
+  const seconds = Math.min(MINING_FRONTIER_TIME_LIMIT, Math.max(0, state.mining.frontierTimer));
+  const low = onFrontier && seconds <= 10;
+  const classes = `mining-frontier-timer${onFrontier ? ' is-active' : ''}${low ? ' is-low' : ''}`;
+  return `
+    <div
+      class="${classes}"
+      data-mining-frontier-timer
+      aria-hidden="${onFrontier ? 'false' : 'true'}"
+    >
+      <strong data-dynamic-value="mining-frontier-timer">${formatMiningTimer(seconds)}</strong>
+    </div>
+    <div class="mining-frontier-toast" data-mining-frontier-toast aria-hidden="true">Temps écoulé !</div>
+  `;
+}
+
+let lastMiningFrontierFailPulse = -1;
+
+function updateMiningFrontierTimer(state: GameState): void {
+  const onFrontier = miningIsFrontierWave(state.mining.terrainCycle, state.mining.deepestLayer);
+  const seconds = Math.min(MINING_FRONTIER_TIME_LIMIT, Math.max(0, state.mining.frontierTimer));
+  setDynamicText('mining-frontier-timer', formatMiningTimer(seconds));
+  const element = rootElement?.querySelector<HTMLElement>('[data-mining-frontier-timer]');
+  if (!element) {
+    return;
+  }
+  element.classList.toggle('is-active', onFrontier);
+  element.classList.toggle('is-low', onFrontier && seconds <= 10);
+  setAttributeIfChanged(element, 'aria-hidden', onFrontier ? 'false' : 'true');
+  // Flash a centered toast when the timer just expired (the badge itself hides on drop-back).
+  if (state.mining.frontierFailPulse !== lastMiningFrontierFailPulse) {
+    if (lastMiningFrontierFailPulse !== -1 && state.mining.frontierFailPulse > lastMiningFrontierFailPulse) {
+      const toast = rootElement?.querySelector<HTMLElement>('[data-mining-frontier-toast]');
+      if (toast) {
+        toast.classList.remove('is-shown');
+        void toast.offsetWidth;
+        toast.classList.add('is-shown');
+      }
+    }
+    lastMiningFrontierFailPulse = state.mining.frontierFailPulse;
+  }
+}
+
+function updateMiningMeteoriteBar(state: GameState): void {
+  const bar = rootElement?.querySelector<HTMLElement>('[data-mining-meteorite-bar]');
+  if (!bar) {
+    return;
+  }
+  const threshold = miningMeteoriteClickThreshold(state);
+  const clicks = Math.max(0, Math.min(threshold, Math.floor(state.mining.meteoriteClicks)));
+  const percent = threshold > 0 ? Math.round((clicks / threshold) * 100) : 0;
+  setStylePropertyIfChanged(bar, '--mining-meteorite-fill', `${percent}%`);
+  bar.classList.toggle('is-ready', percent >= 100);
+  setTextContentIfChanged(bar.querySelector<HTMLElement>('[data-mining-meteorite-text]'), `${clicks}/${threshold}`);
+  setAttributeIfChanged(bar, 'title', `Meteorite : ${clicks} / ${threshold} clics`);
+}
+
+// A little pixel-art pickaxe drawn as inline SVG rects (crisp at any size, matches the game's pixel
+// look, no image asset needed). Palette: dark outline, two metal shades, two wood shades.
+function miningPixelPickaxeSvg(): string {
+  const palette: Record<string, string> = {
+    O: '#241a15',
+    M: '#d6dde6',
+    N: '#98a2b0',
+    W: '#bd8449',
+    w: '#7f5227',
+  };
+  const grid = [
+    '................',
+    '......OOOO......',
+    '....OOMMMMOO....',
+    '..OOMMMMMMMMOO..',
+    '.OMMMMMMMMMMMMO.',
+    '.OMMOOOWWOOONMO.',
+    '.OMO..OWwO..ONO.',
+    '.OO...OWwO...OO.',
+    '......OWwO......',
+    '......OWwO......',
+    '......OWwO......',
+    '......OWwO......',
+    '......OWwO......',
+    '......OWwO......',
+    '......OWwO......',
+    '.......OO.......',
+  ];
+  let rects = '';
+  for (let y = 0; y < grid.length; y += 1) {
+    const row = grid[y]!;
+    for (let x = 0; x < row.length; x += 1) {
+      const fill = palette[row[x]!];
+      if (fill) {
+        rects += `<rect x="${x}" y="${y}" width="1.02" height="1.02" fill="${fill}"/>`;
+      }
+    }
+  }
+  return `<svg viewBox="0 0 16 16" class="mining-damage-pickaxe" shape-rendering="crispEdges" aria-hidden="true">${rects}</svg>`;
+}
+
+// Bottom-left damage indicator: a pixel pickaxe + the true click damage in the game font, with a
+// hover tooltip breaking down every additive/multiplicative modifier (crits shown separately).
+function miningDamageBadge(state: GameState): string {
+  const addLevel = Math.max(0, state.miningSkills.pickaxeForce);
+  const pickaxeMult = miningPickaxeMultiplier(state);
+  const meteorBonus = miningMeteoriteDamageBonus(state);
+  const total = miningPickaxeDamage(state);
+  const critPct = miningCriticalChance(state) * 100;
+  const critMult = miningCriticalMultiplier(state);
+  return `
+    <div class="mining-damage-badge" data-mining-damage-badge tabindex="0" aria-label="Dégâts par coup">
+      <span class="mining-damage-icon">${miningPixelPickaxeSvg()}</span>
+      <strong class="mining-damage-value" data-mining-damage-value>${compactHudNumber(total)}</strong>
+      <div class="mining-damage-tip" role="tooltip">
+        <div class="mining-damage-tip-rows">
+          <span class="mining-damage-tip-row"><b>Pickaxe +</b><i data-mining-dmg-add>${formatGameNumber(1 + addLevel)}</i></span>
+          <span class="mining-damage-tip-row"><b>Pickaxe ×</b><i data-mining-dmg-mult>×${formatTwoDecimalGameNumber(pickaxeMult)}</i></span>
+          <span class="mining-damage-tip-row"><b>Bonus météorite</b><i data-mining-dmg-meteor>×${formatTwoDecimalGameNumber(meteorBonus)}</i></span>
+          <span class="mining-damage-tip-row is-total"><b>= Dégâts</b><i data-mining-dmg-total>${compactHudNumber(total)}</i></span>
+        </div>
+        <div class="mining-damage-tip-crit"><b>Crit</b> <i data-mining-dmg-crit>${formatGameNumber(critPct)}% · ×${formatTwoDecimalGameNumber(critMult)}</i></div>
+      </div>
+    </div>
+  `;
+}
+
+function updateMiningDamageBadge(state: GameState): void {
+  const badge = rootElement?.querySelector<HTMLElement>('[data-mining-damage-badge]');
+  if (!badge) {
+    return;
+  }
+  const addLevel = Math.max(0, state.miningSkills.pickaxeForce);
+  const pickaxeMult = miningPickaxeMultiplier(state);
+  const meteorBonus = miningMeteoriteDamageBonus(state);
+  const total = miningPickaxeDamage(state);
+  const critPct = miningCriticalChance(state) * 100;
+  const critMult = miningCriticalMultiplier(state);
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-damage-value]'), compactHudNumber(total));
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-dmg-add]'), `${formatGameNumber(1 + addLevel)}`);
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-dmg-mult]'), `×${formatTwoDecimalGameNumber(pickaxeMult)}`);
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-dmg-meteor]'), `×${formatTwoDecimalGameNumber(meteorBonus)}`);
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-dmg-total]'), compactHudNumber(total));
+  setTextContentIfChanged(badge.querySelector<HTMLElement>('[data-mining-dmg-crit]'), `${formatGameNumber(critPct)}% · ×${formatTwoDecimalGameNumber(critMult)}`);
+}
+
+function miningLevelStrip(state: GameState): string {
+  const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+  const current = state.mining.terrainCycle;
+  return `
+    <div
+      class="mining-level-strip"
+      role="tablist"
+      aria-label="Niveaux de la mine"
+      data-mining-level-strip
+      data-signature="${maxReached}:${current}"
+    >
+      ${miningLevelFaces(state)}
+    </div>
+  `;
+}
+
+function miningLevelFaces(state: GameState): string {
+  const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+  const current = state.mining.terrainCycle;
+  const faces: string[] = [];
+  for (let cycle = 1; cycle <= maxReached; cycle += 1) {
+    const maxed = miningLevelPreview(state, cycle).level >= MINING_MATERIAL_MAX_LEVEL;
+    faces.push(miningLevelFace(cycle, current, false, maxed));
+  }
+  // Obsidian is the final level: don't show a locked "next" cell past it.
+  if (maxReached < MINING_MAX_CYCLE) {
+    faces.push(miningLevelFace(maxReached + 1, current, true, false));
+  }
+  return faces.join('');
+}
+
+function miningLevelFace(cycle: number, current: number, locked: boolean, maxed: boolean): string {
+  const tier = miningLevelSpriteTier(cycle);
+  const isActive = !locked && cycle === current;
+  const label = locked ? `Niveau ${cycle} verrouille` : `Niveau ${cycle}`;
+  const inner = locked ? '?' : String(cycle);
+  return `
+    <button
+      type="button"
+      class="mining-level-face${isActive ? ' is-active' : ''}${locked ? ' is-locked' : ''}${maxed ? ' is-maxed' : ''}"
+      role="tab"
+      aria-selected="${isActive ? 'true' : 'false'}"
+      data-mining-level="${cycle}"
+      data-material="${tier.materialId}"
+      ${locked ? 'disabled aria-disabled="true"' : ''}
+      style="background-image:url('${tier.assetPath}')"
+      aria-label="${label}"
+    ><span>${inner}</span></button>
   `;
 }
 

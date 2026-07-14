@@ -8,11 +8,13 @@ const snakePanelSource = hudSource.match(/function snakePanel[\s\S]*?\n}\n\nfunc
 const snakeDockSignatureSource = hudSource.match(/function snakeSkillDockSignature[\s\S]*?\n}\n\nfunction snakeSkillCardDynamicSignature/)?.[0];
 const snakeDynamicUpdaterSource = hudSource.match(/function updateDynamicSnakeSkillCards[\s\S]*?\n}\n\nfunction refreshSnakeSkillDock/)?.[0];
 const snakeSkillCardSource = hudSource.match(/function snakeSkillShopCard[\s\S]*?\n}\n\nfunction snakeSkillIcon/)?.[0];
+const snakeSkillTabsSource = hudSource.match(/function snakeSkillShopTabs[\s\S]*?\n}\n\nfunction snakeSkillShopCard/)?.[0];
 
 assert.ok(snakePanelSource, 'snakePanel should exist.');
 assert.ok(snakeDockSignatureSource, 'snakeSkillDockSignature should exist.');
 assert.ok(snakeDynamicUpdaterSource, 'updateDynamicSnakeSkillCards should exist.');
 assert.ok(snakeSkillCardSource, 'snakeSkillShopCard should exist.');
+assert.ok(snakeSkillTabsSource, 'snakeSkillShopTabs should exist.');
 
 for (const requiredSnakeLayout of [
   '<div class="snake-board-shell">',
@@ -67,6 +69,33 @@ assert.equal(
   'Snake skill cards should display scale costs.',
 );
 assert.equal(snakeSkillCardSource.includes('standardManaCostHtml(cost)'), false, 'Snake skill cards must not display mana costs.');
+
+for (const requiredSnakeSkill of [
+  "snakeSkillShopCard(state, 'foodCount', 'Food Count'",
+  "snakeSkillShopCard(state, 'growthThreshold', 'Growth'",
+  "value === 'foodCount'",
+  "value === 'growthThreshold'",
+]) {
+  assert.equal(hudSource.includes(requiredSnakeSkill), true, `Snake skill dock should expose the new progression skill: missing ${requiredSnakeSkill}`);
+}
+
+for (const requiredSnakeAutoTabRule of [
+  "type SnakeSkillShopTabId = 'snake' | 'auto'",
+  "let snakeSkillShopTab: SnakeSkillShopTabId = 'snake'",
+  "id: 'auto'",
+  "label: 'Auto'",
+  "snakeSkillShopCard(state, 'automation', 'Auto'",
+  'snakeSkillShopTab,',
+]) {
+  assert.equal(hudSource.includes(requiredSnakeAutoTabRule), true, `Snake should expose a dedicated Auto tab: missing ${requiredSnakeAutoTabRule}`);
+}
+
+const snakeManualTabSource = snakeSkillTabsSource.split("id: 'auto'")[0];
+assert.equal(
+  snakeManualTabSource.includes("snakeSkillShopCard(state, 'automation'"),
+  false,
+  'Snake automation must not remain in the manual Snake tab.',
+);
 
 for (const requiredSnakeStyle of [
   '.book-overlay[data-book-id="serpent"]',

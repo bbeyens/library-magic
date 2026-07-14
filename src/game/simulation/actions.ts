@@ -42,14 +42,34 @@ export {
 import {
   createStartingSnakeBody,
   createInitialMiningBlocks,
+  createInitialMiningBlockTypeXp,
   createInitialMiningMaterials,
   miningBlockMaterialForDepth,
+  miningBlockSpriteTierForDepth,
   miningBlockMaxHealth,
   miningMaterialExchangeValue,
+  miningLevelSpriteTier,
+  miningLevelStartDepth,
+  miningMaxReachedCycle,
+  miningIsFrontierWave,
+  miningHoloMultiplier,
+  rollMiningHoloTier,
+  MINING_BLOCK_SPRITE_TIERS,
   MINING_GRID_COLUMNS,
   MINING_MATERIAL_RESOURCE_IDS,
   MINING_GRID_ROWS,
   MINING_TERRAIN_LAYER_COUNT,
+  MINING_FRONTIER_TIME_LIMIT,
+  MINING_MAX_CYCLE,
+  MINING_BOMB_CHANCE_BASE,
+  MINING_BOMB_CHANCE_MAX,
+  MINING_BOMB_BASE_POWER,
+  MINING_METEORITE_BASE_CLICKS,
+  MINING_METEORITE_MIN_CLICKS,
+  MINING_METEORITE_CLICKS_PER_LEVEL,
+  MINING_METEORITE_DAMAGE_MULTIPLIER,
+  MINING_METEORITE_MAX_LAYERS,
+  MINING_METEORITE_FALL_SECONDS,
   randomSnakeFood,
   snakeGridSizeForLevel,
   type BlackjackCard,
@@ -143,7 +163,16 @@ export type ManaSkillId =
   | 'criticalHit'
   | 'criticalEffect'
   ;
-export type SnakeSkillId = 'speed' | 'gridSize' | 'automation' | 'baseMultiplier' | 'bonusFruit' | 'extraLife' | 'edgeWrap';
+export type SnakeSkillId =
+  | 'speed'
+  | 'gridSize'
+  | 'foodCount'
+  | 'growthThreshold'
+  | 'automation'
+  | 'baseMultiplier'
+  | 'bonusFruit'
+  | 'extraLife'
+  | 'edgeWrap';
 export type DefenseSkillId =
   | 'damage'
   | 'damageMultiplier'
@@ -165,7 +194,25 @@ export type DefenseSkillId =
   | 'moneyPerEnemy'
   | 'goldMultiplier'
   | 'baseSpeed';
-export type MiningSkillId = 'pickaxeForce' | 'splashDamage' | 'automation';
+export type MiningSkillId =
+  | 'pickaxeForce'
+  | 'pickaxeMultiplier'
+  | 'splashDamage'
+  | 'criticalChance'
+  | 'criticalMultiplier'
+  | 'holdClick'
+  | 'automation'
+  | 'multiAutoClicker'
+  | 'resourceBonus'
+  | 'resourceMultiplier'
+  | 'holoChance'
+  | 'rainbowChance'
+  | 'negativeChance'
+  | 'bombChance'
+  | 'bombRange'
+  | 'bombPower'
+  | 'meteorite'
+  | 'meteoriteBonus';
 export type { TargetSkillId };
 export type { BlackjackSideBonusId };
 export type { BlackjackBonusUpgradeStep };
@@ -253,6 +300,8 @@ const MANA_IDLE_ATTACK_STAGGER_SECONDS = 0.12;
 const DEBUG_SNAKE_SKILL_MAX_LEVELS: Record<SnakeSkillId, number> = {
   speed: 26,
   gridSize: 5,
+  foodCount: 9,
+  growthThreshold: 2,
   automation: 10,
   baseMultiplier: 40,
   bonusFruit: 7,
@@ -378,9 +427,31 @@ const DEFENSE_TOWER_BASE_HEALTH = 3;
 
 const DEBUG_MINING_SKILL_MAX_LEVELS: Record<MiningSkillId, number> = {
   pickaxeForce: 30,
-  splashDamage: 12,
-  automation: 20,
+  pickaxeMultiplier: 40,
+  splashDamage: 39,
+  criticalChance: 50,
+  criticalMultiplier: 40,
+  holdClick: 16,
+  automation: 25,
+  multiAutoClicker: 4,
+  resourceBonus: 50,
+  resourceMultiplier: 40,
+  holoChance: 20,
+  rainbowChance: 45,
+  negativeChance: 40,
+  bombChance: 4,
+  bombRange: 2,
+  bombPower: 15,
+  // 1000 -> 250 clicks in 50-click steps = 15 levels.
+  meteorite: 15,
+  // x1.01 per launched meteorite at level 1, up to x1.05 at level 5.
+  meteoriteBonus: 5,
 };
+const MINING_BLOCK_NATIVE_SIZE_PX = 16;
+// Range starts at 1px (level 1) and gains 1px per level, up to 40px — so exactly 40 levels.
+const MINING_ATTACK_BASE_RANGE_PX = 1;
+const MINING_ATTACK_RANGE_PER_LEVEL_PX = 1;
+const MINING_ATTACK_MAX_RANGE_PX = 40;
 
 const BOOK_PANEL_SLOTS: BookPanelSlot[] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const BOOK_PANEL_OPEN_SLOTS: BookPanelSlot[] = [3, 0, 1, 2, 7, 4, 5, 6, 8];
@@ -487,6 +558,8 @@ export type GameAction =
   | { type: 'chooseHundredOption'; optionId: HundredOptionId }
   | { type: 'attackTarget'; targetId: number }
   | { type: 'digMiningBlock'; blockId: number }
+  | { type: 'digMiningArea'; blockIds: number[] }
+  | { type: 'selectMiningLevel'; cycle: number }
   | { type: 'exchangeMiningMaterials' }
   | { type: 'trainSlime'; commandId: SlimeTrainerCommandId }
   | { type: 'enemyAttackSlime' }
@@ -495,7 +568,8 @@ export type GameAction =
   | { type: 'toggleDefensePause' }
   | { type: 'setDefenseWave'; wave: number }
   | { type: 'setDefenseDebugTowerHealth'; enabled: boolean }
-  | { type: 'grantDebugResources' };
+  | { type: 'grantDebugResources' }
+  | { type: 'debugTriggerMeteorite' };
 
 export function applyAction(state: GameState, action: GameAction): void {
   switch (action.type) {
@@ -652,6 +726,12 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'digMiningBlock':
       digMiningBlock(state, action.blockId);
       return;
+    case 'digMiningArea':
+      digMiningArea(state, action.blockIds);
+      return;
+    case 'selectMiningLevel':
+      selectMiningLevel(state, action.cycle);
+      return;
     case 'exchangeMiningMaterials':
       exchangeMiningMaterials(state);
       return;
@@ -680,6 +760,9 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'grantDebugResources':
       grantDebugResources(state);
       return;
+    case 'debugTriggerMeteorite':
+      launchMeteorite(state);
+      return;
   }
 }
 
@@ -697,7 +780,7 @@ export function tickState(state: GameState, now: number): void {
     const amount = deltaSeconds * book.automation * pinMultiplier * (1 + book.level * 0.12);
     state.mana += amount * 0.65;
     if (bookDefinition.resourceId) {
-      state.resources[bookDefinition.resourceId] += amount * 0.22;
+      state.resources[bookDefinition.resourceId] += miniGameResourceReward(state, amount * 0.22);
     }
   }
 
@@ -959,6 +1042,11 @@ function grantManaCrystalHarvest(state: GameState, amount: number): void {
   if (amount <= 0) {
     return;
   }
+  // Pause all harvesting (manual click, auto-clicker, idle companions, hold) while a
+  // gem-discovery animation plays, so the next gem can't take damage until it ends.
+  if (state.manaCrystal.revealAnimating) {
+    return;
+  }
   state.manaCrystal.harvestedMana = Math.max(0, state.manaCrystal.harvestedMana + amount);
 }
 
@@ -998,7 +1086,9 @@ export function manaClickGainPreview(state: GameState): number {
     manaClickMultiplier(state) *
     manaCrystalResourceMultiplier(state) *
     manaResearchMultiplier(state, 'researchClickPower');
-  return roundManaAmount(directClickDamage + manaResearchAllyClickDamage(state));
+  return roundManaAmount(
+    (directClickDamage + manaResearchAllyClickDamage(state)) * miningAllGamesResourceMultiplier(state),
+  );
 }
 
 export function manaSkillUpgradeEffectDelta(state: GameState, skillId: ManaSkillId): number {
@@ -1080,14 +1170,26 @@ export function manaSkillUpgradeEffectDelta(state: GameState, skillId: ManaSkill
 
 export function manaMeowKnightDamage(state: GameState): number {
   const level = Math.max(0, state.manaSkills.meowKnight ?? 0);
-  return level <= 0 ? 0 : roundManaAmount(level * manaCrystalAllyAttackMultiplier(state) * manaResearchMultiplier(state, 'researchMeowKnight'));
+  return level <= 0
+    ? 0
+    : roundManaAmount(
+        level *
+          manaCrystalAllyAttackMultiplier(state) *
+          manaResearchMultiplier(state, 'researchMeowKnight') *
+          miningAllGamesResourceMultiplier(state),
+      );
 }
 
 export function manaIdleCompanionDamage(state: GameState, skillId: ManaIdleCompanionSkillId): number {
   const level = Math.max(0, state.manaSkills[skillId] ?? 0);
   return level <= 0
     ? 0
-    : roundManaAmount(level * manaCrystalAllyAttackMultiplier(state) * manaResearchMultiplier(state, manaResearchSkillForAlly(skillId)));
+    : roundManaAmount(
+        level *
+          manaCrystalAllyAttackMultiplier(state) *
+          manaResearchMultiplier(state, manaResearchSkillForAlly(skillId)) *
+          miningAllGamesResourceMultiplier(state),
+      );
 }
 
 function roundManaAmount(value: number): number {
@@ -1182,7 +1284,10 @@ export function manaLevelUpEffectMultiplier(state: GameState): number {
 }
 
 function manaLevelUpBonus(state: GameState, levelsGained: number): number {
-  return Math.max(0, Math.round(levelsGained * 100 * manaLevelUpEffectMultiplier(state)));
+  return miniGameResourceReward(
+    state,
+    Math.max(0, Math.round(levelsGained * 100 * manaLevelUpEffectMultiplier(state))),
+  );
 }
 
 function manaOrbPrimaryValue(state: GameState, kind: ManaOrbKind): number {
@@ -1516,6 +1621,14 @@ export function snakeGridSize(state: GameState): number {
   return snakeGridSizeForLevel(state.snakeSkills.gridSize);
 }
 
+export function snakeFoodCapacity(state: GameState): number {
+  return Math.min(10, 1 + state.snakeSkills.foodCount);
+}
+
+export function snakeGrowthFoodRequirement(state: GameState): number {
+  return Math.min(3, 1 + state.snakeSkills.growthThreshold);
+}
+
 export function snakeBaseMultiplier(state: GameState): number {
   return Math.min(5, 1 + state.snakeSkills.baseMultiplier * 0.1);
 }
@@ -1581,6 +1694,10 @@ export function snakeSkillCost(state: GameState, skillId: SnakeSkillId): number 
       return Math.round(25 * Math.pow(1.28, level));
     case 'gridSize':
       return Math.round(70 * Math.pow(1.38, level));
+    case 'foodCount':
+      return Math.round(120 * Math.pow(1.65, level));
+    case 'growthThreshold':
+      return Math.round(180 * Math.pow(2.4, level));
     case 'automation':
       return Math.round(160 * Math.pow(1.42, level));
     case 'baseMultiplier':
@@ -2027,30 +2144,270 @@ export function miningSkillCost(state: GameState, skillId: MiningSkillId): numbe
   const level = state.miningSkills[skillId];
   switch (skillId) {
     case 'pickaxeForce':
-      return Math.round(70 * Math.pow(1.28, level));
+      return Math.round(10 * Math.pow(1.22, level));
+    case 'pickaxeMultiplier':
+      return Math.round(25 * Math.pow(1.28, level));
     case 'splashDamage':
-      return Math.round(180 * Math.pow(1.42, level));
+      return Math.round(30 * Math.pow(1.28, level));
+    case 'criticalChance':
+      return Math.round(12 * Math.pow(1.24, level));
+    case 'criticalMultiplier':
+      return Math.round(20 * Math.pow(1.25, level));
+    case 'holdClick':
+      return Math.round(25 * Math.pow(1.28, level));
     case 'automation':
-      return Math.round(280 * Math.pow(1.46, level));
+      return Math.round(35 * Math.pow(1.25, level));
+    case 'multiAutoClicker':
+      return Math.round(120 * Math.pow(1.45, level));
+    case 'resourceBonus':
+      return Math.round(15 * Math.pow(1.24, level));
+    case 'resourceMultiplier':
+      return Math.round(40 * Math.pow(1.28, level));
+    case 'holoChance':
+      return Math.round(60 * Math.pow(1.3, level));
+    case 'rainbowChance':
+      return Math.round(150 * Math.pow(1.32, level));
+    case 'negativeChance':
+      return Math.round(400 * Math.pow(1.34, level));
+    case 'bombChance':
+      return Math.round(200 * Math.pow(1.5, level));
+    case 'bombRange':
+      return Math.round(500 * Math.pow(2, level));
+    case 'bombPower':
+      return Math.round(120 * Math.pow(1.3, level));
+    case 'meteorite':
+      return Math.round(300 * Math.pow(1.35, level));
+    case 'meteoriteBonus':
+      return Math.round(500 * Math.pow(1.6, level));
   }
 }
 
-export function miningPickaxeDamage(state: GameState): number {
-  return 1 + state.miningSkills.pickaxeForce;
+// Chance (0..0.2) that a freshly generated block is holographic (its rarity tier is then rolled).
+export function miningHoloChance(state: GameState): number {
+  return Math.min(20, Math.max(0, state.miningSkills.holoChance)) / 100;
 }
 
-export function miningSplashDamage(state: GameState): number {
-  if (state.miningSkills.splashDamage <= 0) {
+// Chance a holo block bumps up to Arc-en-ciel (base 15% + 1%/level, capped at 60%).
+export function miningRainbowChance(state: GameState): number {
+  return Math.min(0.6, 0.15 + Math.max(0, state.miningSkills.rainbowChance) / 100);
+}
+
+// Chance an Arc-en-ciel block bumps up to Négatif (base 10% + 1%/level, capped at 50%).
+export function miningNegativeChance(state: GameState): number {
+  return Math.min(0.5, 0.1 + Math.max(0, state.miningSkills.negativeChance) / 100);
+}
+
+// Per-tier upgrade chances passed to rollMiningHoloTier: [holo->rainbow, rainbow->negatif].
+export function miningHoloTierChances(state: GameState): number[] {
+  return [miningRainbowChance(state), miningNegativeChance(state)];
+}
+
+// Chance a freshly generated block is a bomb (base 1% + 1%/level, capped at 5%).
+export function miningBombChance(state: GameState): number {
+  return Math.min(MINING_BOMB_CHANCE_MAX, MINING_BOMB_CHANCE_BASE + Math.max(0, state.miningSkills.bombChance) / 100);
+}
+
+// Bomb blast radius (Manhattan): 1 by default, up to 3 with the range skill.
+export function miningBombRange(state: GameState): number {
+  return Math.min(3, 1 + Math.max(0, state.miningSkills.bombRange));
+}
+
+// Bomb blast damage multiplier (x the player's click damage): base 5, +1 per power level.
+export function miningBombPower(state: GameState): number {
+  return MINING_BOMB_BASE_POWER + Math.max(0, state.miningSkills.bombPower);
+}
+
+// Damage a bomb deals to each block in its blast (click damage x bomb power).
+export function miningBombBlastDamage(state: GameState): number {
+  return miningPickaxeDamage(state) * miningBombPower(state);
+}
+
+// Clicks (manual + auto) needed for the next meteorite: 1000 by default, minus 50 per meteorite
+// level, floored at 250.
+export function miningMeteoriteClickThreshold(state: GameState): number {
+  return Math.max(
+    MINING_METEORITE_MIN_CLICKS,
+    MINING_METEORITE_BASE_CLICKS - Math.max(0, state.miningSkills.meteorite) * MINING_METEORITE_CLICKS_PER_LEVEL,
+  );
+}
+
+// Damage the meteorite deals to every block on impact (x the player's click damage).
+export function miningMeteoriteDamage(state: GameState): number {
+  return miningPickaxeDamage(state) * MINING_METEORITE_DAMAGE_MULTIPLIER;
+}
+
+export function miningPickaxeMultiplier(state: GameState): number {
+  return 1 + Math.max(0, state.miningSkills.pickaxeMultiplier) * 0.25;
+}
+
+// Per-meteorite growth factor from the meteoriteBonus skill: 1 at level 0, then 1.01 / 1.02 ... 1.05
+// at levels 1..5. Applied to the permanent accumulator each time a meteorite is launched.
+export function miningMeteoriteBonusFactor(state: GameState): number {
+  return 1 + Math.min(5, Math.max(0, state.miningSkills.meteoriteBonus)) * 0.01;
+}
+
+// The permanent damage multiplier accumulated from every meteorite launched so far (>= 1).
+export function miningMeteoriteDamageBonus(state: GameState): number {
+  return Math.max(1, state.mining.meteoriteDamageBonus);
+}
+
+// True click damage (before crits): pickaxe+ x pickaxe× x the permanent meteorite bonus.
+export function miningPickaxeDamage(state: GameState): number {
+  return Math.max(
+    1,
+    Math.round((1 + state.miningSkills.pickaxeForce) * miningPickaxeMultiplier(state) * miningMeteoriteDamageBonus(state)),
+  );
+}
+
+export function miningCriticalChance(state: GameState): number {
+  return Math.min(50, Math.max(0, state.miningSkills.criticalChance)) / 100;
+}
+
+export function miningCriticalMultiplier(state: GameState): number {
+  return 2 + Math.min(40, Math.max(0, state.miningSkills.criticalMultiplier)) * 0.1;
+}
+
+export function miningDamageHitResult(
+  state: GameState,
+  roll: () => number = Math.random,
+): { amount: number; critical: boolean } {
+  const amount = miningPickaxeDamage(state);
+  if (miningCriticalChance(state) <= 0 || roll() >= miningCriticalChance(state)) {
+    return { amount, critical: false };
+  }
+  return { amount: Math.max(1, Math.round(amount * miningCriticalMultiplier(state))), critical: true };
+}
+
+export function miningHoldClickRate(state: GameState): number {
+  const level = Math.max(0, state.miningSkills.holdClick);
+  return level <= 0 ? 0 : Math.min(20, 4 + level);
+}
+
+export function miningAutoClickerCapacity(state: GameState): number {
+  return Math.min(5, 1 + Math.max(0, state.miningSkills.multiAutoClicker));
+}
+
+export function miningResourceMultiplier(state: GameState): number {
+  return 1 + Math.max(0, state.miningSkills.resourceMultiplier) * 0.25;
+}
+
+export const MINING_MATERIAL_MAX_LEVEL = 10;
+export const MINING_MATERIAL_XP_PER_LEVEL = 100;
+const MINING_MATERIAL_MAX_XP = MINING_MATERIAL_MAX_LEVEL * MINING_MATERIAL_XP_PER_LEVEL;
+
+export function miningBlockTypeLevelForXp(xp: number): number {
+  return Math.min(
+    MINING_MATERIAL_MAX_LEVEL,
+    Math.floor(Math.max(0, xp) / MINING_MATERIAL_XP_PER_LEVEL),
+  );
+}
+
+export function miningBlockTypeLevel(state: GameState, spriteIndex: number): number {
+  return miningBlockTypeLevelForXp(state.mining.blockTypeXp[Math.max(1, Math.floor(spriteIndex)) - 1] ?? 0);
+}
+
+export function miningBlockTypeXpCurrent(state: GameState, spriteIndex: number): number {
+  const xp = Math.max(0, state.mining.blockTypeXp[Math.max(1, Math.floor(spriteIndex)) - 1] ?? 0);
+  return miningBlockTypeLevel(state, spriteIndex) >= MINING_MATERIAL_MAX_LEVEL
+    ? MINING_MATERIAL_XP_PER_LEVEL
+    : xp % MINING_MATERIAL_XP_PER_LEVEL;
+}
+
+export function miningBlockTypeLevelProgress(state: GameState, spriteIndex: number): number {
+  return (miningBlockTypeXpCurrent(state, spriteIndex) / MINING_MATERIAL_XP_PER_LEVEL) * 100;
+}
+
+export function miningActiveBlockTypeIndex(state: GameState): number {
+  return miningLevelSpriteTier(state.mining.terrainCycle).spriteIndex;
+}
+
+export function miningMineResourceMultiplier(state: GameState): number {
+  const totalLevels = MINING_BLOCK_SPRITE_TIERS.reduce(
+    (total, tier) => total + miningBlockTypeLevel(state, tier.spriteIndex),
+    0,
+  );
+  return Number((1 + totalLevels * 0.05).toFixed(2));
+}
+
+export function miningAllGamesResourceMultiplier(state: GameState): number {
+  const maxedTypes = MINING_BLOCK_SPRITE_TIERS.filter(
+    (tier) => miningBlockTypeLevel(state, tier.spriteIndex) >= MINING_MATERIAL_MAX_LEVEL,
+  ).length;
+  return Number((1 + maxedTypes * 0.05).toFixed(2));
+}
+
+export function miniGameResourceReward(state: GameState, amount: number): number {
+  return Number((Math.max(0, amount) * miningAllGamesResourceMultiplier(state)).toFixed(4));
+}
+
+export function miningMaterialTotal(state: GameState): number {
+  return MINING_MATERIAL_RESOURCE_IDS.reduce(
+    (total, resourceId) => total + Math.max(0, state.mining.materials[resourceId]),
+    0,
+  );
+}
+
+function spendMiningMaterials(state: GameState, rawCost: number): boolean {
+  let remaining = Math.max(0, Math.floor(rawCost));
+  if (miningMaterialTotal(state) < remaining) {
+    return false;
+  }
+
+  for (const resourceId of MINING_MATERIAL_RESOURCE_IDS) {
+    const available = Math.max(0, state.mining.materials[resourceId]);
+    const spent = Math.min(available, remaining);
+    state.mining.materials[resourceId] -= spent;
+    remaining -= spent;
+    if (remaining <= 0) {
+      return true;
+    }
+  }
+  return remaining <= 0;
+}
+
+export function miningResourcesPerSecond(state: GameState): number {
+  const interval = miningAutomationInterval(state.miningSkills.automation);
+  const activeBlocks = state.mining.blocks.filter((block) => block.layersRemaining > 0 && block.maxHealth > 0);
+  if (interval <= 0 || activeBlocks.length === 0) {
     return 0;
   }
-  return 1 + Math.floor(state.miningSkills.splashDamage / 3);
+
+  const averageHealth = activeBlocks.reduce((total, block) => total + block.maxHealth, 0) / activeBlocks.length;
+  const averageReward = activeBlocks.reduce((total, block) => total + miningBlockReward(state, block), 0) / activeBlocks.length;
+  const baseDamage = miningPickaxeDamage(state);
+  const expectedDamage = baseDamage * (1 + miningCriticalChance(state) * (miningCriticalMultiplier(state) - 1));
+  const clicksPerSecond = miningAutoClickerCapacity(state) / interval;
+  return (clicksPerSecond * expectedDamage * averageReward) / averageHealth;
+}
+
+export function miningAttackRangePixels(state: GameState): number {
+  return Math.min(
+    MINING_ATTACK_MAX_RANGE_PX,
+    MINING_ATTACK_BASE_RANGE_PX + Math.max(0, state.miningSkills.splashDamage) * MINING_ATTACK_RANGE_PER_LEVEL_PX,
+  );
+}
+
+export function miningBlockIdsWithinAttackRange(blockId: number, rangePixels: number): number[] {
+  const blockCount = MINING_GRID_COLUMNS * MINING_GRID_ROWS;
+  if (blockId < 0 || blockId >= blockCount) {
+    return [];
+  }
+
+  const originX = blockId % MINING_GRID_COLUMNS;
+  const originY = Math.floor(blockId / MINING_GRID_COLUMNS);
+  const rangeSquared = Math.max(0, rangePixels) ** 2;
+  return Array.from({ length: blockCount }, (_, candidateId) => candidateId).filter((candidateId) => {
+    const deltaX = (candidateId % MINING_GRID_COLUMNS) - originX;
+    const deltaY = Math.floor(candidateId / MINING_GRID_COLUMNS) - originY;
+    return (deltaX * MINING_BLOCK_NATIVE_SIZE_PX) ** 2 + (deltaY * MINING_BLOCK_NATIVE_SIZE_PX) ** 2 <= rangeSquared;
+  });
 }
 
 export function miningAutomationInterval(level: number): number {
   if (level <= 0) {
     return 0;
   }
-  return Math.max(0.55, 3.5 - (level - 1) * 0.16);
+  return Number(Math.max(0.1, 5 - (level - 1) * 0.2).toFixed(1));
 }
 
 export function runeTypingCurrentWord(state: GameState): string {
@@ -2104,7 +2461,7 @@ function typeRuneKey(state: GameState, rawKey: string): void {
 function completeRuneWord(state: GameState, completedWord: string): void {
   const typing = state.runeTyping;
   const wasPerfect = !typing.currentWordHadMistake;
-  const reward = runeTypingRewardPreview(state);
+  const reward = miniGameResourceReward(state, runeTypingRewardPreview(state));
 
   state.resources.runes += reward;
   typing.lastReward = reward;
@@ -2140,6 +2497,9 @@ function buySnakeSkill(state: GameState, skillId: SnakeSkillId): void {
   state.snakeSkills[skillId] += 1;
   if (skillId === 'gridSize') {
     resizeSnakeGrid(state);
+  }
+  if (skillId === 'foodCount') {
+    refillSnakeFoods(state);
   }
   if (skillId === 'automation') {
     state.snakeSkills.automationEnabled = true;
@@ -2195,11 +2555,10 @@ function buyMiningSkill(state: GameState, skillId: MiningSkillId): void {
   }
 
   const cost = miningSkillCost(state, skillId);
-  if (state.mana < cost) {
+  if (!spendMiningMaterials(state, cost)) {
     return;
   }
 
-  state.mana -= cost;
   state.miningSkills[skillId] += 1;
 }
 
@@ -2465,6 +2824,8 @@ function maxManaSkills(state: GameState): void {
 function maxSnakeSkills(state: GameState): void {
   state.snakeSkills.speed = DEBUG_SNAKE_SKILL_MAX_LEVELS.speed;
   state.snakeSkills.gridSize = DEBUG_SNAKE_SKILL_MAX_LEVELS.gridSize;
+  state.snakeSkills.foodCount = DEBUG_SNAKE_SKILL_MAX_LEVELS.foodCount;
+  state.snakeSkills.growthThreshold = DEBUG_SNAKE_SKILL_MAX_LEVELS.growthThreshold;
   state.snakeSkills.automation = DEBUG_SNAKE_SKILL_MAX_LEVELS.automation;
   state.snakeSkills.baseMultiplier = DEBUG_SNAKE_SKILL_MAX_LEVELS.baseMultiplier;
   state.snakeSkills.bonusFruit = DEBUG_SNAKE_SKILL_MAX_LEVELS.bonusFruit;
@@ -2479,8 +2840,23 @@ function maxSnakeSkills(state: GameState): void {
 
 function maxMiningSkills(state: GameState): void {
   state.miningSkills.pickaxeForce = DEBUG_MINING_SKILL_MAX_LEVELS.pickaxeForce;
+  state.miningSkills.pickaxeMultiplier = DEBUG_MINING_SKILL_MAX_LEVELS.pickaxeMultiplier;
   state.miningSkills.splashDamage = DEBUG_MINING_SKILL_MAX_LEVELS.splashDamage;
+  state.miningSkills.criticalChance = DEBUG_MINING_SKILL_MAX_LEVELS.criticalChance;
+  state.miningSkills.criticalMultiplier = DEBUG_MINING_SKILL_MAX_LEVELS.criticalMultiplier;
+  state.miningSkills.holdClick = DEBUG_MINING_SKILL_MAX_LEVELS.holdClick;
   state.miningSkills.automation = DEBUG_MINING_SKILL_MAX_LEVELS.automation;
+  state.miningSkills.multiAutoClicker = DEBUG_MINING_SKILL_MAX_LEVELS.multiAutoClicker;
+  state.miningSkills.resourceBonus = DEBUG_MINING_SKILL_MAX_LEVELS.resourceBonus;
+  state.miningSkills.resourceMultiplier = DEBUG_MINING_SKILL_MAX_LEVELS.resourceMultiplier;
+  state.miningSkills.holoChance = DEBUG_MINING_SKILL_MAX_LEVELS.holoChance;
+  state.miningSkills.rainbowChance = DEBUG_MINING_SKILL_MAX_LEVELS.rainbowChance;
+  state.miningSkills.negativeChance = DEBUG_MINING_SKILL_MAX_LEVELS.negativeChance;
+  state.miningSkills.bombChance = DEBUG_MINING_SKILL_MAX_LEVELS.bombChance;
+  state.miningSkills.bombRange = DEBUG_MINING_SKILL_MAX_LEVELS.bombRange;
+  state.miningSkills.bombPower = DEBUG_MINING_SKILL_MAX_LEVELS.bombPower;
+  state.miningSkills.meteorite = DEBUG_MINING_SKILL_MAX_LEVELS.meteorite;
+  state.miningSkills.meteoriteBonus = DEBUG_MINING_SKILL_MAX_LEVELS.meteoriteBonus;
   state.miningSkills.automationTimer = 0;
 }
 
@@ -2602,6 +2978,8 @@ function resetAllSkills(state: GameState): void {
 
   state.snakeSkills.speed = 0;
   state.snakeSkills.gridSize = 0;
+  state.snakeSkills.foodCount = 0;
+  state.snakeSkills.growthThreshold = 0;
   state.snakeSkills.automation = 0;
   state.snakeSkills.automationEnabled = false;
   state.snakeSkills.baseMultiplier = 0;
@@ -2610,7 +2988,9 @@ function resetAllSkills(state: GameState): void {
   state.snakeSkills.edgeWrap = 0;
   state.snake.gridSize = 8;
   state.snake.body = createStartingSnakeBody(state.snake.gridSize);
-  state.snake.food = randomSnakeFood(state.snake.body, state.snake.gridSize);
+  state.snake.foods = [];
+  state.snake.foodsEatenTowardGrowth = 0;
+  refillSnakeFoods(state);
   state.snake.bonusFood = null;
   state.snake.moveTimer = 0;
 
@@ -2649,8 +3029,18 @@ function resetAllSkills(state: GameState): void {
   state.defense.towerHealth = defenseMaxTowerHealth(state);
 
   state.miningSkills.pickaxeForce = 0;
+  state.miningSkills.pickaxeMultiplier = 0;
   state.miningSkills.splashDamage = 0;
+  state.miningSkills.criticalChance = 0;
+  state.miningSkills.criticalMultiplier = 0;
+  state.miningSkills.holdClick = 0;
   state.miningSkills.automation = 0;
+  state.miningSkills.multiAutoClicker = 0;
+  state.miningSkills.resourceBonus = 0;
+  state.miningSkills.resourceMultiplier = 0;
+  state.miningSkills.meteorite = 0;
+  state.miningSkills.meteoriteBonus = 0;
+  state.mining.meteoriteDamageBonus = 1;
   state.miningSkills.automationTimer = 0;
   state.miningSkills.autoDigCount = 0;
 
@@ -3070,12 +3460,18 @@ function resetTargetRun(state: GameState): void {
 
 function resetMiningRun(state: GameState): void {
   state.mining.terrainCycle = 1;
-  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle);
+  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+  state.mining.blockTypeXp = createInitialMiningBlockTypeXp();
   state.mining.totalMined = 0;
   state.mining.deepestLayer = 1;
   state.mining.lastReward = 0;
   state.mining.lastBrokenDepth = 0;
   state.mining.hitPulse = 0;
+  state.mining.frontierTimer = MINING_FRONTIER_TIME_LIMIT;
+  state.mining.frontierFailPulse = 0;
+  state.mining.meteoriteClicks = 0;
+  state.mining.meteoritePulse = 0;
+  state.mining.meteoriteImpactTimers = [];
   state.miningSkills.automationTimer = 0;
   state.miningSkills.autoDigCount = 0;
 }
@@ -3149,7 +3545,8 @@ function advanceSnake(state: GameState): void {
 
   snake.direction = direction;
   snake.moveFrame = ((snake.moveFrame ?? 0) + 1) % 2;
-  const ateFood = snake.food ? cellsMatch(nextHead, snake.food) : false;
+  const eatenFoodIndex = snake.foods.findIndex((food) => cellsMatch(nextHead, food));
+  const ateFood = eatenFoodIndex >= 0;
   const ateBonusFood = snake.bonusFood ? cellsMatch(nextHead, snake.bonusFood.cell) : false;
   snake.body = [nextHead, ...snake.body];
 
@@ -3158,6 +3555,13 @@ function advanceSnake(state: GameState): void {
     const bonusFood = ateBonusFood ? snake.bonusFood : null;
     const bonusKind = bonusFood ? snakeBonusFoodKind(bonusFood.type) : null;
     const givesScoreReward = ateFood || bonusKind === 'score';
+    snake.foodsEatenTowardGrowth += 1;
+    const shouldGrow = snake.foodsEatenTowardGrowth >= snakeGrowthFoodRequirement(state);
+    if (shouldGrow) {
+      snake.foodsEatenTowardGrowth = 0;
+    } else {
+      snake.body.pop();
+    }
 
     if (bonusFood && bonusKind === 'multiplier') {
       snake.comboSteps += snakeBonusFoodComboSteps(bonusFood.type);
@@ -3168,7 +3572,8 @@ function advanceSnake(state: GameState): void {
 
     if (givesScoreReward) {
       const rewardMultiplier = snakeBaseMultiplier(state) * snakeComboMultiplier(state);
-      const reward = Math.max(1, Math.round((1 + Math.floor(book.level * 0.4)) * rewardMultiplier));
+      const baseReward = Math.max(1, Math.round((1 + Math.floor(book.level * 0.4)) * rewardMultiplier));
+      const reward = miniGameResourceReward(state, baseReward);
       snake.score += reward;
       snake.best = Math.max(snake.best, snake.score);
       snake.lastReward = reward;
@@ -3177,7 +3582,8 @@ function advanceSnake(state: GameState): void {
     }
 
     if (ateFood) {
-      snake.food = randomSnakeFood(excludedSnakeFoodCells(state), snake.gridSize);
+      snake.foods.splice(eatenFoodIndex, 1);
+      refillSnakeFoods(state);
     }
     if (ateBonusFood) {
       snake.bonusFood = nextBonusFood(state);
@@ -3207,14 +3613,16 @@ function resetSnakeRun(state: GameState): void {
   const snake = state.snake;
   snake.score = 0;
   snake.comboSteps = 0;
+  snake.foodsEatenTowardGrowth = 0;
   snake.extraLivesUsed = 0;
   snake.invincibleTimer = 0;
   snake.gridSize = snakeGridSize(state);
   snake.body = createStartingSnakeBody(snake.gridSize);
   snake.direction = 'right';
   snake.nextDirection = 'right';
-  snake.food = randomSnakeFood(snake.body, snake.gridSize);
+  snake.foods = [];
   snake.bonusFood = nextBonusFood(state);
+  refillSnakeFoods(state);
   snake.moveTimer = 0;
   snake.moveFrame = 0;
   snake.running = true;
@@ -3297,19 +3705,28 @@ function snakeBonusFruitType(state: GameState): SnakeBonusFruitType | null {
 
 function excludedSnakeFoodCells(state: GameState): SnakeCell[] {
   const excluded = [...state.snake.body];
-  if (state.snake.food) {
-    excluded.push(state.snake.food);
-  }
+  excluded.push(...state.snake.foods);
   if (state.snake.bonusFood) {
     excluded.push(state.snake.bonusFood.cell);
   }
   return excluded;
 }
 
+function refillSnakeFoods(state: GameState): void {
+  const capacity = snakeFoodCapacity(state);
+  while (state.snake.foods.length < capacity) {
+    const food = randomSnakeFood(excludedSnakeFoodCells(state), state.snake.gridSize);
+    if (!food) {
+      return;
+    }
+    state.snake.foods.push(food);
+  }
+}
+
 function automatedSnakeDirection(state: GameState): SnakeDirection | null {
   const snake = state.snake;
   const head = snake.body[0];
-  const target = snake.bonusFood?.cell ?? snake.food;
+  const target = snake.bonusFood?.cell ?? snake.foods[0];
   if (!target) {
     return null;
   }
@@ -4348,7 +4765,7 @@ function collectDefenseEnemyIfDefeated(state: GameState, enemy: DefenseEnemy): v
     return;
   }
 
-  const reward = defenseEnemyReward(state, enemy.kind ?? 'slime');
+  const reward = miniGameResourceReward(state, defenseEnemyReward(state, enemy.kind ?? 'slime'));
   const defense = state.defense;
   enemy.state = 'dying';
   enemy.deathTimer =
@@ -4966,12 +5383,13 @@ function resolveBlackjackRound(state: GameState): void {
     blackjackEffectiveWagerLevel(state, 'wagerStreak'),
   );
   const totalGain = rawGain + streakBonus;
+  const resourceGain = miniGameResourceReward(state, totalGain);
   blackjack.winStreak = nextWinStreak;
 
-  blackjack.lastReward = totalGain;
-  if (totalGain > 0) {
-    applyBlackjackMoneyGain(state, totalGain);
-    state.mana += totalGain * (0.8 + state.books.blackjack.level * 0.15);
+  blackjack.lastReward = resourceGain;
+  if (resourceGain > 0) {
+    applyBlackjackMoneyGain(state, resourceGain);
+    state.mana += resourceGain * (0.8 + state.books.blackjack.level * 0.15);
   }
 
   if (split) {
@@ -5242,7 +5660,10 @@ function activateBlackjackBonus(state: GameState, bonusId: BlackjackSideBonusId)
     bonusId === 'twentyOneThree'
       ? Math.max(payoutLevel, blackjackUpgradeCellLevel(state, 'twentyOneThreeJackpot'))
       : payoutLevel;
-  const payout = Math.floor(cost * blackjackPayoutMultiplier(outcome.multiplier, jackpotLevel, bonusId, outcome.kind));
+  const payout = miniGameResourceReward(
+    state,
+    Math.floor(cost * blackjackPayoutMultiplier(outcome.multiplier, jackpotLevel, bonusId, outcome.kind)),
+  );
   const xp = blackjackSideBonusXp(outcome.xp, state.blackjack.debt > 0, xpLevel);
   bonus.xp += xp;
   bonus.lastOutcome = outcome.label;
@@ -5329,7 +5750,7 @@ function chooseHundredOption(state: GameState, optionId: HundredOptionId): void 
   hundred.lastReward = 0;
 
   if (nextTotal >= 100 && nextTotal <= targetMax) {
-    const reward = hundredReward(book.level, nextTotal);
+    const reward = miniGameResourceReward(state, hundredReward(book.level, nextTotal));
     hundred.attempts += 1;
     hundred.wins += 1;
     hundred.bestTotal = Math.max(hundred.bestTotal, nextTotal);
@@ -5439,7 +5860,7 @@ function damageTarget(state: GameState, target: TargetInstance): void {
     return;
   }
 
-  const reward = targetReward(state.books.targets.level, target.maxHealth);
+  const reward = miniGameResourceReward(state, targetReward(state.books.targets.level, target.maxHealth));
   state.targets.targets = state.targets.targets.filter((candidate) => candidate.id !== target.id);
   state.targets.score += reward;
   state.targets.best = Math.max(state.targets.best, state.targets.score);
@@ -5457,6 +5878,29 @@ function tickMining(state: GameState, deltaSeconds: number): void {
     return;
   }
 
+  // Normalize saves that advanced past the obsidian cap before the limit existed.
+  if (state.mining.terrainCycle > MINING_MAX_CYCLE) {
+    state.mining.terrainCycle = MINING_MAX_CYCLE;
+    state.mining.blocks = createInitialMiningBlocks(MINING_MAX_CYCLE, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+  }
+
+  // Land any falling meteorites whose fall has elapsed (runs before the early-returns below so the
+  // impact fires even when there is no automation / on the frontier wave).
+  tickMeteorites(state, deltaSeconds);
+
+  // Frontier time challenge: only the deepest reached wave is timed, and only while the
+  // player is actively looking at it. Running out drops back one wave (see failMiningFrontier).
+  if (
+    isBookPanelOpen(state, 'mine') &&
+    miningIsFrontierWave(state.mining.terrainCycle, state.mining.deepestLayer)
+  ) {
+    state.mining.frontierTimer = Math.max(0, state.mining.frontierTimer - Math.max(0, deltaSeconds));
+    if (state.mining.frontierTimer <= 0) {
+      failMiningFrontier(state);
+      return;
+    }
+  }
+
   const interval = miningAutomationInterval(skills.automation);
   if (interval <= 0) {
     skills.automationTimer = 0;
@@ -5470,14 +5914,24 @@ function tickMining(state: GameState, deltaSeconds: number): void {
 
   const digs = Math.max(1, Math.floor(skills.automationTimer / interval));
   skills.automationTimer %= interval;
+  state.mining.hitFeedback = [];
+  state.mining.breakFeedback = [];
+  state.mining.bombFeedback = [];
+  let appliedClicks = 0;
   for (let dig = 0; dig < digs; dig += 1) {
-    const target = weakestMiningBlock(state);
-    if (!target) {
+    const targets = weakestMiningBlocks(state, miningAutoClickerCapacity(state));
+    if (targets.length === 0) {
       return;
     }
-    applyMiningHit(state, target, miningPickaxeDamage(state));
+    for (const target of targets) {
+      const hit = miningDamageHitResult(state);
+      applyMiningHit(state, target, hit.amount, hit.critical);
+      appliedClicks += 1;
+    }
   }
-  skills.autoDigCount += digs;
+  skills.autoDigCount += appliedClicks;
+  // Auto-clicks count toward the meteorite too (each auto-clicker fire = one click).
+  addMiningClicks(state, appliedClicks);
 }
 
 function digMiningBlock(state: GameState, blockId: number): void {
@@ -5485,57 +5939,79 @@ function digMiningBlock(state: GameState, blockId: number): void {
     return;
   }
 
-  const block = state.mining.blocks.find((candidate) => candidate.id === blockId);
-  if (!block || block.layersRemaining <= 0) {
+  const target = state.mining.blocks.find((candidate) => candidate.id === blockId);
+  if (!target || target.layersRemaining <= 0) {
+    return;
+  }
+
+  digMiningArea(state, miningBlockIdsWithinAttackRange(blockId, miningAttackRangePixels(state)));
+}
+
+function digMiningArea(state: GameState, blockIds: number[]): void {
+  if (!state.books.mine.unlocked || !isBookPanelOpen(state, 'mine')) {
+    return;
+  }
+
+  const affectedBlockIds = new Set(blockIds.filter(Number.isFinite).map((blockId) => Math.floor(blockId)));
+  const affectedBlocks = state.mining.blocks.filter(
+    (block) => block.layersRemaining > 0 && affectedBlockIds.has(block.id),
+  );
+  if (affectedBlocks.length === 0) {
     return;
   }
 
   state.mining.lastReward = 0;
-  applyMiningHit(state, block, miningPickaxeDamage(state));
-
-  const splash = miningSplashDamage(state);
-  if (splash <= 0) {
-    return;
+  state.mining.hitFeedback = [];
+  state.mining.breakFeedback = [];
+  state.mining.bombFeedback = [];
+  const hit = miningDamageHitResult(state);
+  for (const block of affectedBlocks) {
+    applyMiningHit(state, block, hit.amount, hit.critical);
   }
+  // One manual click (or hover tick) counts as one click toward the meteorite, whatever its splash.
+  addMiningClicks(state, 1);
+}
 
-  for (const neighbor of miningNeighbors(state, blockId)) {
-    applyMiningHit(state, neighbor, splash);
+function weakestMiningBlocks(state: GameState, count: number): MiningBlock[] {
+  return state.mining.blocks
+    .filter((block) => block.layersRemaining > 0)
+    .sort((first, second) => {
+      const firstRatio = first.health / first.maxHealth;
+      const secondRatio = second.health / second.maxHealth;
+      if (firstRatio !== secondRatio) {
+        return firstRatio - secondRatio;
+      }
+      if (first.depth !== second.depth) {
+        return second.depth - first.depth;
+      }
+      // Tie-break the front-left edge first: nearest rows (higher row) before back rows,
+      // and within a row the left columns first, so it sweeps from the bottom-left corner.
+      const firstRow = Math.floor(first.id / MINING_GRID_COLUMNS);
+      const secondRow = Math.floor(second.id / MINING_GRID_COLUMNS);
+      if (firstRow !== secondRow) {
+        return secondRow - firstRow;
+      }
+      return (first.id % MINING_GRID_COLUMNS) - (second.id % MINING_GRID_COLUMNS);
+    })
+    .slice(0, Math.max(1, count));
+}
+
+// Block ids the auto-clicker is currently targeting (empty when automation is off),
+// so the UI can draw a clicking hand on each of them.
+export function miningAutoClickTargetIds(state: GameState): number[] {
+  if (state.miningSkills.automation <= 0) {
+    return [];
   }
+  return weakestMiningBlocks(state, miningAutoClickerCapacity(state)).map((block) => block.id);
 }
 
-function weakestMiningBlock(state: GameState): MiningBlock | null {
-  return (
-    state.mining.blocks
-      .filter((block) => block.layersRemaining > 0)
-      .sort((first, second) => {
-        const firstRatio = first.health / first.maxHealth;
-        const secondRatio = second.health / second.maxHealth;
-        return firstRatio - secondRatio || second.depth - first.depth || first.id - second.id;
-      })[0] ?? null
-  );
-}
-
-function miningNeighbors(state: GameState, blockId: number): MiningBlock[] {
-  const x = blockId % MINING_GRID_COLUMNS;
-  const y = Math.floor(blockId / MINING_GRID_COLUMNS);
-  const neighborIds = [
-    { x: x - 1, y },
-    { x: x + 1, y },
-    { x, y: y - 1 },
-    { x, y: y + 1 },
-  ]
-    .filter((cell) => cell.x >= 0 && cell.x < MINING_GRID_COLUMNS && cell.y >= 0 && cell.y < MINING_GRID_ROWS)
-    .map((cell) => cell.y * MINING_GRID_COLUMNS + cell.x);
-
-  return state.mining.blocks.filter((block) => neighborIds.includes(block.id));
-}
-
-function applyMiningHit(state: GameState, block: MiningBlock, damage: number): void {
+function applyMiningHit(state: GameState, block: MiningBlock, damage: number, critical = false): void {
   if (block.layersRemaining <= 0) {
     return;
   }
   state.mining.hitPulse += 1;
   block.lastHit = state.mining.hitPulse;
+  state.mining.hitFeedback.push({ blockId: block.id, amount: damage, critical });
   block.health -= damage;
   if (block.health > 0) {
     return;
@@ -5544,18 +6020,159 @@ function applyMiningHit(state: GameState, block: MiningBlock, damage: number): v
   breakMiningBlock(state, block);
 }
 
+// True while a bomb blast is resolving, so nested breaks defer the wave-clear check to the
+// top-level break that started the chain (avoids regenerating the terrain mid-blast).
+let miningDetonating = false;
+
+// Apply blast damage to a block, breaking AT MOST `maxLayers` of its layers (so a bomb never
+// wipes a whole column). Within that cap it cascades: enough damage breaks a layer and rolls the
+// remainder onto the next. A neighbour bomb whose layer breaks here detonates via breakMiningBlock.
+function applyBombBlast(state: GameState, block: MiningBlock, damage: number, maxLayers: number): void {
+  let remaining = damage;
+  let broken = 0;
+  while (block.layersRemaining > 0 && broken < maxLayers && remaining >= block.health) {
+    remaining -= block.health;
+    block.health = 0;
+    breakMiningBlock(state, block);
+    broken += 1;
+  }
+  if (block.layersRemaining > 0 && broken < maxLayers && remaining > 0) {
+    block.health = Math.max(1, block.health - remaining);
+  }
+}
+
+function detonateBomb(state: GameState, block: MiningBlock): void {
+  const wasDetonating = miningDetonating;
+  miningDetonating = true;
+  state.mining.bombPulse += 1;
+  state.mining.bombFeedback.push(block.id);
+
+  const damage = miningBombBlastDamage(state);
+  const radius = miningBombRange(state);
+  const col = block.id % MINING_GRID_COLUMNS;
+  const row = Math.floor(block.id / MINING_GRID_COLUMNS);
+  for (let dr = -radius; dr <= radius; dr += 1) {
+    for (let dc = -radius; dc <= radius; dc += 1) {
+      const dist = Math.abs(dr) + Math.abs(dc);
+      if (dist > radius) {
+        continue;
+      }
+      const nr = row + dr;
+      const nc = col + dc;
+      if (nr < 0 || nr >= MINING_GRID_ROWS || nc < 0 || nc >= MINING_GRID_COLUMNS) {
+        continue;
+      }
+      const cell = state.mining.blocks[nr * MINING_GRID_COLUMNS + nc];
+      if (!cell || cell.layersRemaining <= 0) {
+        continue;
+      }
+      // Stepped octahedron crater: a cell at Manhattan distance d loses (radius + 1 - d) layers —
+      // deepest at the centre, one layer thick at the rim. The bomb's own top layer was already
+      // broken by the triggering hit, so its column only digs `radius` more.
+      const maxLayers = dist === 0 ? radius : radius + 1 - dist;
+      applyBombBlast(state, cell, damage, maxLayers);
+    }
+  }
+
+  miningDetonating = wasDetonating;
+}
+
+// Launch a meteorite: bump the pulse so the renderer starts the falling ball, and queue its impact
+// for when the ball lands. The damage itself is deferred (see impactMeteorite) so it strikes at the
+// end of the fall animation, together with the impact particles — not the instant it is launched.
+function launchMeteorite(state: GameState): void {
+  state.mining.meteoritePulse += 1;
+  state.mining.meteoriteImpactTimers.push(MINING_METEORITE_FALL_SECONDS);
+  // Each launch permanently ramps damage while the meteoriteBonus skill is owned.
+  if (state.miningSkills.meteoriteBonus > 0) {
+    state.mining.meteoriteDamageBonus = miningMeteoriteDamageBonus(state) * miningMeteoriteBonusFactor(state);
+  }
+}
+
+// A meteorite lands on the middle and damages every block on the board at once. Uses the same blast
+// helper as a bomb (so it cascades through layers) with the whole board as its area, deferring the
+// wave-clear check until every block has been hit.
+function impactMeteorite(state: GameState): void {
+  const wasDetonating = miningDetonating;
+  miningDetonating = true;
+
+  const damage = miningMeteoriteDamage(state);
+  for (const block of state.mining.blocks) {
+    if (block.layersRemaining > 0) {
+      applyBombBlast(state, block, damage, MINING_METEORITE_MAX_LAYERS);
+    }
+  }
+
+  miningDetonating = wasDetonating;
+  // Top-level impact: if the whole wave is now clear, advance / refill it once.
+  if (!wasDetonating && state.mining.blocks.every((candidate) => candidate.layersRemaining <= 0)) {
+    const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+    if (state.mining.terrainCycle >= maxReached) {
+      advanceMiningTerrainCycle(state);
+    } else {
+      state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+    }
+  }
+}
+
+// Advance every falling meteorite's timer; each one that reaches 0 lands and deals its damage.
+function tickMeteorites(state: GameState, deltaSeconds: number): void {
+  if (state.mining.meteoriteImpactTimers.length === 0) {
+    return;
+  }
+  const step = Math.max(0, deltaSeconds);
+  const remaining: number[] = [];
+  for (const timer of state.mining.meteoriteImpactTimers) {
+    if (timer - step <= 0) {
+      impactMeteorite(state);
+    } else {
+      remaining.push(timer - step);
+    }
+  }
+  state.mining.meteoriteImpactTimers = remaining;
+}
+
+// Count clicks (manual or auto) toward the next meteorite, firing one each time the threshold is met.
+function addMiningClicks(state: GameState, count: number): void {
+  if (!Number.isFinite(count) || count <= 0) {
+    return;
+  }
+  state.mining.meteoriteClicks += count;
+  let guard = 0;
+  let threshold = miningMeteoriteClickThreshold(state);
+  while (state.mining.meteoriteClicks >= threshold && guard < 100) {
+    state.mining.meteoriteClicks -= threshold;
+    launchMeteorite(state);
+    threshold = miningMeteoriteClickThreshold(state);
+    guard += 1;
+  }
+}
+
 function breakMiningBlock(state: GameState, block: MiningBlock): void {
   const brokenDepth = block.depth;
   const reward = miningBlockReward(state, block);
   const material = miningBlockMaterialForDepth(brokenDepth);
+  const spriteIndex = miningBlockSpriteTierForDepth(brokenDepth).spriteIndex;
   state.mining.materials[material.resourceId] += reward;
+  state.mining.blockTypeXp[spriteIndex - 1] = Math.min(
+    MINING_MATERIAL_MAX_XP,
+    (state.mining.blockTypeXp[spriteIndex - 1] ?? 0) + 1,
+  );
   state.mining.totalMined += 1;
   state.mining.lastReward += reward;
   state.mining.lastBrokenDepth = brokenDepth;
+  // Record where this reward came from so the HUD can float it above the block.
+  state.mining.breakFeedback.push({ blockId: block.id, reward });
 
-  block.layersRemaining = Math.max(0, block.layersRemaining - 1);
   state.mining.deepestLayer = Math.max(state.mining.deepestLayer, brokenDepth);
 
+  // A bomb goes off on its first break: it becomes a normal block (spent) and blasts the area.
+  const detonating = block.special === 'bomb';
+  if (detonating) {
+    block.special = 'none';
+  }
+
+  block.layersRemaining = Math.max(0, block.layersRemaining - 1);
   if (block.layersRemaining > 0) {
     const nextDepth = brokenDepth + 1;
     const nextMaxHealth = miningBlockMaxHealth(nextDepth);
@@ -5564,27 +6181,122 @@ function breakMiningBlock(state: GameState, block: MiningBlock): void {
     block.material = nextMaterial.id;
     block.maxHealth = nextMaxHealth;
     block.health = nextMaxHealth;
+    // Roll the holo rarity per layer, not per whole column.
+    block.holoTier = rollMiningHoloTier(miningHoloChance(state), miningHoloTierChances(state));
     state.mining.deepestLayer = Math.max(state.mining.deepestLayer, nextDepth);
+    if (!detonating) {
+      return;
+    }
+  } else {
+    block.health = 0;
+    block.maxHealth = 0;
+    block.holoTier = 0;
+  }
+
+  if (detonating) {
+    detonateBomb(state, block);
+  }
+
+  // A nested blast defers the wave-clear check to the top-level break that started it.
+  if (miningDetonating) {
     return;
   }
 
-  block.health = 0;
-  block.maxHealth = 0;
-
   if (state.mining.blocks.every((candidate) => candidate.layersRemaining <= 0)) {
-    advanceMiningTerrainCycle(state);
+    // Only advance when clearing the frontier wave; revisiting an earlier wave
+    // refills it so the player keeps farming that terrain instead of chaining forward.
+    const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+    if (state.mining.terrainCycle >= maxReached) {
+      advanceMiningTerrainCycle(state);
+    } else {
+      state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+    }
   }
 }
 
 function advanceMiningTerrainCycle(state: GameState): void {
+  // Obsidian (cycle MINING_MAX_CYCLE) is the last level: clearing it just refills the same
+  // wave to keep farming, rather than advancing to a non-existent deeper level.
+  if (state.mining.terrainCycle >= MINING_MAX_CYCLE) {
+    state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+    state.mining.frontierTimer = MINING_FRONTIER_TIME_LIMIT;
+    return;
+  }
   state.mining.terrainCycle += 1;
   const startDepth = (state.mining.terrainCycle - 1) * MINING_TERRAIN_LAYER_COUNT + 1;
-  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle);
+  state.mining.blocks = createInitialMiningBlocks(state.mining.terrainCycle, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
   state.mining.deepestLayer = Math.max(state.mining.deepestLayer, startDepth);
+  // The freshly reached wave is the new frontier: restart its time challenge.
+  state.mining.frontierTimer = MINING_FRONTIER_TIME_LIMIT;
+}
+
+// Frontier timer ran out: drop back one wave (keeping the frontier unlocked to retry).
+function failMiningFrontier(state: GameState): void {
+  const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+  const target = Math.max(1, maxReached - 1);
+  state.mining.terrainCycle = target;
+  state.mining.blocks = createInitialMiningBlocks(target, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+  // Keep deepestLayer intact so the frontier stays unlocked and re-selectable.
+  state.mining.frontierTimer = MINING_FRONTIER_TIME_LIMIT;
+  state.mining.frontierFailPulse += 1;
+  state.mining.lastReward = 0;
+  state.mining.lastBrokenDepth = 0;
+  state.mining.hitPulse += 1;
+}
+
+// Jump back to an already-reached terrain cycle to re-mine its material.
+function selectMiningLevel(state: GameState, cycle: number): void {
+  if (!state.books.mine.unlocked || !isBookPanelOpen(state, 'mine')) {
+    return;
+  }
+
+  const maxReached = miningMaxReachedCycle(state.mining.deepestLayer);
+  const target = Math.max(1, Math.min(Math.floor(cycle), maxReached));
+  if (!Number.isFinite(target) || target === state.mining.terrainCycle) {
+    return;
+  }
+
+  state.mining.terrainCycle = target;
+  state.mining.blocks = createInitialMiningBlocks(target, miningHoloChance(state), miningHoloTierChances(state), miningBombChance(state));
+  // Re-arm the frontier timer; it only actually counts down while on the frontier wave.
+  state.mining.frontierTimer = MINING_FRONTIER_TIME_LIMIT;
+  state.mining.lastReward = 0;
+  state.mining.lastBrokenDepth = 0;
+  state.mining.hitPulse += 1;
+}
+
+export function miningDepthReward(state: GameState, depth: number, holoTier = 0): number {
+  const baseReward = 1 + Math.floor(depth * 0.45) + Math.floor(state.books.mine.level * 0.3);
+  return miniGameResourceReward(
+    state,
+    Number(
+      (
+        (baseReward + Math.max(0, state.miningSkills.resourceBonus)) *
+        miningResourceMultiplier(state) *
+        miningMineResourceMultiplier(state) *
+        miningHoloMultiplier(holoTier)
+      ).toFixed(4),
+    ),
+  );
 }
 
 function miningBlockReward(state: GameState, block: MiningBlock): number {
-  return 1 + Math.floor(block.depth * 0.45) + Math.floor(state.books.mine.level * 0.3);
+  return miningDepthReward(state, block.depth, block.holoTier);
+}
+
+// Selector-tooltip stats for a terrain cycle, taken at its entry (top) layer.
+export function miningLevelPreview(
+  state: GameState,
+  cycle: number,
+): { reward: number; health: number; level: number; maxLevel: number } {
+  const depth = miningLevelStartDepth(cycle);
+  const spriteIndex = miningLevelSpriteTier(cycle).spriteIndex;
+  return {
+    reward: miningDepthReward(state, depth, 0),
+    health: miningBlockMaxHealth(depth),
+    level: miningBlockTypeLevel(state, spriteIndex),
+    maxLevel: MINING_MATERIAL_MAX_LEVEL,
+  };
 }
 
 function exchangeMiningMaterials(state: GameState): void {
@@ -5634,7 +6346,7 @@ function trainSlime(state: GameState, commandId: SlimeTrainerCommandId): void {
   }
 
   const xp = slimeTrainerXpReward(trainer.enemy, trainer.level);
-  const reward = slimeTrainerResourceReward(trainer.enemy, trainer.level);
+  const reward = miniGameResourceReward(state, slimeTrainerResourceReward(trainer.enemy, trainer.level));
   trainer.victories += 1;
   trainer.xp += xp;
   trainer.lastXp = xp;

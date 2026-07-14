@@ -100,11 +100,16 @@ export interface ManaCrystalState {
   lastXpOrbSpawned: boolean;
   holdClickActive: boolean;
   holdClickTimer: number;
+  // True while a gem-discovery animation plays: harvesting is paused so the player
+  // can't damage the next gem until it finishes. UI-driven, never persisted.
+  revealAnimating: boolean;
 }
 
 export interface SnakeSkillsState {
   speed: number;
   gridSize: number;
+  foodCount: number;
+  growthThreshold: number;
   automation: number;
   automationEnabled: boolean;
   baseMultiplier: number;
@@ -118,13 +123,14 @@ export interface SnakeState {
   score: number;
   best: number;
   comboSteps: number;
+  foodsEatenTowardGrowth: number;
   extraLivesUsed: number;
   invincibleTimer: number;
   gridSize: number;
   body: SnakeCell[];
   direction: SnakeDirection;
   nextDirection: SnakeDirection;
-  food: SnakeCell | null;
+  foods: SnakeCell[];
   bonusFood: SnakeBonusFood | null;
   moveTimer: number;
   moveFrame: number;
@@ -401,6 +407,9 @@ export interface TargetState {
   targets: TargetInstance[];
 }
 
+// Special block kinds (rolled at generation). 'bomb' explodes on the first break.
+export type MiningSpecialKind = 'none' | 'bomb';
+
 export interface MiningBlock {
   id: number;
   depth: number;
@@ -409,12 +418,43 @@ export interface MiningBlock {
   health: number;
   maxHealth: number;
   lastHit: number;
+  // Holographic rarity: 0 = normal, 1 = Holo, 2 = Arc-en-ciel, 3 = Négatif (see MINING_HOLO_TIERS).
+  holoTier: number;
+  special: MiningSpecialKind;
+}
+
+export interface MiningHitFeedback {
+  blockId: number;
+  amount: number;
+  critical: boolean;
+}
+
+export interface MiningBreakFeedback {
+  blockId: number;
+  reward: number;
 }
 
 export interface MiningSkillsState {
   pickaxeForce: number;
+  pickaxeMultiplier: number;
   splashDamage: number;
+  criticalChance: number;
+  criticalMultiplier: number;
+  holdClick: number;
   automation: number;
+  multiAutoClicker: number;
+  resourceBonus: number;
+  resourceMultiplier: number;
+  holoChance: number;
+  rainbowChance: number;
+  negativeChance: number;
+  bombChance: number;
+  bombRange: number;
+  bombPower: number;
+  // Shaves clicks off the meteorite threshold (50 per level, down to MINING_METEORITE_MIN_CLICKS).
+  meteorite: number;
+  // Each launched meteorite permanently multiplies damage by (1 + level * 0.01); max level 5.
+  meteoriteBonus: number;
   automationTimer: number;
   autoDigCount: number;
 }
@@ -422,12 +462,31 @@ export interface MiningSkillsState {
 export interface MiningState {
   blocks: MiningBlock[];
   materials: Record<MiningMaterialResourceId, number>;
+  blockTypeXp: number[];
   terrainCycle: number;
   totalMined: number;
   deepestLayer: number;
   lastReward: number;
   lastBrokenDepth: number;
   hitPulse: number;
+  hitFeedback: MiningHitFeedback[];
+  breakFeedback: MiningBreakFeedback[];
+  // Countdown (seconds) for the frontier-wave time challenge; re-armed on entering the frontier.
+  frontierTimer: number;
+  // Bumped when the frontier timer runs out, so the HUD can flash a "time up" cue.
+  frontierFailPulse: number;
+  // Bumped whenever a bomb detonates; bombFeedback holds the detonating block ids (for FX).
+  bombPulse: number;
+  bombFeedback: number[];
+  // Clicks accumulated toward the next meteorite (manual + auto); meteoritePulse bumps on launch
+  // (so the renderer starts the falling ball), and each entry in meteoriteImpactTimers is a meteorite
+  // still falling — its damage lands when the timer reaches 0.
+  meteoriteClicks: number;
+  meteoritePulse: number;
+  meteoriteImpactTimers: number[];
+  // Permanent damage multiplier that grows with every meteorite launched (see the meteoriteBonus
+  // skill). Starts at 1 and is never reset on a run reset — only a full skills reset clears it.
+  meteoriteDamageBonus: number;
 }
 
 export type SlimeTrainerOutcome = 'idle' | 'hit' | 'enemyHit' | 'locked' | 'waitingEnemy' | 'victory' | 'levelUp' | 'slimeDown';
@@ -518,10 +577,12 @@ export interface GameState {
 
 export const SNAKE_BASE_GRID_SIZE = 4;
 export const SNAKE_MAX_GRID_SIZE = 9;
-export const MINING_GRID_COLUMNS = 6;
-export const MINING_GRID_ROWS = 6;
+export const MINING_GRID_COLUMNS = 5;
+export const MINING_GRID_ROWS = 5;
 export const MINING_TERRAIN_LAYER_COUNT = 5;
 export const MINING_SPRITE_LAYER_SIZE = 5;
+// The deepest reached wave (the frontier) must be cleared within this time limit to advance.
+export const MINING_FRONTIER_TIME_LIMIT = 30;
 
 export type MiningBlockMaterialId =
   | 'dirt'
@@ -623,6 +684,9 @@ export const MINING_BLOCK_SPRITE_TIERS: MiningBlockSpriteTier[] = [
   { spriteIndex: 20, materialId: 'obsidian', assetPath: '/assets/Block%20terre/20%20block%20obsidian.jpg' },
 ];
 
+// Highest selectable level: one cycle per sprite tier, capped so the last level is obsidian.
+export const MINING_MAX_CYCLE = MINING_BLOCK_SPRITE_TIERS.length;
+
 export function snakeGridSizeForLevel(level: number): number {
   return Math.min(SNAKE_MAX_GRID_SIZE, SNAKE_BASE_GRID_SIZE + level);
 }
@@ -680,8 +744,35 @@ export function miningBlockMaterialById(materialId: MiningBlockMaterialId): Mini
   return MINING_BLOCK_MATERIALS[materialId] ?? MINING_BLOCK_MATERIALS.dirt;
 }
 
+// The shallowest layer of a terrain cycle. Each cycle spans exactly one sprite tier.
+export function miningLevelStartDepth(cycle: number): number {
+  return (Math.max(1, Math.floor(cycle)) - 1) * MINING_TERRAIN_LAYER_COUNT + 1;
+}
+
+// Deepest cycle the player has unlocked, derived from the deepest broken layer (capped at obsidian).
+export function miningMaxReachedCycle(deepestLayer: number): number {
+  return Math.min(
+    MINING_MAX_CYCLE,
+    Math.floor((Math.max(1, Math.floor(deepestLayer)) - 1) / MINING_TERRAIN_LAYER_COUNT) + 1,
+  );
+}
+
+// True when the current wave is the frontier (deepest reached), i.e. the timed challenge wave.
+export function miningIsFrontierWave(terrainCycle: number, deepestLayer: number): boolean {
+  return Math.floor(terrainCycle) >= miningMaxReachedCycle(deepestLayer);
+}
+
+// Representative block face (material + sprite asset) shown for a terrain cycle.
+export function miningLevelSpriteTier(cycle: number): MiningBlockDepthTier {
+  return miningBlockSpriteTierForDepth(miningLevelStartDepth(cycle));
+}
+
 export function createInitialMiningMaterials(): Record<MiningMaterialResourceId, number> {
   return Object.fromEntries(MINING_MATERIAL_RESOURCE_IDS.map((resourceId) => [resourceId, 0])) as Record<MiningMaterialResourceId, number>;
+}
+
+export function createInitialMiningBlockTypeXp(): number[] {
+  return Array.from({ length: MINING_BLOCK_SPRITE_TIERS.length }, () => 0);
 }
 
 export function miningMaterialExchangeValue(resourceId: MiningMaterialResourceId): number {
@@ -705,11 +796,75 @@ export function miningBlockCrackOverlayForDamage(
   return { row, column };
 }
 
-export function createInitialMiningBlocks(terrainCycle = 1): MiningBlock[] {
+export interface MiningHoloTierDef {
+  tier: number;
+  name: string;
+  multiplier: number;
+}
+
+// Holographic rarity ladder: rarer tiers pay out much more. Tier index 0 = tier 1 (Holo).
+export const MINING_HOLO_TIERS: MiningHoloTierDef[] = [
+  { tier: 1, name: 'Holo', multiplier: 5 },
+  { tier: 2, name: 'Arc-en-ciel', multiplier: 25 },
+  { tier: 3, name: 'Négatif', multiplier: 100 },
+];
+// Chance that a holo block bumps up one rarity tier (cascading, so higher tiers are rarer).
+export const MINING_HOLO_UPGRADE_CHANCE = 0.15;
+
+// Bomb spawn chance: base at skill level 0, capped by the bomb-chance skill.
+export const MINING_BOMB_CHANCE_BASE = 0.01;
+export const MINING_BOMB_CHANCE_MAX = 0.05;
+// Base blast damage multiplier (x the player's click damage) before the bomb-power skill.
+export const MINING_BOMB_BASE_POWER = 5;
+
+// Meteorite: every N clicks (manual + auto) a meteorite falls on the centre and damages every block.
+// The meteorite skill shaves 50 clicks off that threshold per level, down to a 250-click floor.
+export const MINING_METEORITE_BASE_CLICKS = 1000;
+export const MINING_METEORITE_MIN_CLICKS = 250;
+export const MINING_METEORITE_CLICKS_PER_LEVEL = 50;
+// Damage the meteorite deals to each block (x the player's click damage), capped to this many layers.
+export const MINING_METEORITE_DAMAGE_MULTIPLIER = 50;
+export const MINING_METEORITE_MAX_LAYERS = MINING_TERRAIN_LAYER_COUNT;
+// Seconds the meteorite spends falling before it lands — the damage is deferred this long so it hits
+// exactly when the ball impacts (must match the fall animation length in the renderer).
+export const MINING_METEORITE_FALL_SECONDS = 3;
+
+// Reward multiplier for a block's holo tier (1 for a normal block).
+export function miningHoloMultiplier(holoTier: number): number {
+  const def = MINING_HOLO_TIERS[Math.floor(holoTier) - 1];
+  return def ? def.multiplier : 1;
+}
+
+// Roll a block's holo rarity: first the base holo chance, then cascading tier upgrades.
+// tierUpgradeChances[i] is the chance to reach tier i+2 (index 0 = holo->arc-en-ciel);
+// unspecified entries fall back to MINING_HOLO_UPGRADE_CHANCE.
+export function rollMiningHoloTier(
+  holoChance: number,
+  tierUpgradeChances: number[] = [],
+  random: () => number = Math.random,
+): number {
+  if (holoChance <= 0 || random() >= holoChance) {
+    return 0;
+  }
+  let tier = 1;
+  while (tier < MINING_HOLO_TIERS.length && random() < (tierUpgradeChances[tier - 1] ?? MINING_HOLO_UPGRADE_CHANCE)) {
+    tier += 1;
+  }
+  return tier;
+}
+
+export function createInitialMiningBlocks(
+  terrainCycle = 1,
+  holoChance = 0,
+  tierChances: number[] = [],
+  bombChance = MINING_BOMB_CHANCE_BASE,
+): MiningBlock[] {
   const startDepth = Math.max(1, Math.floor(terrainCycle - 1) * MINING_TERRAIN_LAYER_COUNT + 1);
   return Array.from({ length: MINING_GRID_COLUMNS * MINING_GRID_ROWS }, (_, id) => {
     const maxHealth = miningBlockMaxHealth(startDepth);
     const material = miningBlockMaterialForDepth(startDepth);
+    // A block is either a bomb or a (possibly holo) normal block — never both.
+    const isBomb = Math.random() < bombChance;
     return {
       id,
       depth: startDepth,
@@ -718,6 +873,8 @@ export function createInitialMiningBlocks(terrainCycle = 1): MiningBlock[] {
       health: maxHealth,
       maxHealth,
       lastHit: 0,
+      holoTier: isBomb ? 0 : rollMiningHoloTier(holoChance, tierChances),
+      special: isBomb ? 'bomb' : 'none',
     };
   });
 }
@@ -725,6 +882,7 @@ export function createInitialMiningBlocks(terrainCycle = 1): MiningBlock[] {
 export function createInitialState(): GameState {
   const snakeGridSize = snakeGridSizeForLevel(0);
   const snakeBody = createStartingSnakeBody(snakeGridSize);
+  const initialSnakeFood = randomSnakeFood(snakeBody, snakeGridSize);
 
   return {
     mana: 0,
@@ -887,10 +1045,13 @@ export function createInitialState(): GameState {
       lastXpOrbSpawned: false,
       holdClickActive: false,
       holdClickTimer: 0,
+      revealAnimating: false,
     },
     snakeSkills: {
       speed: 0,
       gridSize: 0,
+      foodCount: 0,
+      growthThreshold: 0,
       automation: 0,
       automationEnabled: true,
       baseMultiplier: 0,
@@ -903,13 +1064,14 @@ export function createInitialState(): GameState {
       score: 0,
       best: 0,
       comboSteps: 0,
+      foodsEatenTowardGrowth: 0,
       extraLivesUsed: 0,
       invincibleTimer: 0,
       gridSize: snakeGridSize,
       body: snakeBody,
       direction: 'right',
       nextDirection: 'right',
-      food: randomSnakeFood(snakeBody, snakeGridSize),
+      foods: initialSnakeFood ? [initialSnakeFood] : [],
       bonusFood: null,
       moveTimer: 0,
       moveFrame: 0,
@@ -1087,8 +1249,23 @@ export function createInitialState(): GameState {
     },
     miningSkills: {
       pickaxeForce: 0,
+      pickaxeMultiplier: 0,
       splashDamage: 0,
+      criticalChance: 0,
+      criticalMultiplier: 0,
+      holdClick: 0,
       automation: 0,
+      multiAutoClicker: 0,
+      resourceBonus: 0,
+      resourceMultiplier: 0,
+      holoChance: 0,
+      rainbowChance: 0,
+      negativeChance: 0,
+      bombChance: 0,
+      bombRange: 0,
+      bombPower: 0,
+      meteorite: 0,
+      meteoriteBonus: 0,
       automationTimer: 0,
       autoDigCount: 0,
     },
@@ -1106,12 +1283,23 @@ export function createInitialState(): GameState {
     mining: {
       blocks: createInitialMiningBlocks(),
       materials: createInitialMiningMaterials(),
+      blockTypeXp: createInitialMiningBlockTypeXp(),
       terrainCycle: 1,
       totalMined: 0,
       deepestLayer: 1,
       lastReward: 0,
       lastBrokenDepth: 0,
       hitPulse: 0,
+      hitFeedback: [],
+      breakFeedback: [],
+      frontierTimer: MINING_FRONTIER_TIME_LIMIT,
+      frontierFailPulse: 0,
+      bombPulse: 0,
+      bombFeedback: [],
+      meteoriteClicks: 0,
+      meteoritePulse: 0,
+      meteoriteImpactTimers: [],
+      meteoriteDamageBonus: 1,
     },
     slimeTrainer: {
       level: 1,

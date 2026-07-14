@@ -99,7 +99,18 @@ for (const skillId of defenseSkillIds) {
   assert.equal(state.defenseSkills[skillId], defenseSkillMaxLevel(skillId));
 }
 
-const miningSkillIds: MiningSkillId[] = ['pickaxeForce', 'splashDamage', 'automation'];
+const miningSkillIds: MiningSkillId[] = [
+  'pickaxeForce',
+  'pickaxeMultiplier',
+  'splashDamage',
+  'criticalChance',
+  'criticalMultiplier',
+  'holdClick',
+  'automation',
+  'multiAutoClicker',
+  'resourceBonus',
+  'resourceMultiplier',
+];
 for (const skillId of miningSkillIds) {
   assert.equal(state.miningSkills[skillId], miningSkillMaxLevel(skillId));
 }

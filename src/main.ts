@@ -344,6 +344,12 @@ function installDebugManaSkillHotkeys(): void {
       gameStore.dispatch({ type: 'maxAllSkills' });
       return;
     }
+    if (event.key === ')') {
+      // Debug: drop a meteorite on demand for testing.
+      event.preventDefault();
+      gameStore.dispatch({ type: 'debugTriggerMeteorite' });
+      return;
+    }
     if (key === 'j') {
       event.preventDefault();
       gameStore.dispatch({ type: 'setDefenseDebugTowerHealth', enabled: true });
