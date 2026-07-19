@@ -10,12 +10,12 @@ import {
   defenseTowerRange,
   miningSkillMaxLevel,
   snakeSkillMaxLevel,
-  targetSkillMaxLevel,
+  runnerUpgradeMaxLevel,
   type DefenseSkillId,
   type ManaSkillId,
   type MiningSkillId,
   type SnakeSkillId,
-  type TargetSkillId,
+  type RunnerUpgradeId,
 } from '../src/game/simulation/actions.ts';
 import { books } from '../src/game/content/books.ts';
 import { createInitialState } from '../src/game/simulation/state.ts';
@@ -68,9 +68,9 @@ for (const skillId of snakeSkillIds) {
 }
 assert.equal(state.snakeSkills.automationEnabled, true);
 
-const targetSkillIds: TargetSkillId[] = ['spawnSpeed', 'targetCount', 'damage', 'automation'];
-for (const skillId of targetSkillIds) {
-  assert.equal(state.targetSkills[skillId], targetSkillMaxLevel(skillId));
+const runnerUpgradeIds: RunnerUpgradeId[] = ['baseDamage', 'startUnits', 'baseFireRate', 'gateQuality', 'coinGain'];
+for (const upgradeId of runnerUpgradeIds) {
+  assert.equal(state.runnerMeta.upgrades[upgradeId], runnerUpgradeMaxLevel(upgradeId));
 }
 
 const defenseSkillIds: DefenseSkillId[] = [
@@ -140,6 +140,7 @@ assert.equal(debugResourceState.resources.fragments, 100_000_000);
 assert.equal(debugResourceState.resources.marks, 100_000_000);
 assert.equal(debugResourceState.resources.minerals, 100_000_000);
 assert.equal(debugResourceState.resources.gels, 100_000_000);
+assert.equal(debugResourceState.runnerMeta.coins, 100_000_000);
 for (const amount of Object.values(debugResourceState.mining.materials)) {
   assert.equal(amount, 100_000_000);
 }
@@ -164,8 +165,8 @@ for (const skillId of snakeSkillIds) {
 assert.equal(state.snakeSkills.automationEnabled, false);
 assert.equal(state.snake.gridSize, 8);
 
-for (const skillId of targetSkillIds) {
-  assert.equal(state.targetSkills[skillId], 0);
+for (const upgradeId of runnerUpgradeIds) {
+  assert.equal(state.runnerMeta.upgrades[upgradeId], 0);
 }
 
 for (const skillId of defenseSkillIds) {

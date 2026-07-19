@@ -1,0 +1,12 @@
+export const RUNNER_TERRAIN_LOOP_LENGTH = 100;
+export const RUNNER_TERRAIN_SEGMENT_LENGTH = 16;
+export const RUNNER_TERRAIN_SEGMENT_COUNT = 7;
+
+const RUNNER_TERRAIN_SEGMENT_SPACING = RUNNER_TERRAIN_LOOP_LENGTH / RUNNER_TERRAIN_SEGMENT_COUNT;
+
+export function runnerTerrainSegmentPositions(): number[] {
+  return Array.from(
+    { length: RUNNER_TERRAIN_SEGMENT_COUNT },
+    (_, index) => index * RUNNER_TERRAIN_SEGMENT_SPACING - RUNNER_TERRAIN_SEGMENT_SPACING,
+  );
+}

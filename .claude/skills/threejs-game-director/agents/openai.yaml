@@ -1,0 +1,4 @@
+interface:
+  display_name: "Three.js Game Director"
+  short_description: "Route only the Three.js owners needed by the active GDD"
+  default_prompt: "Load threejs-game-director/SKILL.md. Use the named GDD and current game-design, game-build, or game-polish stage; load only needed owners and record decisions and proof directly in the GDD. Never add a build or release gate."

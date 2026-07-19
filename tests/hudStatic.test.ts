@@ -19,6 +19,7 @@ const renderHudEnd = hudSource.indexOf('function setDefenseWaveFromInput');
 const renderHudSource =
   renderHudStart === -1 || renderHudEnd === -1 ? undefined : hudSource.slice(renderHudStart, renderHudEnd);
 const updateDynamicHudValuesSource = hudSource.match(/function updateDynamicHudValues[\s\S]*?\n}\n\nfunction defenseHealthPercent/)?.[0];
+const createHudSignatureSource = hudSource.match(/function createHudSignature[\s\S]*?\n}\n\nfunction createHudStructureSignature/)?.[0];
 const formatGameNumberSource = hudSource.match(/function formatGameNumber[\s\S]*?\n}\n\nfunction compactHudNumber/)?.[0];
 
 assert.ok(dockSignature, 'defenseSkillDockSignature should exist');
@@ -31,7 +32,37 @@ assert.ok(manaSkillShopTabsSource, 'manaSkillShopTabs should exist');
 assert.ok(manaSkillShopCardSource, 'manaSkillShopCard should exist');
 assert.ok(renderHudSource, 'renderHud should exist');
 assert.ok(updateDynamicHudValuesSource, 'updateDynamicHudValues should exist');
+assert.ok(createHudSignatureSource, 'createHudSignature should exist');
 assert.ok(formatGameNumberSource, 'formatGameNumber should exist');
+
+assert.equal(
+  createHudSignatureSource.includes('state.manaCrystal.xp,'),
+  false,
+  'volatile Mana crystal XP must not rebuild every open mini-game HUD on every auto click',
+);
+assert.equal(
+  createHudSignatureSource.includes('state.manaCrystal.lastCollectedXpOrb'),
+  false,
+  'auto-collected Mana orbs must not remount unrelated mini-game WebGL canvases',
+);
+assert.equal(
+  updateDynamicHudValuesSource.includes('updateManaXpHud(state);'),
+  true,
+  'the open Mana panel must continue to patch its XP display dynamically',
+);
+assert.equal(
+  renderHudSource.includes('shouldPatchOpenRunnerPanel(state, structureSignature)'),
+  true,
+  'background automation updates must patch an open Runner panel without remounting its WebGL canvas',
+);
+for (const requiredRunnerStructureState of ['state.runner.running ? 1 : 0', 'state.runner.dead ? 1 : 0']) {
+  assert.equal(
+    hudSource.match(/function createHudStructureSignature[\s\S]*?\n}\n\nfunction shouldPatchOpenDefensePanel/)?.[0]
+      ?.includes(requiredRunnerStructureState),
+    true,
+    `Runner ${requiredRunnerStructureState} must remain a structural HUD transition`,
+  );
+}
 
 for (const requiredGameFontRule of [
   '@font-face',

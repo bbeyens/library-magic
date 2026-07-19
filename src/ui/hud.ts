@@ -148,6 +148,7 @@ import {
   snakeBaseMultiplier,
   snakeAutomationActive,
   snakeExtraLivesRemaining,
+  snakeActiveSpeedLevel,
   snakeFoodCapacity,
   snakeGridSize,
   snakeGrowthFoodRequirement,
@@ -155,8 +156,9 @@ import {
   snakeSkillCost,
   snakeSkillMaxLevel,
   snakeTotalMultiplier,
-  targetSkillCost,
-  targetSkillMaxLevel,
+  runnerUpgradeCost,
+  runnerUpgradeMaxLevel,
+  type RunnerUpgradeId,
   type DefenseSkillId,
   type ManaSkillId,
   type ManaResearchSkillId,
@@ -169,15 +171,25 @@ import {
 import { blackjackMainBet } from '../game/simulation/blackjackRules';
 import type { HundredOptionId } from '../game/simulation/hundredRules';
 import {
-  targetAttackDamage,
-  targetAutomationInterval,
-  targetMaxActiveTargets,
-  targetSpawnInterval,
-  type TargetSkillId,
-} from '../game/simulation/targetRules';
+  runnerAvailableCheckpoints,
+  runnerAttackRange,
+  runnerBaseDamage,
+  runnerBaseFireRate,
+  runnerCoinFlatBonus,
+  runnerCoinMultiplier,
+  runnerGateUpgradeChance,
+  runnerHomingStrength,
+  runnerLateralSpeed,
+  runnerMultishotProjectiles,
+  runnerProjectileSpeed,
+  runnerStartUnits,
+  RUNNER_UPGRADE_IDS,
+} from '../game/simulation/runnerRules';
 import type { SlimeTrainerCommandId } from '../game/simulation/slimeTrainerRules';
 import { miningIsoBlockIdFromPoint, miningIsoBoardBounds } from './miningIsoGeometry';
 import { syncMiningThreeTerrain } from './miningThreeTerrain';
+import { startRunnerLaunchTransition, syncRunnerThreeLane } from './runnerThreeLane';
+import { installRunnerEditor, runnerEditorInteraction, syncRunnerEditor } from './runnerEditor';
 import {
   MINING_GRID_COLUMNS,
   MINING_GRID_ROWS,
@@ -265,7 +277,6 @@ let lastRuneTypingRewardMarker = '';
 let lastRenderStableSignature = '';
 let lastBlackjackRewardMarker = '';
 let lastHundredRewardMarker = '';
-let lastTargetRewardMarker = '';
 const lastMiningBlockTypeXp = new Map<number, number>();
 let lastSlimeTrainerRewardMarker = '';
 let lastBlackjackRenderedRound = -1;
@@ -455,6 +466,7 @@ export function mountHud(root: HTMLDivElement | null): void {
   installDefenseControls();
   installPanelSizeControls();
   installEscapeControls();
+  installRunnerEditor();
   gameStore.subscribe(renderHud);
   void loadDefenseTiledMap().then(() => {
     lastRenderSignature = '';
@@ -540,6 +552,17 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
     refreshMiningBoard(state);
     updateDynamicHudValues(state);
     refreshMiningSkillDock(state);
+    runHudTransientEffects(state);
+    scheduleBlackjackAutoDeal(state);
+    return;
+  }
+  if (!options.forceFull && shouldPatchOpenRunnerPanel(state, structureSignature)) {
+    lastRenderSignature = signature;
+    lastRenderStableSignature = stableSignature;
+    if (runnerHubSkillsOpen) {
+      refreshRunnerSkillShop(state);
+    }
+    updateDynamicHudValues(state);
     runHudTransientEffects(state);
     scheduleBlackjackAutoDeal(state);
     return;
@@ -672,10 +695,37 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
           refreshMiningSkillDock(gameStore.snapshot, { force: true });
         }
       }
-      if (action === 'buyTargetSkill') {
-        const skillId = button.dataset.skillId as TargetSkillId | undefined;
-        if (skillId) {
-          gameStore.dispatch({ type: 'buyTargetSkill', skillId });
+      if (action === 'buyRunnerUpgrade') {
+        const upgradeId = button.dataset.upgradeId as RunnerUpgradeId | undefined;
+        if (upgradeId) {
+          gameStore.dispatch({ type: 'buyRunnerUpgrade', upgradeId });
+        }
+      }
+      if (action === 'toggleRunnerSkills') {
+        runnerHubSkillsOpen = !runnerHubSkillsOpen;
+        const hub = button.closest<HTMLElement>('.runner-hub');
+        hub?.classList.toggle('is-skills-open', runnerHubSkillsOpen);
+        // The entrance cascade is bound to this transient class, never to the persisted markup, so
+        // it plays only on an explicit open — not when the panel is re-rendered (switching mini-games
+        // and back). Remove + reflow + add restarts the animation on each open.
+        if (hub && runnerHubSkillsOpen) {
+          hub.classList.remove('is-skills-opening');
+          void hub.offsetWidth;
+          hub.classList.add('is-skills-opening');
+        } else {
+          hub?.classList.remove('is-skills-opening');
+        }
+        hub
+          ?.querySelector<HTMLButtonElement>('.runner-menu-action[data-action="toggleRunnerSkills"]')
+          ?.setAttribute('aria-expanded', `${runnerHubSkillsOpen}`);
+        hub?.querySelector<HTMLElement>('.runner-skill-drawer')?.setAttribute('aria-hidden', `${!runnerHubSkillsOpen}`);
+      }
+      if (action === 'startRunnerRun') {
+        runnerHubSkillsOpen = false;
+        const startRun = (playerX?: number): void =>
+          gameStore.dispatch({ type: 'startRunnerRun', playerX });
+        if (!startRunnerLaunchTransition(startRun)) {
+          startRun();
         }
       }
       if (action === 'buyMiningSkill') {
@@ -803,12 +853,6 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
           gameStore.dispatch({ type: 'chooseHundredOption', optionId });
         }
       }
-      if (action === 'attackTarget') {
-        const targetId = Number(button.dataset.targetId);
-        if (Number.isFinite(targetId)) {
-          gameStore.dispatch({ type: 'attackTarget', targetId });
-        }
-      }
       if (action === 'digMiningBlock') {
         const blockId = Number(button.dataset.blockId);
         if (Number.isFinite(blockId)) {
@@ -863,6 +907,14 @@ function renderHud(state: GameState, options: { forceFull?: boolean } = {}): voi
       }
       if (action === 'unlockAllBooks') {
         gameStore.dispatch({ type: 'unlockAllBooks' });
+      }
+    });
+  });
+  rootElement.querySelectorAll<HTMLSelectElement>('[data-runner-checkpoint]').forEach((select) => {
+    select.addEventListener('change', () => {
+      const distance = Number(select.value);
+      if (Number.isFinite(distance)) {
+        gameStore.dispatch({ type: 'selectRunnerCheckpoint', distance });
       }
     });
   });
@@ -1139,14 +1191,6 @@ function runHudTransientEffects(state: GameState): void {
     }
   }
 
-  if (isBookPanelOpen(state, 'targets') && state.targets.lastReward > 0) {
-    const marker = `${state.targets.score}:${Math.floor(state.resources.marks)}:${state.targets.shotPulse}`;
-    if (marker !== lastTargetRewardMarker) {
-      lastTargetRewardMarker = marker;
-      showFloatingGain(state.targets.lastReward, '.target-gallery');
-    }
-  }
-
   // Mine resource gains float directly above the destroyed block (see updateMiningRewardPopups),
   // not at a generic grid position, so no showFloatingGain here.
 
@@ -1248,11 +1292,12 @@ function clearBlackjackDealerStep(): void {
 }
 
 function updateDynamicHudValues(state: GameState): void {
+  syncRunnerEditor(state);
   const currentMana = Math.floor(state.mana);
   const manaPanelOpen = isBookPanelOpen(state, 'mana');
   const snakePanelOpen = isBookPanelOpen(state, 'serpent');
   const miningPanelOpen = isBookPanelOpen(state, 'mine');
-  const targetPanelOpen = isBookPanelOpen(state, 'targets');
+  const runnerPanelOpen = isBookPanelOpen(state, 'runner');
   const typingPanelOpen = isBookPanelOpen(state, 'typing');
   const hundredPanelOpen = isBookPanelOpen(state, 'hundred');
   setDynamicText('mana', formatGameNumber(state.mana));
@@ -1305,9 +1350,20 @@ function updateDynamicHudValues(state: GameState): void {
     updateMiningLevelStripMaxed(state);
     updateDynamicMiningSkillCards(state);
   }
-  if (targetPanelOpen) {
-    setDynamicText('target-score', state.targets.score);
-    setDynamicText('target-best', state.targets.best);
+  if (runnerPanelOpen) {
+    const run = state.runner;
+    setDynamicText('runner-distance', Math.floor(run.distance));
+    setDynamicText('runner-lives', run.units);
+    setDynamicText('runner-attacks', run.attacks);
+    setDynamicText('runner-coins', Math.floor(run.coinsEarned));
+    // The lane redraws from state every frame; the squad only ever moves sideways.
+    syncRunnerThreeLane(
+      state,
+      (x) => {
+        gameStore.dispatch({ type: 'moveRunnerPlayer', x });
+      },
+      runnerEditorInteraction(),
+    );
   }
   if (typingPanelOpen) {
     setDynamicText('typing-reward', runeTypingRewardPreview(state));
@@ -2450,13 +2506,16 @@ function updateDynamicSnakeSkillCards(state: GameState): void {
     const isMaxed = state.snakeSkills[skillId] >= snakeSkillMaxLevel(skillId);
     const isUnaffordable = !isMaxed && currentScales < snakeSkillCost(state, skillId);
     const canBuy = !isMaxed && !isUnaffordable;
+    // The speed card keeps its −/+ controls interactive at all times, so it must never become a
+    // disabled button (a disabled button blocks clicks on its children).
+    const alwaysEnabled = skillId === 'speed';
     card.classList.toggle('is-unaffordable', isUnaffordable);
     card.classList.toggle('is-maxed', isMaxed);
-    if (!canBuy) {
+    if (!canBuy && !alwaysEnabled) {
       clearOneShotHoverTarget(card);
     }
-    card.disabled = !canBuy;
-    if (canBuy) {
+    card.disabled = alwaysEnabled ? false : !canBuy;
+    if (canBuy || alwaysEnabled) {
       card.dataset.action = 'buySnakeSkill';
     } else {
       delete card.dataset.action;
@@ -2509,6 +2568,7 @@ function snakeSkillDockSignature(state: GameState): string {
   const skills = state.snakeSkills;
   return [
     skills.speed,
+    skills.speedSetting,
     skills.gridSize,
     skills.foodCount,
     skills.growthThreshold,
@@ -2549,6 +2609,26 @@ function bindSnakeSkillDockControls(dock: HTMLElement): void {
       }
       snakeSkillShopTab = tabId;
       refreshSnakeSkillDock(gameStore.snapshot, { force: true });
+    });
+  });
+
+  // −/+ speed dialers: stop the click bubbling to the card so it never buys, just adjusts the level.
+  dock.querySelectorAll<HTMLElement>('[data-snake-speed-adjust]').forEach((control) => {
+    const dispatchAdjust = () => {
+      gameStore.dispatch({ type: 'adjustSnakeSpeed', delta: control.dataset.snakeSpeedAdjust === 'up' ? 1 : -1 });
+      refreshSnakeSkillDock(gameStore.snapshot, { force: true });
+    };
+    control.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      dispatchAdjust();
+    });
+    control.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        event.stopPropagation();
+        dispatchAdjust();
+      }
     });
   });
 }
@@ -3885,11 +3965,16 @@ function bookOverlay(
     selectedBook.id === 'defense' ||
     selectedBook.id === 'blackjack' ||
     selectedBook.id === 'hundred' ||
-    selectedBook.id === 'targets' ||
+    selectedBook.id === 'runner' ||
     selectedBook.id === 'mine' ||
     selectedBook.id === 'slimeTrainer';
+  // The runner ('runner') has no upgrade tiles: its shop lives in its own home menu.
   const hasUpgradeControls =
-    selectedBook.id !== 'typing' && selectedBook.id !== 'defense' && selectedBook.id !== 'mana' && selectedBook.id !== 'mine';
+    selectedBook.id !== 'typing' &&
+    selectedBook.id !== 'defense' &&
+    selectedBook.id !== 'mana' &&
+    selectedBook.id !== 'mine' &&
+    selectedBook.id !== 'runner';
   const isCompactUpgradeOpen = openUpgradePanel === selectedBook.id && upgradePanelMode === 'compact';
   const miniSkillClass = isCompactUpgradeOpen ? ' has-mini-skills' : '';
   return `
@@ -3920,8 +4005,8 @@ function bookOverlay(
                     ? blackjackPanel(state)
                     : selectedBook.id === 'hundred'
                       ? hundredPanel(state)
-                      : selectedBook.id === 'targets'
-                        ? targetPanel(state)
+                      : selectedBook.id === 'runner'
+                        ? runnerPanel(state)
                         : selectedBook.id === 'mine'
                           ? miningPanel(state)
                           : selectedBook.id === 'slimeTrainer'
@@ -3960,8 +4045,8 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
   const typing = state.runeTyping;
   const blackjack = state.blackjack;
   const hundred = state.hundred;
-  const targetState = state.targets;
-  const targetSkills = state.targetSkills;
+  const runner = state.runner;
+  const runnerMeta = state.runnerMeta;
   const mining = state.mining;
   const miningSkills = state.miningSkills;
   const slimeTrainer = state.slimeTrainer;
@@ -4028,11 +4113,10 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
     hundred.lastOption ?? 'none',
     hundred.lastReward,
     hundred.lastOutcome,
-    targetState.score,
-    targetState.best,
-    targetState.lastReward,
-    targetState.shotPulse,
-    targetState.targets.map((target) => `${target.id},${target.x},${target.y},${target.health}`).join(';'),
+    // Only the run's STRUCTURAL state belongs here: the lane redraws itself from state
+    // every frame, so distance/enemies/bullets must never force an HTML re-render.
+    runner.running ? 1 : 0,
+    runner.dead ? 1 : 0,
     mining.totalMined,
     mining.deepestLayer,
     mining.lastReward,
@@ -4065,9 +4149,11 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
     typing.currentWordHadMistake ? 1 : 0,
     typing.lastReward,
     typing.lastFeedback,
-    state.manaCrystal.xp,
-    state.manaCrystal.lastCollectedXpOrb?.id ?? 0,
-    state.manaCrystal.lastCollectedXpOrb?.value ?? 0,
+    // Mana XP advances on every automatic click. The open Mana panel patches it below;
+    // putting it in this signature remounts unrelated mini-games and their WebGL canvases.
+    'mana-crystal-xp-dynamic',
+    // Auto-collected orbs are also high-frequency Mana-only feedback.
+    'mana-last-collected-orb-dynamic',
     state.manaCrystal.holdClickActive ? 1 : 0,
     manaSkills.power,
     manaSkills.clickMultiplier,
@@ -4092,10 +4178,10 @@ function createHudSignature(state: GameState, options: { includeDefenseVolatile?
     snakeSkills.extraLife,
     snakeSkills.edgeWrap,
     'defense-skills-dynamic',
-    targetSkills.spawnSpeed,
-    targetSkills.targetCount,
-    targetSkills.damage,
-    targetSkills.automation,
+    Math.floor(runnerMeta.coins),
+    Math.floor(runnerMeta.bestDistance),
+    runnerMeta.selectedCheckpoint ?? 0,
+    RUNNER_UPGRADE_IDS.map((id) => runnerMeta.upgrades[id]).join(','),
     miningSkills.pickaxeForce,
     miningSkills.splashDamage,
     miningSkills.automation,
@@ -4126,6 +4212,8 @@ function createHudStructureSignature(state: GameState): string {
     defenseSkillShopTab,
     miningSkillShopTab,
     state.defense.speedMultiplier,
+    state.runner.running ? 1 : 0,
+    state.runner.dead ? 1 : 0,
     bookState,
   ].join('/');
 }
@@ -4168,6 +4256,16 @@ function shouldPatchOpenMiningPanel(state: GameState, structureSignature: string
     return false;
   }
   return Boolean(rootElement.querySelector('.book-overlay[data-book-id="mine"] .mining-panel'));
+}
+
+function shouldPatchOpenRunnerPanel(state: GameState, structureSignature: string): boolean {
+  if (!rootElement || structureSignature !== lastRenderStructureSignature) {
+    return false;
+  }
+  if (state.openBookPanels.length !== 1 || state.openBookPanels[0]?.bookId !== 'runner') {
+    return false;
+  }
+  return Boolean(rootElement.querySelector('.book-overlay[data-book-id="runner"] [data-runner-3d-lane]'));
 }
 
 function refreshMiningBoard(state: GameState): void {
@@ -4246,9 +4344,6 @@ function upgradePanel(bookId: BookId, state: GameState, shouldAnimate: boolean, 
   }
   if (bookId === 'defense') {
     return defenseUpgradePanel(state, shouldAnimate, mode);
-  }
-  if (bookId === 'targets') {
-    return targetUpgradePanel(state, shouldAnimate, mode);
   }
   if (bookId === 'mine') {
     return miningUpgradePanel(state, shouldAnimate, mode);
@@ -4355,18 +4450,6 @@ function compactUpgradePopover(bookId: BookId, state: GameState, shouldAnimate: 
           ${defenseSkillCompactButton(state, 'health', '♥')}
           ${defenseSkillCompactButton(state, 'moneyPerEnemy', '◆')}
           ${defenseSkillCompactButton(state, 'goldMultiplier', '×')}
-        </div>
-      </div>
-    `;
-  }
-  if (bookId === 'targets') {
-    return `
-      <div class="mini-skill-popover ${shouldAnimate ? 'is-entering' : ''}" aria-label="Mini competences des cibles">
-        <div class="mini-skill-scroll is-mana">
-          ${targetSkillCompactButton(state, 'spawnSpeed', '↯')}
-          ${targetSkillCompactButton(state, 'targetCount', '◎')}
-          ${targetSkillCompactButton(state, 'damage', '▲')}
-          ${targetSkillCompactButton(state, 'automation', '⌁')}
         </div>
       </div>
     `;
@@ -4542,6 +4625,10 @@ interface SkillShopCard {
   isDisabled?: boolean;
   isLocked?: boolean;
   isUnaffordable?: boolean;
+  // Speed card only: extra +/- line HTML rendered under the value, and keeping the card button always
+  // clickable (so the +/- children stay interactive even when a purchase isn't possible).
+  adjustControlHtml?: string;
+  alwaysEnabled?: boolean;
 }
 
 interface SkillShopTab<T extends string = string> {
@@ -4732,7 +4819,7 @@ function skillShopCard(card: SkillShopCard, theme: SkillShopTheme, cascadeIndex?
       data-skill-id="${card.skillId}"
       ${cascadeStyle}
       ${elementKindAttribute}
-      ${canBuy ? `data-action="${card.action}"` : 'disabled'}
+      ${canBuy || card.alwaysEnabled ? `data-action="${card.action}"` : 'disabled'}
       aria-label="${card.title}: ${card.value}. ${card.detail}. ${card.costText}."
       title="${card.title} - ${card.value} - ${card.costText}"
     >
@@ -4743,6 +4830,7 @@ function skillShopCard(card: SkillShopCard, theme: SkillShopTheme, cascadeIndex?
       <span class="skill-shop-card-value">
         <strong data-skill-card-value>${card.value}</strong>
         <small data-skill-card-delta ${!card.isLocked && card.delta ? '' : 'hidden'}>${card.delta}</small>
+        ${card.adjustControlHtml ?? ''}
       </span>
       <span class="skill-shop-card-detail">${card.detail}</span>
       <span class="skill-shop-buy" data-skill-card-buy>
@@ -5391,7 +5479,28 @@ function snakeSkillShopCard(
     isMaxed,
     isDisabled: isUnaffordable,
     isUnaffordable,
+    // Speed carries a −/+ line to dial the active level within what's been purchased; keep the card
+    // clickable even when maxed/unaffordable so those controls always work.
+    ...(skillId === 'speed'
+      ? { adjustControlHtml: snakeSpeedAdjustLineHtml(state), alwaysEnabled: true }
+      : {}),
   };
+}
+
+// The −/+ line for the Speed card: dial the active speed level in [0, purchased]. The buttons stop
+// their click from bubbling to the card so they never trigger a purchase.
+function snakeSpeedAdjustLineHtml(state: GameState): string {
+  const max = Math.max(0, state.snakeSkills.speed);
+  const active = snakeActiveSpeedLevel(state);
+  const canSlow = active > 0;
+  const canSpeed = active < max;
+  return `
+    <span class="skill-shop-speed-adjust">
+      <span class="skill-shop-speed-btn ${canSlow ? '' : 'is-disabled'}" data-snake-speed-adjust="down" role="button" tabindex="0" aria-label="Ralentir">−</span>
+      <b data-snake-speed-level>${active} / ${max}</b>
+      <span class="skill-shop-speed-btn ${canSpeed ? '' : 'is-disabled'}" data-snake-speed-adjust="up" role="button" tabindex="0" aria-label="Accélérer">+</span>
+    </span>
+  `;
 }
 
 function snakeSkillIcon(skillId: SnakeSkillId): string {
@@ -5449,73 +5558,6 @@ function snakeSkillCompactButton(state: GameState, skillId: SnakeSkillId, icon: 
       <span>${icon}</span><strong>${level}</strong>
     </button>
   `;
-}
-
-function targetUpgradePanel(state: GameState, shouldAnimate: boolean, mode: 'detail' | 'compact'): string {
-  if (mode === 'compact') {
-    return `
-      <section class="upgrade-panel is-compact ${shouldAnimate ? 'is-entering' : ''}" aria-label="Competences des cibles">
-        <button class="upgrade-panel-close" data-action="toggleCompactUpgradePanel" data-book-id="targets" title="Fermer">×</button>
-        <div class="compact-upgrade-grid is-mana">
-          ${targetSkillCompactButton(state, 'spawnSpeed', '↯')}
-          ${targetSkillCompactButton(state, 'targetCount', '◎')}
-          ${targetSkillCompactButton(state, 'damage', '▲')}
-          ${targetSkillCompactButton(state, 'automation', '⌁')}
-        </div>
-      </section>
-    `;
-  }
-
-  return `
-    ${standardUpgradePanel('targets', shouldAnimate, 'Table des upgrades', 'Cibles', [
-      targetSkillTrack(state, 'spawnSpeed', '↯', 'Apparition', `${formatGameNumber(targetSpawnInterval(state.targetSkills.spawnSpeed), { forceDecimal: true })}s`, 'Les cibles arrivent plus vite'),
-      targetSkillTrack(state, 'targetCount', '◎', 'Cibles max', `${targetMaxActiveTargets(state.targetSkills.targetCount)}`, 'Plus de cibles en meme temps'),
-      targetSkillTrack(state, 'damage', '▲', 'Degats', `${targetAttackDamage(state.targetSkills.damage)}`, 'Chaque clic tape plus fort'),
-      targetSkillTrack(state, 'automation', '⌁', 'Automatisation', targetAutomationLabel(state), 'Tir automatique sur les cibles'),
-    ])}
-  `;
-}
-
-function targetSkillTrack(
-  state: GameState,
-  skillId: TargetSkillId,
-  icon: string,
-  label: string,
-  value: string,
-  detail: string,
-): StandardUpgradeTrack {
-  const level = state.targetSkills[skillId];
-  const maxLevel = targetSkillMaxLevel(skillId);
-  const isMaxed = level >= maxLevel;
-  const cost = targetSkillCost(state, skillId);
-  return {
-    action: 'buyTargetSkill',
-    skillId,
-    icon,
-    title: label,
-    subtitle: value,
-    levelLabel: `Lv ${level}/${maxLevel}`,
-    detail,
-    costHtml: isMaxed ? 'MAX' : standardManaCostHtml(cost),
-    costText: isMaxed ? 'MAX' : `${compactHudNumber(cost)} Mana`,
-    isMaxed,
-  };
-}
-
-function targetSkillCompactButton(state: GameState, skillId: TargetSkillId, icon: string): string {
-  const level = state.targetSkills[skillId];
-  const maxLevel = targetSkillMaxLevel(skillId);
-  const isMaxed = level >= maxLevel;
-  return `
-    <button class="compact-upgrade-entry ${isMaxed ? 'is-maxed' : ''}" data-action="buyTargetSkill" data-skill-id="${skillId}" ${isMaxed ? 'disabled' : ''}>
-      <span>${icon}</span><strong>${level}</strong>
-    </button>
-  `;
-}
-
-function targetAutomationLabel(state: GameState): string {
-  const interval = targetAutomationInterval(state.targetSkills.automation);
-  return interval > 0 ? `${formatGameNumber(interval, { forceDecimal: true })}s/tir` : 'Off';
 }
 
 function miningSkillShop(state: GameState, shouldAnimate = false, options: SkillShopPanelOptions = {}): string {
@@ -8505,48 +8547,272 @@ function hundredOutcomeLabel(outcome: GameState['hundred']['lastOutcome']): stri
   }
 }
 
-function targetPanel(state: GameState): string {
-  const targetState = state.targets;
-  const automationInterval = targetAutomationInterval(state.targetSkills.automation);
-  const targets = targetState.targets
-    .map((target) => {
-      const health = Math.max(0, Math.round((target.health / target.maxHealth) * 100));
-      return `
-        <button
-          class="target-dot"
-          data-action="attackTarget"
-          data-book-id="targets"
-          data-target-id="${target.id}"
-          style="--target-x:${target.x}%; --target-y:${target.y}%; --target-health:${health}%"
-          title="Attaquer la cible"
-          aria-label="Attaquer la cible ${target.id}"
-        >
-          <span></span>
-        </button>
-      `;
-    })
-    .join('');
+let runnerHubSkillsOpen = false;
+
+// Icons reuse the TD mini-game's skill set (/assets/td/icons) so both shops share one visual language.
+const RUNNER_UPGRADE_LABELS: Record<RunnerUpgradeId, { icon: string; name: string; hint: string; gain: string }> = {
+  baseDamage: { icon: 'atk_damage', name: 'Dégâts', hint: 'Chaque balle tape plus fort', gain: '+0,5 dégât' },
+  startUnits: { icon: 'other_health', name: 'Vies', hint: 'Plus de vies au départ', gain: '+1 vie' },
+  baseFireRate: { icon: 'atk_speed', name: 'Cadence', hint: 'Tirs plus rapprochés', gain: '+0,4 tir/s' },
+  lateralSpeed: { icon: 'elem_lightning', name: 'Latérale', hint: 'Déplacement plus rapide sur les côtés', gain: '+0,35 u/s' },
+  attackRange: { icon: 'atk_range', name: 'Portée', hint: 'Les projectiles voyagent plus loin', gain: '+2 m' },
+  multishot: { icon: 'atk_supercrit_chance', name: 'Multishot', hint: 'Ajoute un projectile par niveau', gain: '+1 tir' },
+  homing: { icon: 'elem_ice_range', name: 'Homing', hint: 'Guide les tirs vers les ennemis', gain: '+0,55 u/s' },
+  projectileSpeed: { icon: 'game_speed', name: 'Projectile', hint: 'Les tirs avancent plus vite', gain: '+2 u/s' },
+  gateQuality: { icon: 'atk_crit_chance', name: 'Portails', hint: 'Chance qu\'un +1 sorte en +2', gain: '+6%' },
+  coinFlat: { icon: 'other_gold_plus', name: 'Pièces +', hint: 'Pièces en plus par ennemi', gain: '+0,5 pièce' },
+  coinGain: { icon: 'other_gold_x', name: 'Pièces ×', hint: 'Multiplie les pièces gagnées', gain: '+0,15×' },
+};
+
+// Colour family per upgrade (icon tint): off = offense, def = survie, mob = mobilité, eco = économie.
+const RUNNER_UPGRADE_KIND: Record<RunnerUpgradeId, 'off' | 'def' | 'mob' | 'eco'> = {
+  baseDamage: 'off',
+  baseFireRate: 'off',
+  multishot: 'off',
+  homing: 'off',
+  attackRange: 'off',
+  projectileSpeed: 'off',
+  startUnits: 'def',
+  lateralSpeed: 'mob',
+  gateQuality: 'eco',
+  coinFlat: 'eco',
+  coinGain: 'eco',
+};
+
+// Grouped, ordered layout of the shop: compact icon boxes (details live in the hover panel), `cols`
+// per section so every row is full (6 attack boxes on one row, 4 support boxes on one row).
+const RUNNER_UPGRADE_SECTIONS: ReadonlyArray<{ label: string; ids: readonly RunnerUpgradeId[]; cols: number }> = [
+  { label: 'Attaque', ids: ['baseDamage', 'baseFireRate', 'multishot', 'homing', 'attackRange', 'projectileSpeed'], cols: 6 },
+  { label: 'Soutien', ids: ['startUnits', 'lateralSpeed', 'gateQuality', 'coinFlat', 'coinGain'], cols: 6 },
+];
+
+function refreshRunnerSkillShop(state: GameState): void {
+  const drawer = rootElement?.querySelector<HTMLElement>(
+    '.book-overlay[data-book-id="runner"] .runner-hub.is-skills-open .runner-skill-drawer',
+  );
+  const shop = drawer?.querySelector<HTMLElement>('.runner-shop');
+  if (!drawer || !shop) {
+    return;
+  }
+
+  const walletValues = drawer.querySelectorAll<HTMLElement>('.runner-hub-wallet b');
+  setTextContentIfChanged(walletValues[0], formatGameNumber(state.runnerMeta.coins));
+  setTextContentIfChanged(walletValues[1], `${Math.floor(state.runnerMeta.bestDistance)} m`);
+
+  for (const upgradeId of RUNNER_UPGRADE_IDS) {
+    const entry = shop.querySelector<HTMLButtonElement>(`[data-upgrade-id="${upgradeId}"]`);
+    if (!entry) {
+      continue;
+    }
+
+    const level = state.runnerMeta.upgrades[upgradeId];
+    const maxLevel = runnerUpgradeMaxLevel(upgradeId);
+    const maxed = level >= maxLevel;
+    const cost = runnerUpgradeCost(upgradeId, level);
+    const affordable = !maxed && state.runnerMeta.coins >= cost;
+    const stat = runnerUpgradeStatLabel(upgradeId, level);
+
+    entry.classList.toggle('is-maxed', maxed);
+    entry.classList.toggle('is-unaffordable', !affordable);
+    entry.disabled = maxed || !affordable;
+    const progress = maxLevel > 0 ? Math.round((level / maxLevel) * 100) : 0;
+    setStylePropertyIfChanged(entry, '--shop-fill', `${progress}%`);
+    setTextContentIfChanged(
+      entry.querySelector<HTMLElement>('.runner-shop-name small'),
+      `${level}/${maxLevel}${stat ? ` · ${stat}` : ''}`,
+    );
+    setTextContentIfChanged(
+      entry.querySelector<HTMLElement>('.runner-shop-cost'),
+      maxed ? 'MAX' : `${formatGameNumber(cost)} ◎`,
+    );
+  }
+}
+
+function runnerPanel(state: GameState): string {
+  const run = state.runner;
+
+  // The home overlay, including the shop, stays unavailable during a run and its death sequence.
+  const overlay = run.running || run.dead ? '' : runnerHub(state);
 
   return `
-    <div class="target-panel">
-      <div class="target-gallery" style="--target-shot:${targetState.shotPulse % 2}" role="img" aria-label="Mini jeu Galerie des Cibles">
-        <div class="target-stats" aria-label="Etat des cibles">
-          <span>◎ <strong data-dynamic-value="marks">${formatGameNumber(state.resources.marks)}</strong></span>
-          <span>▲ <strong>${formatGameNumber(targetAttackDamage(state.targetSkills.damage))}</strong></span>
-          <span>↯ <strong>${formatGameNumber(targetSpawnInterval(state.targetSkills.spawnSpeed), { forceDecimal: true })}s</strong></span>
+    <div class="runner-panel">
+      <div class="runner-lane-frame" aria-label="Mini jeu Runner">
+        <canvas
+          class="runner-lane"
+          data-runner-3d-lane
+          role="application"
+          aria-label="Terrain du Runner"
+        ></canvas>
+
+        <div class="runner-hud ${run.running ? '' : 'is-hidden'}" aria-label="Etat de la course">
+          <span class="runner-hud-stat is-distance">
+            <b data-dynamic-value="runner-distance">${Math.floor(run.distance)}</b><i>m</i>
+          </span>
+          <span class="runner-hud-stat is-lives">
+            ♥ <b data-dynamic-value="runner-lives">${formatGameNumber(run.units)}</b>
+          </span>
+          <span class="runner-hud-stat is-attacks">
+            ✣ <b data-dynamic-value="runner-attacks">${formatGameNumber(run.attacks)}</b>
+          </span>
+          <span class="runner-hud-stat is-coins">
+            ◎ <b data-dynamic-value="runner-coins">${formatGameNumber(Math.floor(run.coinsEarned))}</b>
+          </span>
         </div>
-        <div class="target-board" aria-label="Cibles actives">
-          ${targets || '<i class="target-empty" aria-hidden="true"></i>'}
-        </div>
-        <div class="target-mini-stats" aria-label="Galerie">
-          <span># <strong data-dynamic-value="target-score">${formatGameNumber(targetState.score)}</strong></span>
-          <span>↟ <strong data-dynamic-value="target-best">${formatGameNumber(targetState.best)}</strong></span>
-          <span>◎ <strong>${formatGameNumber(targetState.targets.length)}/${formatGameNumber(targetMaxActiveTargets(state.targetSkills.targetCount))}</strong></span>
-          <span>⌁ <strong>${automationInterval > 0 ? `${formatGameNumber(automationInterval, { forceDecimal: true })}s` : 'Off'}</strong></span>
-        </div>
+
+        ${overlay}
       </div>
     </div>
   `;
+}
+
+/** The menu is a transparent interaction layer; the actual hub lives in the Three.js scene. */
+function runnerHub(state: GameState): string {
+  const run = state.runner;
+  const meta = state.runnerMeta;
+  const died = run.dead;
+
+  const shop = RUNNER_UPGRADE_SECTIONS.map(
+    (section) => `
+      <div class="runner-shop-cat">${section.label}</div>
+      <div class="runner-shop-grid" style="--shop-cols:${section.cols}">
+        ${section.ids.map((upgradeId) => runnerShopEntry(state, upgradeId)).join('')}
+      </div>
+    `,
+  ).join('');
+  const checkpointOptions = runnerAvailableCheckpoints(meta.bestDistance)
+    .map(
+      (distance) =>
+        `<option value="${distance}" ${distance === meta.selectedCheckpoint ? 'selected' : ''}>${distance} m</option>`,
+    )
+    .join('');
+
+  return `
+    <div
+      class="runner-hub ${died ? 'is-death' : 'is-intro'} ${runnerHubSkillsOpen ? 'is-skills-open' : ''}"
+      role="dialog"
+      aria-label="Menu du Runner"
+    >
+      <div class="runner-hub-head">
+        <strong>Runner</strong>
+        ${
+          died
+            ? `<div class="runner-hub-run" aria-label="Resultat de la derniere course">
+                 <span class="is-distance"><b>${Math.floor(meta.lastRunDistance)}</b><i>m</i></span>
+                 <span class="is-coins"><b>+${formatGameNumber(meta.lastRunCoins)}</b><i>◎</i></span>
+               </div>`
+            : ''
+        }
+      </div>
+
+      <nav class="runner-menu-actions" aria-label="Actions du Runner">
+        <button class="runner-menu-action is-primary" data-action="startRunnerRun" type="button">
+          <i aria-hidden="true">▶</i>
+          <span>Run</span>
+        </button>
+        <button
+          class="runner-menu-action"
+          data-action="toggleRunnerSkills"
+          type="button"
+          aria-expanded="${runnerHubSkillsOpen}"
+        >
+          <i aria-hidden="true">✦</i>
+          <span>Skill</span>
+        </button>
+      </nav>
+
+      <label class="runner-checkpoint-picker">
+        <span>Checkpoint</span>
+        <select data-runner-checkpoint aria-label="Checkpoint du Runner">
+          ${checkpointOptions}
+        </select>
+      </label>
+
+      <section class="runner-skill-drawer" aria-label="Skills du Runner" aria-hidden="${!runnerHubSkillsOpen}">
+        <header class="runner-skill-header">
+          <strong class="runner-skill-title">Skills</strong>
+          <button
+            class="runner-skill-close"
+            data-action="toggleRunnerSkills"
+            type="button"
+            title="Retour au menu"
+            aria-label="Retour au menu du Runner"
+          >← Retour</button>
+          <div class="runner-hub-wallet">
+            <span>◎ <b>${formatGameNumber(meta.coins)}</b></span>
+            <span>Record <b>${Math.floor(meta.bestDistance)} m</b></span>
+          </div>
+        </header>
+        <div class="runner-shop" aria-label="Ameliorations permanentes">
+          ${shop}
+        </div>
+        <div class="runner-shop-tipzone" aria-hidden="true">Survole une compétence</div>
+      </section>
+    </div>
+  `;
+}
+
+function runnerShopEntry(state: GameState, upgradeId: RunnerUpgradeId): string {
+  const meta = state.runnerMeta;
+  const level = meta.upgrades[upgradeId];
+  const maxLevel = runnerUpgradeMaxLevel(upgradeId);
+  const maxed = level >= maxLevel;
+  const cost = runnerUpgradeCost(upgradeId, level);
+  const affordable = !maxed && meta.coins >= cost;
+  const label = RUNNER_UPGRADE_LABELS[upgradeId];
+  const stat = runnerUpgradeStatLabel(upgradeId, level);
+  const progress = maxLevel > 0 ? Math.round((level / maxLevel) * 100) : 0;
+
+  return `
+    <button
+      class="runner-shop-entry ${maxed ? 'is-maxed' : ''} ${affordable ? '' : 'is-unaffordable'}"
+      data-action="buyRunnerUpgrade"
+      data-upgrade-id="${upgradeId}"
+      data-kind="${RUNNER_UPGRADE_KIND[upgradeId]}"
+      type="button"
+      ${maxed || !affordable ? 'disabled' : ''}
+      aria-label="${label.name}"
+      style="--shop-fill:${progress}%"
+    >
+      <i class="runner-shop-icon" aria-hidden="true"><img src="/assets/td/icons/${label.icon}.png" alt="" draggable="false" loading="lazy" decoding="async"></i>
+      <span class="runner-shop-tip" aria-hidden="true">
+        <span class="runner-shop-name">
+          <strong>${label.name}</strong>
+          <small>${level}/${maxLevel}${stat ? ` · ${stat}` : ''}</small>
+        </span>
+        <b class="runner-shop-cost">${maxed ? 'MAX' : `${formatGameNumber(cost)} ◎`}</b>
+        <span class="runner-shop-gain">${label.gain} / niv</span>
+      </span>
+    </button>
+  `;
+}
+
+function runnerUpgradeStatLabel(upgradeId: RunnerUpgradeId, level: number): string {
+  switch (upgradeId) {
+    case 'baseDamage':
+      return `${runnerBaseDamage(level)} dmg`;
+    case 'startUnits':
+      return `${runnerStartUnits(level)} vies`;
+    case 'baseFireRate':
+      return `${runnerBaseFireRate(level)} tir/s`;
+    case 'lateralSpeed':
+      return `${runnerLateralSpeed(level)} u/s`;
+    case 'attackRange':
+      return `${runnerAttackRange(level)} m`;
+    case 'multishot':
+      return `+${runnerMultishotProjectiles(level)} tir`;
+    case 'homing': {
+      const strength = runnerHomingStrength(level);
+      return strength > 0 ? `${strength} u/s` : 'OFF';
+    }
+    case 'projectileSpeed':
+      return `${runnerProjectileSpeed(level)} u/s`;
+    case 'gateQuality':
+      return `${Math.round(runnerGateUpgradeChance(level) * 100)}%`;
+    case 'coinFlat':
+      return `+${runnerCoinFlatBonus(level)}`;
+    case 'coinGain':
+      return `x${runnerCoinMultiplier(level)}`;
+  }
 }
 
 function defensePanel(state: GameState): string {

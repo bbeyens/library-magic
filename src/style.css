@@ -1925,6 +1925,59 @@ button.compact-upgrade-entry {
   overflow-wrap: anywhere;
 }
 
+/* Speed card −/+ dialers (Snake): inline after the value to pick the active speed level. */
+.skill-shop-speed-adjust {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 4px;
+  pointer-events: auto;
+  vertical-align: middle;
+}
+
+.skill-shop-speed-adjust b {
+  min-width: 32px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+  color: #ffe8b0;
+  text-shadow: 0 2px 0 #000000;
+  white-space: nowrap;
+}
+
+/* Speed value line: the −/+ replaces the redundant delta, so hide the delta on that card. */
+.snake-skill-dock .skill-shop-card[data-skill-id="speed"] .skill-shop-card-value small[data-skill-card-delta] {
+  display: none;
+}
+
+.skill-shop-speed-btn {
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border-radius: 5px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  background: rgba(0, 0, 0, 0.3);
+  color: #ffffff;
+  font-size: 15px;
+  line-height: 1;
+  font-weight: 700;
+  cursor: pointer;
+  pointer-events: auto;
+  user-select: none;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.skill-shop-speed-btn:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.skill-shop-speed-btn.is-disabled {
+  opacity: 0.32;
+  pointer-events: none;
+}
+
 .skill-shop-buy {
   position: absolute;
   top: 8px;
@@ -2411,7 +2464,7 @@ button.upgrade-entry {
 .book-overlay[data-book-id="defense"] .book-page-header,
 .book-overlay[data-book-id="hundred"] .book-page-header,
 .book-overlay[data-book-id="mine"] .book-page-header,
-.book-overlay[data-book-id="targets"] .book-page-header,
+.book-overlay[data-book-id="runner"] .book-page-header,
 .book-overlay[data-book-id="serpent"] .book-page-header {
   z-index: 7;
 }
@@ -2465,7 +2518,7 @@ button.upgrade-entry {
 .book-overlay[data-book-id="blackjack"] .book-page-body,
 .book-overlay[data-book-id="hundred"] .book-page-body,
 .book-overlay[data-book-id="mine"] .book-page-body,
-.book-overlay[data-book-id="targets"] .book-page-body,
+.book-overlay[data-book-id="runner"] .book-page-body,
 .book-overlay[data-book-id="serpent"] .book-page-body {
   position: absolute;
   inset: clamp(6px, 1.4cqw, 12px);
@@ -2506,7 +2559,7 @@ button.upgrade-entry {
 .book-overlay[data-book-id="blackjack"] .book-panel-close,
 .book-overlay[data-book-id="hundred"] .book-panel-close,
 .book-overlay[data-book-id="mine"] .book-panel-close,
-.book-overlay[data-book-id="targets"] .book-panel-close,
+.book-overlay[data-book-id="runner"] .book-panel-close,
 .book-overlay[data-book-id="serpent"] .book-panel-close {
   z-index: 8;
 }
@@ -3250,6 +3303,12 @@ button.upgrade-entry {
 /* Radial "éclat" : the chip pops, is flung outward on a gravity arc, spins and fades,
    so the little pixels visibly detach instead of shrinking on the spot. */
 .mana-crystal-cover i.is-removed {
+  /* Grid items honour z-index without position, so lift flung chips above the
+     intact cover cells (later DOM siblings) they arc over — otherwise they slide
+     behind the square instead of popping out in front of it. */
+  z-index: 4;
+  /* Small black outline so the detaching chips read clearly against the crystal. */
+  box-shadow: 0 0 0 1.5px #000;
   animation: mana-cover-chip 720ms cubic-bezier(0.2, 0.5, 0.35, 1) forwards;
 }
 
@@ -4992,7 +5051,7 @@ button.upgrade-entry {
   position: absolute;
   left: 13%;
   right: 13%;
-  top: 22%;
+  top: 18%;
   bottom: 22%;
   z-index: 2;
   border-radius: 7px;
@@ -6489,187 +6548,39 @@ button.blackjack-chip-token {
   color: #fff2e3;
 }
 
-.target-panel {
-  flex: 1;
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  place-items: stretch;
-  container-type: size;
-  padding: 0;
-}
 
-.target-gallery {
-  position: relative;
-  isolation: isolate;
-  width: 100%;
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-  padding:
-    clamp(58px, 13cqw, 78px)
-    clamp(14px, 4cqw, 28px)
-    clamp(18px, 4cqw, 30px);
-  border: 3px solid rgba(43, 57, 76, 0.94);
-  border-radius: clamp(26px, 7.5cqw, 42px);
-  color: #f8ead3;
-  background:
-    linear-gradient(rgba(255, 210, 160, 0.08) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 210, 160, 0.08) 1px, transparent 1px),
-    radial-gradient(circle at 50% 45%, rgba(255, 122, 128, 0.18), transparent 38%),
-    #263447;
-  background-size: 20px 20px, 20px 20px, auto, auto;
-  box-shadow:
-    inset 0 -8px 0 rgba(9, 20, 34, 0.3),
-    inset 0 0 0 2px rgba(191, 214, 233, 0.12),
-    0 12px 0 rgba(26, 36, 52, 0.24);
-}
 
-.target-stats,
-.target-mini-stats {
-  position: absolute;
-  z-index: 7;
-  left: clamp(16px, 4cqw, 26px);
-  right: clamp(52px, 12cqw, 96px);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 7px;
-}
 
-.target-stats {
-  top: clamp(16px, 4cqw, 28px);
-}
 
-.target-mini-stats {
-  right: clamp(18px, 4.6cqw, 34px);
-  bottom: clamp(18px, 4cqw, 30px);
-  justify-content: center;
-}
 
-.target-stats span,
-.target-mini-stats span {
-  min-width: 48px;
-  height: 30px;
-  display: inline-grid;
-  grid-auto-flow: column;
-  place-items: center;
-  gap: 5px;
-  padding: 0 8px;
-  border: 2px solid rgba(22, 34, 49, 0.78);
-  border-radius: 8px;
-  color: #223043;
-  font-size: 15px;
-  font-weight: 900;
-  background: rgba(252, 235, 201, 0.86);
-  box-shadow: inset 0 -4px 0 rgba(38, 48, 64, 0.13);
-}
 
-.target-stats strong,
-.target-mini-stats strong {
-  color: #182334;
-  font-size: 13px;
-}
 
-.target-board {
-  position: absolute;
-  left: clamp(18px, 4.6cqw, 34px);
-  right: clamp(18px, 4.6cqw, 34px);
-  top: clamp(64px, 15cqw, 92px);
-  bottom: clamp(66px, 13cqw, 94px);
-  z-index: 2;
-  overflow: hidden;
-  border: 2px solid rgba(238, 216, 181, 0.28);
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 50% 50%, rgba(248, 234, 211, 0.08), transparent 42%),
-    rgba(8, 15, 26, 0.2);
-}
 
-.target-board::before,
-.target-board::after {
-  content: "";
-  position: absolute;
-  inset: 12%;
-  border: 1px solid rgba(248, 234, 211, 0.16);
-  border-radius: 50%;
-  pointer-events: none;
-}
 
-.target-board::after {
-  inset: 32%;
-}
 
-.target-dot {
-  position: absolute;
-  left: var(--target-x);
-  top: var(--target-y);
-  z-index: 4;
-  width: clamp(34px, 9cqw, 58px);
-  aspect-ratio: 1;
-  display: grid;
-  place-items: center;
-  padding: 0;
-  border: 3px solid #ffe3ba;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #ffedf0 0 16%, #ff7a80 17% 38%, #78313f 39% 54%, #ffd58a 55% 72%, #3a4254 73%);
-  box-shadow:
-    inset 0 -5px 0 rgba(25, 29, 39, 0.22),
-    0 7px 0 rgba(7, 15, 28, 0.26),
-    0 0 16px rgba(255, 122, 128, 0.24);
-  cursor: crosshair;
-  transform: translate(-50%, -50%);
-}
 
-.target-dot::after {
-  content: "";
-  position: absolute;
-  left: -3px;
-  right: -3px;
-  bottom: -11px;
-  height: 4px;
-  border-radius: 999px;
-  background:
-    linear-gradient(90deg, #9ef0ad var(--target-health), rgba(255, 226, 186, 0.26) var(--target-health));
-}
 
-.target-dot span {
-  width: 24%;
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #fff8db;
-  box-shadow: 0 0 8px rgba(255, 248, 219, 0.78);
-}
 
-.target-dot:active {
-  filter: brightness(1.25);
-  transform: translate(-50%, -50%) scale(0.92);
-}
 
-.target-gallery[style*="--target-shot:1"] .target-board {
-  box-shadow: inset 0 0 32px rgba(255, 122, 128, 0.12);
-}
 
-.target-empty {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  width: clamp(60px, 18cqw, 110px);
-  aspect-ratio: 1;
-  border: 3px dashed rgba(248, 234, 211, 0.22);
-  border-radius: 50%;
-  transform: translate(-50%, -50%);
-}
 
-.target-panel {
-  flex: 1;
-  height: 100%;
-  min-height: 0;
-  display: grid;
-  place-items: stretch;
-  container-type: size;
-  padding: 0;
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 .mining-panel {
   flex: 0 0 auto;
@@ -6704,7 +6615,6 @@ button.blackjack-chip-token {
   border-radius: 0;
 }
 
-.target-gallery,
 .mining-grid {
   position: relative;
   min-height: 0;
@@ -6719,7 +6629,6 @@ button.blackjack-chip-token {
     inset 0 0 0 2px rgba(255, 241, 205, 0.22);
 }
 
-.target-stats,
 .mining-stats {
   position: absolute;
   left: clamp(12px, 3.5cqw, 24px);
@@ -6731,7 +6640,6 @@ button.blackjack-chip-token {
   gap: 7px;
 }
 
-.target-stats span,
 .mining-stats span {
   min-width: 48px;
   height: 30px;
@@ -6748,31 +6656,9 @@ button.blackjack-chip-token {
   background: rgba(255, 232, 186, 0.78);
 }
 
-.target-dot {
-  position: absolute;
-  left: var(--target-x);
-  top: var(--target-y);
-  z-index: 2;
-  width: clamp(34px, 10cqw, 58px);
-  aspect-ratio: 1;
-  border: 4px solid #8f252d;
-  border-radius: 50%;
-  background:
-    radial-gradient(circle, #fff4d6 0 18%, #d8505a 19% 42%, #fff4d6 43% 64%, #d8505a 65%);
-  cursor: pointer;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 7px 0 rgba(68, 39, 32, 0.22);
-}
 
-.target-empty {
-  position: absolute;
-  left: 50%;
-  top: 52%;
-  color: rgba(80, 50, 38, 0.42);
-  font-size: clamp(62px, 24cqw, 132px);
-  line-height: 1;
-  transform: translate(-50%, -50%);
-}
+
+
 
 .mining-grid {
   display: grid;
@@ -14095,4 +13981,894 @@ button.blackjack-chip-token {
 }
 .book-overlay[data-book-id="mana"] .skill-shop-research-progress i {
   background: linear-gradient(180deg, #d9a6ff, #9a4fd8);
+}
+
+/* ===========================================================================
+   Runner mini-game (book id "runner").
+   The panel deliberately keeps the default portrait A4 aspect — the lane needs the
+   full vertical run, so unlike the mine/crystal it must NOT be forced square.
+   =========================================================================== */
+
+.runner-panel {
+  flex: 1;
+  height: 100%;
+  min-height: 0;
+  display: grid;
+  place-items: stretch;
+  container-type: size;
+  padding: 0;
+}
+
+.runner-lane-frame {
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #a8ddf4;
+}
+
+.runner-lane-frame::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background: #06090e;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.runner-lane-frame.is-runner-death-fading::after {
+  animation: runner-death-fade-out 450ms linear forwards;
+}
+
+.runner-lane-frame.is-runner-menu-fading-in::after {
+  animation: runner-menu-fade-in 450ms ease-out forwards;
+}
+
+@keyframes runner-death-fade-out {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes runner-menu-fade-in {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+.runner-lane {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: default;
+  touch-action: none;
+  outline: 0;
+}
+
+/* In-run HUD: distance / lives / attacks / coins. */
+.runner-hud {
+  position: absolute;
+  left: 10px;
+  right: 50px;
+  top: 10px;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.runner-hud-stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 3px;
+  padding: 3px 9px;
+  border-radius: 8px;
+  border: 1px solid rgba(219, 234, 254, 0.62);
+  background: rgba(3, 7, 18, 0.9);
+  color: #f8fafc;
+  font-size: 16px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 0 #020617, 0 0 6px rgba(255, 255, 255, 0.28);
+}
+
+.runner-hud-stat b {
+  color: #ffffff;
+  font-size: 32px;
+  line-height: 1;
+}
+
+.runner-hud-stat i {
+  font-style: normal;
+  font-size: 16px;
+  opacity: 1;
+}
+
+.runner-hud-stat.is-lives {
+  border-color: rgba(74, 222, 128, 0.42);
+  color: #bbf7d0;
+}
+
+.runner-hud-stat.is-attacks {
+  border-color: rgba(251, 146, 60, 0.55);
+  color: #fed7aa;
+}
+
+.runner-hud-stat.is-coins {
+  border-color: rgba(250, 204, 21, 0.42);
+  color: #fde68a;
+}
+
+.runner-hud.is-hidden {
+  visibility: hidden;
+}
+
+/* Transparent controls over the real 3D camp; the scene itself remains the menu. */
+.runner-hub {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.runner-hub-head {
+  position: absolute;
+  top: 7%;
+  left: 18px;
+  right: 18px;
+  text-align: center;
+  transition: opacity 0.22s ease;
+}
+
+.runner-hub .runner-hub-head strong {
+  color: #fff3c9;
+  font-size: 72px !important;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow:
+    0 4px 0 #2d1735,
+    3px 0 0 #2d1735,
+    -3px 0 0 #2d1735,
+    0 -3px 0 #2d1735;
+}
+
+.runner-hub-run {
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 32px;
+  margin-top: 18px;
+  font-family: var(--game-font);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 3px 0 #130f22,
+    2px 0 0 #130f22,
+    -2px 0 0 #130f22,
+    0 -2px 0 #130f22;
+}
+
+.runner-hub-run span {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  font-size: 32px;
+  white-space: nowrap;
+}
+
+.runner-hub-run b,
+.runner-hub-run i {
+  color: inherit;
+  font: inherit;
+}
+
+.runner-hub-run i {
+  font-style: normal;
+}
+
+.runner-hub-run .is-distance {
+  color: #ffffff;
+}
+
+.runner-hub-run .is-coins {
+  color: #ffe16b;
+}
+
+.runner-hub-wallet {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #c9cce8;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.runner-hub-wallet b {
+  color: #fff3c9;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.runner-menu-actions {
+  position: absolute;
+  top: 30%;
+  left: 20px;
+  z-index: 2;
+  display: grid;
+  gap: 10px;
+  width: 132px;
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+
+.runner-hub .runner-menu-action {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  align-items: center;
+  gap: 7px;
+  min-height: 58px;
+  padding: 3px 0;
+  border: 0;
+  background: transparent;
+  color: #d8d7df;
+  font: inherit;
+  font-size: 34px !important;
+  font-weight: 900;
+  text-align: left;
+  text-shadow:
+    0 3px 0 #130f22,
+    2px 0 0 #130f22,
+    -2px 0 0 #130f22;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.runner-hub .runner-menu-action span {
+  color: inherit !important;
+  font-size: 34px !important;
+  line-height: 1;
+  text-shadow: inherit !important;
+}
+
+.runner-menu-action i {
+  color: #f6d35e;
+  font-style: normal;
+  font-size: 18px;
+  text-align: center;
+  opacity: 0;
+  transform: translateX(-5px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.runner-menu-action.is-primary,
+.runner-menu-action:hover,
+.runner-menu-action:focus-visible,
+.runner-menu-action[aria-expanded='true'] {
+  color: #fff;
+}
+
+.runner-menu-action.is-primary i,
+.runner-menu-action:hover i,
+.runner-menu-action:focus-visible i,
+.runner-menu-action[aria-expanded='true'] i {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.runner-menu-action:focus-visible {
+  outline: 2px solid #f6d35e;
+  outline-offset: 2px;
+}
+
+.runner-checkpoint-picker {
+  position: absolute;
+  left: 20px;
+  bottom: 20px;
+  z-index: 3;
+  display: grid;
+  gap: 8px;
+  color: #fff3c9;
+  font-family: var(--game-font);
+  font-size: 32px;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: auto;
+  transition: opacity 0.18s ease;
+}
+
+.runner-checkpoint-picker > span {
+  color: #fff3c9;
+  font-size: 32px;
+  line-height: 1;
+  text-shadow: none;
+}
+
+.runner-checkpoint-picker select {
+  width: 200px;
+  min-height: 54px;
+  padding: 5px 44px 5px 12px;
+  border: 2px solid rgba(246, 211, 94, 0.86);
+  border-radius: 4px;
+  background: rgba(13, 15, 34, 0.9);
+  color: #fff;
+  font: inherit;
+  font-size: 32px;
+  cursor: pointer;
+}
+
+.runner-checkpoint-picker select:focus-visible {
+  outline: 2px solid #f6d35e;
+  outline-offset: 2px;
+}
+
+.runner-skill-drawer {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: none;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 56px 18px 18px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1.4px),
+    linear-gradient(180deg, #2b2340 0%, #171223 100%);
+  background-size: 7px 7px, 100% 100%;
+  box-shadow:
+    inset 0 0 0 3px #120e1c,
+    inset 0 0 0 5px rgba(255, 224, 138, 0.28),
+    inset 0 -34px 46px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+
+.runner-hub.is-skills-open .runner-skill-drawer {
+  display: grid;
+  /* Ambient drift of the dot weave; harmless to restart on a re-render. */
+  animation: runner-drawer-drift 26s linear infinite;
+}
+
+/* The entrance animation lives on a transient class added only by the open action, so re-rendering
+   the panel (switching mini-games and back) never replays it. Placed after the rule above and
+   carrying the drift too, so it wins for the ~0.24s the opening class is present. */
+.runner-hub.is-skills-opening .runner-skill-drawer {
+  animation:
+    runner-drawer-open 0.24s ease-out,
+    runner-drawer-drift 26s linear infinite;
+}
+
+@keyframes runner-drawer-open {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.975);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes runner-drawer-drift {
+  from { background-position: 0 0, 0 0; }
+  to { background-position: 0 -56px, 0 0; }
+}
+
+/* Floating dust motes drifting up over the whole page (same vibe as the mine's cave dust). The
+   pattern tile repeats and the loop travels exactly one tile height, so it never visibly jumps. */
+.runner-skill-drawer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.6;
+  background-image:
+    radial-gradient(2.2px 2.2px at 20% 30%, rgba(255, 232, 176, 0.85), transparent 60%),
+    radial-gradient(1.7px 1.7px at 72% 58%, rgba(214, 208, 230, 0.7), transparent 60%),
+    radial-gradient(1.5px 1.5px at 42% 82%, rgba(255, 232, 176, 0.75), transparent 60%),
+    radial-gradient(1.5px 1.5px at 86% 24%, rgba(214, 208, 230, 0.6), transparent 60%),
+    radial-gradient(2.2px 2.2px at 55% 14%, rgba(214, 208, 230, 0.55), transparent 60%),
+    radial-gradient(1.5px 1.5px at 12% 66%, rgba(255, 232, 176, 0.7), transparent 60%),
+    radial-gradient(1.7px 1.7px at 33% 48%, rgba(214, 208, 230, 0.6), transparent 60%),
+    radial-gradient(1.5px 1.5px at 64% 92%, rgba(255, 232, 176, 0.6), transparent 60%);
+  background-size: 240px 280px;
+  animation: runner-dust-drift 15s linear infinite;
+}
+
+@keyframes runner-dust-drift {
+  from { background-position: 0 0; }
+  to { background-position: 0 -280px; }
+}
+
+/* Second, faster parallax layer: fewer but bigger glowing motes — the two speeds sell the drift. */
+.runner-skill-drawer::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0.75;
+  background-image:
+    radial-gradient(3px 3px at 28% 22%, rgba(255, 238, 190, 0.95), rgba(255, 238, 190, 0.25) 55%, transparent 75%),
+    radial-gradient(2.6px 2.6px at 78% 64%, rgba(226, 220, 246, 0.85), rgba(226, 220, 246, 0.2) 55%, transparent 75%),
+    radial-gradient(3px 3px at 52% 86%, rgba(255, 238, 190, 0.8), rgba(255, 238, 190, 0.2) 55%, transparent 75%),
+    radial-gradient(2.4px 2.4px at 10% 52%, rgba(226, 220, 246, 0.75), transparent 70%);
+  background-size: 300px 340px;
+  animation: runner-dust-drift-fast 8s linear infinite;
+}
+
+@keyframes runner-dust-drift-fast {
+  from { background-position: 0 0; }
+  to { background-position: 0 -340px; }
+}
+
+/* Layered entrance (transient class only): the panel lands first, then the header, then the tiles. */
+.runner-hub.is-skills-opening .runner-skill-header {
+  animation: runner-shop-pop 0.26s ease-out 0.08s backwards;
+}
+
+.runner-hub.is-skills-opening .runner-shop-cat {
+  animation: runner-shop-pop 0.26s ease-out 0.14s backwards;
+}
+
+.runner-skill-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(255, 224, 138, 0.28);
+}
+
+.runner-skill-title {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #f2dfbd;
+  font-size: clamp(22px, 6.4cqw, 34px);
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.6);
+}
+
+.runner-skill-close {
+  grid-column: 1;
+  grid-row: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 42px;
+  padding: 0 14px;
+  border: 2px solid rgba(255, 224, 138, 0.4);
+  border-radius: 10px;
+  background: rgba(12, 9, 20, 0.72);
+  color: #ffe7b0;
+  font-family: var(--game-font);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.runner-skill-close:hover,
+.runner-skill-close:focus-visible {
+  background: rgba(45, 34, 66, 0.9);
+  outline: 2px solid #f6d35e;
+  outline-offset: 2px;
+}
+
+.runner-skill-drawer .runner-hub-wallet {
+  grid-column: 3;
+  grid-row: 1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  line-height: 1;
+}
+
+.runner-skill-drawer .runner-hub-wallet span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 11px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 224, 138, 0.32);
+  background: rgba(12, 9, 20, 0.72);
+  color: #f4e6c4;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+.runner-skill-drawer .runner-hub-wallet span:first-child b {
+  color: #ffd85e;
+}
+
+.runner-skill-drawer .runner-hub-wallet b {
+  color: inherit;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.runner-hub.is-launching .runner-hub-head,
+.runner-hub.is-launching .runner-menu-actions,
+.runner-hub.is-launching .runner-checkpoint-picker,
+.runner-hub.is-launching .runner-skill-drawer {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.runner-hub.is-skills-open .runner-checkpoint-picker {
+  display: none;
+}
+
+.runner-hub.is-skills-open .runner-hub-head,
+.runner-hub.is-skills-open .runner-menu-actions {
+  visibility: hidden;
+}
+
+.runner-shop {
+  display: block;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-color: rgba(255, 216, 94, 0.55) rgba(0, 0, 0, 0.3);
+  scrollbar-width: thin;
+}
+
+.runner-shop-cat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #bfaee0;
+  margin: 8px 2px 6px;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.55);
+}
+
+.runner-shop-cat::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, rgba(191, 174, 224, 0.4), rgba(191, 174, 224, 0.05));
+}
+
+.runner-shop-cat:first-child {
+  margin-top: 2px;
+}
+
+.runner-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--shop-cols, 3), minmax(0, 1fr));
+  gap: 10px;
+}
+
+/* Registered so the bottom-up level fill animates smoothly when a level is bought. */
+@property --shop-fill {
+  syntax: '<percentage>';
+  inherits: false;
+  initial-value: 0%;
+}
+
+.runner-shop-entry {
+  display: grid;
+  place-items: center;
+  min-height: 0;
+  min-width: 0;
+  aspect-ratio: 1 / 1;
+  padding: 6px;
+  border-radius: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.12);
+  background-color: #251e3a;
+  /* The square fills bottom-up with level/max: a soft green pool + a bright waterline on top. */
+  background-image:
+    linear-gradient(
+      to top,
+      transparent calc(var(--shop-fill) - 2px),
+      rgba(159, 232, 132, 0.85) calc(var(--shop-fill) - 2px),
+      rgba(159, 232, 132, 0.85) var(--shop-fill),
+      transparent var(--shop-fill)
+    ),
+    linear-gradient(to top, rgba(111, 209, 79, 0.26) var(--shop-fill), transparent var(--shop-fill));
+  color: #f2ecff;
+  text-align: center;
+  cursor: pointer;
+  /* No transform/filter on hover/press: both would turn the tile into the containing block for its
+     absolutely-positioned detail tip, which must anchor to the drawer's bottom panel instead. */
+  transition: background-color 0.12s ease, border-color 0.12s ease, --shop-fill 0.3s ease;
+}
+
+.runner-shop-entry:hover:not(:disabled),
+.runner-shop-entry:focus-visible {
+  background-color: #2f2749;
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
+.runner-shop-entry:active:not(:disabled) {
+  background-color: #1d1730;
+}
+
+.runner-shop-entry:disabled {
+  cursor: default;
+}
+
+.runner-shop-entry.is-unaffordable:not(.is-maxed) {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Dim only the tile's own content — the hover tip must stay fully opaque. */
+.runner-shop-entry.is-unaffordable:not(.is-maxed) .runner-shop-icon {
+  opacity: 0.45;
+}
+
+.runner-shop-entry.is-maxed {
+  border-color: rgba(126, 211, 96, 0.55);
+  background-color: #21301f;
+  color: #b8eda0;
+}
+
+.runner-shop-icon {
+  display: grid;
+  place-items: center;
+  line-height: 1;
+}
+
+/* TD skill-set icons carry their own colours — just size them to the box. */
+.runner-shop-icon img {
+  display: block;
+  width: clamp(26px, 7cqw, 34px);
+  height: clamp(26px, 7cqw, 34px);
+  object-fit: contain;
+}
+
+/* Cards pop in with a short cascade each time the drawer opens (display flip restarts it). */
+@keyframes runner-shop-pop {
+  from { opacity: 0; transform: translateY(7px); }
+  to { opacity: 1; transform: none; }
+}
+
+.runner-hub.is-skills-opening .runner-shop-entry {
+  animation: runner-shop-pop 0.24s ease-out 0.14s backwards;
+}
+
+.runner-hub.is-skills-opening .runner-shop-entry:nth-child(2) { animation-delay: 0.18s; }
+.runner-hub.is-skills-opening .runner-shop-entry:nth-child(3) { animation-delay: 0.22s; }
+.runner-hub.is-skills-opening .runner-shop-entry:nth-child(4) { animation-delay: 0.26s; }
+.runner-hub.is-skills-opening .runner-shop-entry:nth-child(5) { animation-delay: 0.3s; }
+.runner-hub.is-skills-opening .runner-shop-entry:nth-child(6) { animation-delay: 0.34s; }
+
+/* Ambient life: icons idle-bob gently, out of phase per column so the grid never moves in lockstep. */
+@keyframes runner-icon-bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-2px); }
+}
+
+.runner-hub.is-skills-open .runner-shop-icon {
+  animation: runner-icon-bob 2.8s ease-in-out infinite;
+}
+
+.runner-hub.is-skills-open .runner-shop-entry:nth-child(2) .runner-shop-icon { animation-delay: -0.7s; }
+.runner-hub.is-skills-open .runner-shop-entry:nth-child(3) .runner-shop-icon { animation-delay: -1.4s; }
+.runner-hub.is-skills-open .runner-shop-entry:nth-child(4) .runner-shop-icon { animation-delay: -2.1s; }
+.runner-hub.is-skills-open .runner-shop-entry:nth-child(5) .runner-shop-icon { animation-delay: -0.35s; }
+.runner-hub.is-skills-open .runner-shop-entry:nth-child(6) .runner-shop-icon { animation-delay: -1.75s; }
+
+.runner-shop-name {
+  display: grid;
+  justify-items: start;
+  min-width: 0;
+  gap: 4px;
+}
+
+.runner-shop-name strong {
+  max-width: 100%;
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.05;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.runner-shop-name small {
+  max-width: 100%;
+  color: #b9aed6;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.runner-shop-cost {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: end;
+  align-self: center;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 9px;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffd85e 0%, #e8a93c 100%);
+  color: #4a3208;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), inset 0 -3px 0 rgba(0, 0, 0, 0.18), 0 2px 0 rgba(0, 0, 0, 0.4);
+}
+
+/* A light sweep glides across affordable buy buttons every few seconds — "you can buy me". */
+@keyframes runner-cost-shine {
+  0%, 62% { left: -45%; }
+  86%, 100% { left: 120%; }
+}
+
+.runner-shop-entry:not(.is-unaffordable):not(.is-maxed) .runner-shop-cost::after {
+  content: '';
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -45%;
+  width: 30%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+  transform: skewX(-18deg);
+  animation: runner-cost-shine 3.6s ease-in-out infinite;
+}
+
+.runner-shop-entry:nth-child(even):not(.is-unaffordable):not(.is-maxed) .runner-shop-cost::after {
+  animation-delay: 1.8s;
+}
+
+/* Hover detail panel: each tile carries its details, revealed into the fixed bottom zone. Anchored to
+   the drawer (nearest positioned ancestor), so it escapes the shop's scroll clipping. */
+.runner-shop-tip {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  min-height: 96px;
+  z-index: 8;
+  display: none;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: center;
+  gap: 6px 14px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 2px solid rgba(255, 224, 138, 0.42);
+  background: #0c0914;
+  text-align: left;
+  cursor: default;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.55);
+}
+
+.runner-shop-entry:hover .runner-shop-tip,
+.runner-shop-entry:focus-visible .runner-shop-tip {
+  display: grid;
+}
+
+/* Per-level effect ("+0,5 dégât / niv"): the concrete promise of the next purchase. Extra
+   specificity so the book-overlay's generic span styling cannot dim or shrink it. */
+.runner-skill-drawer .runner-shop-tip .runner-shop-gain {
+  grid-column: 2;
+  justify-self: end;
+  align-self: center;
+  color: #9fe884;
+  font-size: 16px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+/* Idle placeholder under the grids; the hover tip paints over it. */
+.runner-shop-tipzone {
+  display: grid;
+  place-items: center;
+  min-height: 96px;
+  border-radius: 12px;
+  border: 2px dashed rgba(255, 255, 255, 0.14);
+  color: rgba(191, 174, 224, 0.55);
+  font-size: 16px;
+  pointer-events: none;
+}
+
+.runner-shop-entry.is-unaffordable:not(.is-maxed) .runner-shop-cost {
+  background: rgba(255, 255, 255, 0.1);
+  color: #8d84a8;
+  box-shadow: none;
+}
+
+.runner-shop-entry.is-maxed .runner-shop-cost {
+  background: linear-gradient(180deg, #7ed360 0%, #4a8a38 100%);
+  color: #14320c;
+}
+
+.runner-editor-host {
+  position: fixed;
+  top: 16px;
+  left: 16px;
+  z-index: 10000;
+  display: none;
+  width: min(300px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: #16191f;
+  border: 1px solid #596170;
+  box-shadow: 0 12px 36px rgb(0 0 0 / 55%);
+}
+
+.runner-editor-modes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 6px;
+  background: #20242c;
+}
+
+.runner-editor-modes button {
+  min-height: 28px;
+  padding: 4px 8px;
+  color: #cbd2dc;
+  background: #353b46;
+  border: 1px solid #4e5766;
+  cursor: pointer;
+}
+
+.runner-editor-modes button.is-active {
+  color: #111820;
+  background: #8fd3ff;
+  border-color: #c5e9ff;
+}
+
+.runner-editor-host.is-visible {
+  display: block;
+}
+
+.runner-editor-json {
+  display: block;
+  width: calc(100% - 16px);
+  min-height: 116px;
+  margin: 8px;
+  padding: 8px;
+  resize: vertical;
+  color: #e8edf5;
+  background: #0d1015;
+  border: 1px solid #414957;
+  border-radius: 3px;
+  box-sizing: border-box;
+  font: 11px/1.35 monospace;
+  letter-spacing: 0;
+}
+
+.runner-editor-status {
+  min-height: 24px;
+  padding: 2px 10px 8px;
+  color: #9ddbb5;
+  font: 11px/1.35 sans-serif;
+  letter-spacing: 0;
+}
+
+.runner-editor-status.is-error {
+  color: #ff9b9b;
 }

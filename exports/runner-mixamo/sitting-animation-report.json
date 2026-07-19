@@ -1,0 +1,37 @@
+{
+  "pipeline": "runner-sitting-animation-only-v1",
+  "assets": [
+    {
+      "skin": "boy",
+      "source": "exports/runner-mixamo/boy/animations/boy-sitting-idle-source.fbx",
+      "sourceBytes": 850640,
+      "sourceSha256": "8b2ae425316f69aca874f058048c81905292f74ae1cd292e165d751c6af45c74",
+      "sourceFrames": [
+        1.0,
+        215.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerBoySittingIdle",
+      "output": "public/assets/runner/heroes/boy-sitting-idle.glb",
+      "outputBytes": 110992,
+      "outputSha256": "8dccb8a57f175281c5ebd089df0440ae6ee9be3adbd0370413c5753a9490714f",
+      "channelCount": 132
+    },
+    {
+      "skin": "girl",
+      "source": "exports/runner-mixamo/girl/animations/girl-sitting-source.fbx",
+      "sourceBytes": 1116368,
+      "sourceSha256": "1924f33eae0fbaa62688e049b423157637647d3c0f8039d12386992797c9d0c1",
+      "sourceFrames": [
+        1.0,
+        389.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerGirlSitting",
+      "output": "public/assets/runner/heroes/girl-sitting.glb",
+      "outputBytes": 216348,
+      "outputSha256": "9a2be8e01a2846aae8560d7d4b11f9dff235c85b1bc1be73adfe1213864c1e7d",
+      "channelCount": 132
+    }
+  ]
+}

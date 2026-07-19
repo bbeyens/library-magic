@@ -7,7 +7,7 @@ export type BookId =
   | 'blackjack'
   | 'hundred'
   | 'mine'
-  | 'targets'
+  | 'runner'
   | 'slimeTrainer';
 
 export type ResourceId = 'scales' | 'runes' | 'spores' | 'sigils' | 'chips' | 'fragments' | 'minerals' | 'marks' | 'gels';
@@ -140,7 +140,7 @@ export const books: BookDefinition[] = [
     unlockResource: { id: 'fragments', amount: 20 },
   },
   {
-    id: 'targets',
+    id: 'runner',
     name: 'Galerie des Cibles',
     subtitle: 'Clique les cibles, monte les degats, puis automatise le tir.',
     resourceId: 'marks',
@@ -165,7 +165,9 @@ export const books: BookDefinition[] = [
     shelf: 2,
     slot: 3,
     unlockMana: 1680,
-    unlockResource: { id: 'marks', amount: 24 },
+    // Temporary bridge: the runner's coins are internal to its own shop, so nothing
+    // produces Marks any more. Re-point this at the key/achievement system once it lands.
+    unlockResource: { id: 'minerals', amount: 24 },
   },
 ];
 

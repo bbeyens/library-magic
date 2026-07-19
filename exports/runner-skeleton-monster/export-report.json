@@ -1,0 +1,19 @@
+{
+  "source": "exports/runner-skeleton-monster/skeleton_girl_guy_sketchfab.fbx",
+  "sourceBytes": 327408,
+  "sourceSha256": "af1adca3312053939caf255be7eaa6b797785b874eceae3f1670e393459d130d",
+  "texture": "exports/runner-skeleton-monster/skeleton_texture.tga.png",
+  "textureSha256": "4135a5a8ca159c4d0e6678bbf09caa89a2f4398b95fa6d5dd96e6a16bcadacf3",
+  "blend": "exports/runner-skeleton-monster/skeleton-warrior.blend",
+  "preview": "exports/runner-skeleton-monster/skeleton-warrior-preview.png",
+  "output": "public/assets/runner/monsters/skeleton-warrior.glb",
+  "outputBytes": 299592,
+  "outputSha256": "d806b474956e8471ec3df54c3a45865559c9e33bf5ecdcd48ed9e21982a18f5f",
+  "meshCount": 1,
+  "skinCount": 0,
+  "materialCount": 1,
+  "animations": [
+    "Animation"
+  ],
+  "polygonCount": 2491
+}

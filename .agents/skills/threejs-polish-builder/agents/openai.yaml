@@ -1,0 +1,4 @@
+interface:
+  display_name: "Three.js Polish Builder"
+  short_description: "Close visible gaps against an approved game target"
+  default_prompt: "Load threejs-polish-builder/SKILL.md and close the largest visible gap for game-polish. Honor the binding BlenderMCP decision, record proof directly in the active GDD, and add no extra gate or build."

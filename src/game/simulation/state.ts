@@ -1,5 +1,21 @@
 import type { BookId, ResourceId } from '../content/books';
 import type { ForbiddenOfferingResourceId } from '../content/forbiddenGrimoire';
+import {
+  runnerAttackRange,
+  runnerAttackCount,
+  runnerBaseDamage,
+  runnerBaseFireRate,
+  runnerHomingStrength,
+  runnerLateralSpeed,
+  runnerNextBossDistance,
+  runnerNextBoostPortalDistance,
+  runnerProjectileSpeed,
+  runnerStartUnits,
+  RUNNER_BASE_SPEED,
+  type RunnerGateKind,
+  type RunnerUpgradeId,
+} from './runnerRules';
+import type { RunnerMonsterModelId } from './runnerEditorRules';
 import { slimeTrainerEnemyForVictoryCount, type SlimeTrainerCommandId, type SlimeTrainerEnemy } from './slimeTrainerRules';
 
 export interface BookState {
@@ -106,7 +122,9 @@ export interface ManaCrystalState {
 }
 
 export interface SnakeSkillsState {
+  // Purchased speed level (the cap). `speedSetting` is the active level the player dials in [0, speed].
   speed: number;
+  speedSetting: number;
   gridSize: number;
   foodCount: number;
   growthThreshold: number;
@@ -380,31 +398,190 @@ export interface HundredState {
   lastOutcome: HundredOutcome;
 }
 
-export interface TargetInstance {
+/** A cube barrelling down the lane at the squad. */
+export interface RunnerEnemy {
   id: number;
   x: number;
-  y: number;
+  z: number;
   health: number;
   maxHealth: number;
+  modelId?: RunnerMonsterModelId;
+  contactDamage?: number;
+  coinReward?: number;
+  scale?: number;
+  speedMultiplier?: number;
+  editorPlaced?: boolean;
+  isMiniBoss?: boolean;
+  isBoss?: boolean;
 }
 
-export interface TargetSkillsState {
-  spawnSpeed: number;
-  targetCount: number;
+/** A seal floating over the lane; shoot its hit points away to absorb the modifier. */
+export interface RunnerGate {
+  id: number;
+  x: number;
+  z: number;
+  kind: RunnerGateKind;
+  value: number;
+  shotsRequired: number;
+  shotsRemaining: number;
+  activated: boolean;
+}
+
+export interface RunnerBoostPortalPair {
+  id: number;
+  z: number;
+  leftUpgradeId: RunnerUpgradeId;
+  rightUpgradeId: RunnerUpgradeId;
+}
+
+export interface RunnerBullet {
+  id: number;
+  x: number;
+  z: number;
+  maxZ: number;
   damage: number;
-  automation: number;
 }
 
-export interface TargetState {
+export interface RunnerImpact {
+  id: number;
+  x: number;
+  z: number;
+  createdAt: number;
+}
+
+export interface RunnerDefeatEffect {
+  id: number;
+  x: number;
+  z: number;
+  amount: number;
+  scale: number;
+  createdAt: number;
+}
+
+/** The run in flight. Reset from scratch on every relaunch. */
+export interface RunnerRunState {
   running: boolean;
-  score: number;
-  best: number;
-  spawnTimer: number;
-  automationTimer: number;
-  nextTargetId: number;
-  lastReward: number;
-  shotPulse: number;
-  targets: TargetInstance[];
+  dead: boolean;
+  editorPaused: boolean;
+  distance: number;
+  playerX: number;
+  playerTargetX: number;
+  lateralSpeed: number;
+  /** Remaining lives. Enemy contact subtracts the enemy's remaining health. */
+  units: number;
+  /** Projectiles emitted by each volley, independent from remaining lives. */
+  attacks: number;
+  damage: number;
+  fireRate: number;
+  attackRange: number;
+  homingStrength: number;
+  projectileSpeed: number;
+  speed: number;
+  fireCooldown: number;
+  enemySpawnTimer: number;
+  nextGateDistance: number;
+  nextBoostPortalDistance: number;
+  nextBossDistance: number;
+  gateIndex: number;
+  nextEntityId: number;
+  enemies: RunnerEnemy[];
+  gates: RunnerGate[];
+  boostPortals: RunnerBoostPortalPair[];
+  temporaryUpgrades: Record<RunnerUpgradeId, number>;
+  bullets: RunnerBullet[];
+  impacts: RunnerImpact[];
+  defeatEffects: RunnerDefeatEffect[];
+  coinsEarned: number;
+  kills: number;
+  /** Bumped on each kill / gate crack so the renderer can fire one-shot effects. */
+  hitPulse: number;
+  gatePulse: number;
+  boostPortalPulse: number;
+  lastBoostUpgradeId: RunnerUpgradeId | null;
+  lastBoostAt: number | null;
+  deathPulse: number;
+  /** Exact simulation time of the latest enemy contact, used by hit feedback. */
+  lastDamageAt: number | null;
+  /** Exact simulation time when the current run ended. */
+  deathAt: number | null;
+  /** Set while the home camp fades back in after a completed death sequence. */
+  menuReturnAt: number | null;
+}
+
+/** Survives across runs. Coins are spendable only in this mini-game's own shop. */
+export interface RunnerMetaState {
+  coins: number;
+  bestDistance: number;
+  lastRunCoins: number;
+  lastRunDistance: number;
+  selectedCheckpoint: number;
+  upgrades: Record<RunnerUpgradeId, number>;
+}
+
+export function createInitialRunnerUpgrades(): Record<RunnerUpgradeId, number> {
+  return {
+    baseDamage: 0,
+    startUnits: 0,
+    baseFireRate: 0,
+    lateralSpeed: 0,
+    attackRange: 0,
+    multishot: 0,
+    homing: 0,
+    projectileSpeed: 0,
+    gateQuality: 0,
+    coinFlat: 0,
+    coinGain: 0,
+  };
+}
+
+/** A fresh run, seeded from the permanent upgrades bought in the shop. */
+export function createRunnerRunState(
+  upgrades: Record<RunnerUpgradeId, number>,
+  startDistance = 0,
+): RunnerRunState {
+  const distance = Math.max(0, startDistance);
+  return {
+    running: false,
+    dead: false,
+    editorPaused: false,
+    distance,
+    playerX: 0,
+    playerTargetX: 0,
+    lateralSpeed: runnerLateralSpeed(upgrades.lateralSpeed),
+    units: runnerStartUnits(upgrades.startUnits),
+    attacks: runnerAttackCount(upgrades.multishot),
+    damage: runnerBaseDamage(upgrades.baseDamage),
+    fireRate: runnerBaseFireRate(upgrades.baseFireRate),
+    attackRange: runnerAttackRange(upgrades.attackRange),
+    homingStrength: runnerHomingStrength(upgrades.homing),
+    projectileSpeed: runnerProjectileSpeed(upgrades.projectileSpeed),
+    speed: RUNNER_BASE_SPEED,
+    fireCooldown: 0,
+    enemySpawnTimer: 0,
+    nextGateDistance: distance + 30,
+    nextBoostPortalDistance: runnerNextBoostPortalDistance(distance),
+    nextBossDistance: runnerNextBossDistance(distance),
+    gateIndex: Math.floor(distance / 35),
+    nextEntityId: 1,
+    enemies: [],
+    gates: [],
+    boostPortals: [],
+    temporaryUpgrades: createInitialRunnerUpgrades(),
+    bullets: [],
+    impacts: [],
+    defeatEffects: [],
+    coinsEarned: 0,
+    kills: 0,
+    hitPulse: 0,
+    gatePulse: 0,
+    boostPortalPulse: 0,
+    lastBoostUpgradeId: null,
+    lastBoostAt: null,
+    deathPulse: 0,
+    lastDamageAt: null,
+    deathAt: null,
+    menuReturnAt: null,
+  };
 }
 
 // Special block kinds (rolled at generation). 'bomb' explodes on the first break.
@@ -567,8 +744,8 @@ export interface GameState {
   defense: DefenseState;
   blackjack: BlackjackState;
   hundred: HundredState;
-  targetSkills: TargetSkillsState;
-  targets: TargetState;
+  runnerMeta: RunnerMetaState;
+  runner: RunnerRunState;
   miningSkills: MiningSkillsState;
   mining: MiningState;
   slimeTrainer: SlimeTrainerState;
@@ -977,7 +1154,7 @@ export function createInitialState(): GameState {
         unlocked: true,
         charge: 0,
       },
-      targets: {
+      runner: {
         level: 1,
         automation: 0,
         pinned: false,
@@ -1049,6 +1226,7 @@ export function createInitialState(): GameState {
     },
     snakeSkills: {
       speed: 0,
+      speedSetting: 0,
       gridSize: 0,
       foodCount: 0,
       growthThreshold: 0,
@@ -1241,11 +1419,13 @@ export function createInitialState(): GameState {
       lastReward: 0,
       lastOutcome: 'idle',
     },
-    targetSkills: {
-      spawnSpeed: 0,
-      targetCount: 0,
-      damage: 0,
-      automation: 0,
+    runnerMeta: {
+      coins: 0,
+      bestDistance: 0,
+      lastRunCoins: 0,
+      lastRunDistance: 0,
+      selectedCheckpoint: 0,
+      upgrades: createInitialRunnerUpgrades(),
     },
     miningSkills: {
       pickaxeForce: 0,
@@ -1269,17 +1449,7 @@ export function createInitialState(): GameState {
       automationTimer: 0,
       autoDigCount: 0,
     },
-    targets: {
-      running: false,
-      score: 0,
-      best: 0,
-      spawnTimer: 0,
-      automationTimer: 0,
-      nextTargetId: 1,
-      lastReward: 0,
-      shotPulse: 0,
-      targets: [],
-    },
+    runner: createRunnerRunState(createInitialRunnerUpgrades()),
     mining: {
       blocks: createInitialMiningBlocks(),
       materials: createInitialMiningMaterials(),

@@ -68,7 +68,7 @@ const resourceDefinitions: ResourceDefinition[] = [
   { id: 'chips', label: 'Jetons', color: 0x74d88f, accent: '#74d88f', bookId: 'blackjack' },
   { id: 'fragments', label: 'Fragments', color: 0x7ea4ff, accent: '#7ea4ff', bookId: 'hundred' },
   { id: 'minerals', label: 'Pieces mine', color: 0xd69a58, accent: '#d69a58', bookId: 'mine' },
-  { id: 'marks', label: 'Marques', color: 0xff7a80, accent: '#ff7a80', bookId: 'targets' },
+  { id: 'marks', label: 'Marques', color: 0xff7a80, accent: '#ff7a80', bookId: 'runner' },
   { id: 'gels', label: 'Gels', color: 0x7df0a3, accent: '#7df0a3', bookId: 'slimeTrainer' },
 ];
 
@@ -1168,7 +1168,7 @@ function bookPosition(id: BookDefinition['id']): { x: number; y: number } {
       return { x: scaled(415), y: scaled(286) };
     case 'mine':
       return { x: scaled(548), y: scaled(286) };
-    case 'targets':
+    case 'runner':
       return { x: scaled(145), y: scaled(422) };
     case 'slimeTrainer':
       return { x: scaled(548), y: scaled(422) };

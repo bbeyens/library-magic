@@ -1,0 +1,58 @@
+{
+  "character": "demongirl",
+  "format": "FBX Binary",
+  "mixamoPurpose": "unrigged static character for Mixamo autorig",
+  "source": "exports/runner-demongirl/demongirl.blend",
+  "export": {
+    "sourceSha256": "d9ccabab407028fe0c02b5978f40784b1f136a2c79d5fc32b8bee2f723b9a2e9",
+    "vertexCount": 42999,
+    "polygonCount": 84064,
+    "armatureCount": 0,
+    "materialCount": 7,
+    "dimensionsMeters": [
+      2.1496,
+      1.3503,
+      2.3008
+    ],
+    "groundedMinZ": 0.0,
+    "embeddedAnimationCount": 0
+  },
+  "validation": {
+    "reimported": true,
+    "meshCount": 1,
+    "vertexCount": 42999,
+    "polygonCount": 84064,
+    "armatureCount": 0,
+    "animationCount": 0,
+    "materialCount": 7,
+    "dimensionsMeters": [
+      2.1496,
+      1.3503,
+      2.3008
+    ],
+    "groundedMinZ": -0.0,
+    "previewRendered": true,
+    "mixamoAutorigWarning": "Source silhouette has no clearly separated exposed wrists or elbows."
+  },
+  "protectedAssetsUnchanged": true,
+  "protectedSha256": {
+    "exports/runner-demongirl/demongirl-source.fbx": "0069e3af4ecfa85f974d5a05a57d8fe50f47d668a40f7e883a6c32b216d332b3",
+    "exports/runner-demongirl/demongirl.blend": "d9ccabab407028fe0c02b5978f40784b1f136a2c79d5fc32b8bee2f723b9a2e9",
+    "public/assets/runner/heroes/girl.glb": "f7e1dd3cab896d8a94561105049fc526ca3055d117ece3a6c8b0033db187860a"
+  },
+  "files": {
+    "demongirl-mixamo.fbx": {
+      "bytes": 2661996,
+      "sha256": "ce77dd79405c960751ab6c6e65074d5f14ed27fa7c6247243dece5812c675ce9"
+    },
+    "demongirl-mixamo-preview.png": {
+      "bytes": 240089,
+      "sha256": "4c834cac3d6c838d38ba35bce778edac9293476061934641a38b012ce1f8f45c"
+    }
+  },
+  "zip": {
+    "path": "exports/runner-mixamo/demongirl-mixamo.zip",
+    "bytes": 2744014,
+    "sha256": "ba1bedca9b3e49980105763afc2b0383a6fd0461cf2e561e29040e8ba3cc0242"
+  }
+}

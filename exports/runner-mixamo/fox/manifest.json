@@ -1,0 +1,57 @@
+{
+  "character": "fox",
+  "format": "FBX Binary",
+  "mixamoPurpose": "rigged T-pose character without animation clip",
+  "source": "exports/runner-fox/fox-source.fbx",
+  "export": {
+    "sourceSha256": "4241c4a676841d77f7c25b76bd91238d305077706d17f8298ad6d52abff6bd61",
+    "vertexCount": 13452,
+    "polygonCount": 13562,
+    "boneCount": 33,
+    "materialCount": 3,
+    "dimensionsMeters": [
+      1.5387,
+      1.2619,
+      1.8817
+    ],
+    "groundedMinZ": -0.0,
+    "embeddedAnimationCount": 0
+  },
+  "validation": {
+    "reimported": true,
+    "meshCount": 1,
+    "vertexCount": 13452,
+    "polygonCount": 13562,
+    "boneCount": 33,
+    "animationCount": 0,
+    "materialCount": 3,
+    "dimensionsMeters": [
+      1.5387,
+      1.2619,
+      1.8817
+    ],
+    "groundedMinZ": 0.0,
+    "previewRendered": true
+  },
+  "protectedAssetsUnchanged": true,
+  "protectedSha256": {
+    "exports/runner-fox/fox-source.fbx": "4241c4a676841d77f7c25b76bd91238d305077706d17f8298ad6d52abff6bd61",
+    "public/assets/runner/heroes/boy.glb": "499127590dbd9181532cc3246afc6f6fb75376bf2046bee2b53f00433dd146af",
+    "exports/runner-fox/fox.blend": "2dc418c26e6dcce7b816884c318c7d49d8036ba701457b16aca7ef317af54580"
+  },
+  "files": {
+    "fox-mixamo.fbx": {
+      "bytes": 643724,
+      "sha256": "a2f924d665555815d807513440690438aa57195c7b6c3c5359b13549c1707d9d"
+    },
+    "fox-mixamo-preview.png": {
+      "bytes": 119077,
+      "sha256": "e542e3753ea7f43c95279af175f471d6fdf092893adea4f9ffecba025a763c39"
+    }
+  },
+  "zip": {
+    "path": "exports/runner-mixamo/fox-mixamo.zip",
+    "bytes": 632858,
+    "sha256": "36086ceb791780cad6804de178a2017802ca18c211deaa7bccafeb2c4a2e0d14"
+  }
+}

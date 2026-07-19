@@ -1,0 +1,118 @@
+{
+  "characters": [
+    {
+      "character": "boy",
+      "format": "FBX Binary",
+      "mixamoPurpose": "rigged character without animation clip",
+      "export": {
+        "source": "public/assets/runner/heroes/boy.glb",
+        "sourceSha256": "141ef20d5f0d6e6488bf54207ee4ece8ca9522cd96abee6fc6ba5a9d6d1da3c6",
+        "meshCount": 1,
+        "vertexCount": 9288,
+        "boneCount": 43,
+        "dimensionsMeters": [
+          1.4868,
+          0.9162,
+          1.5515
+        ],
+        "groundedMinZ": 0.0,
+        "embeddedAnimationCount": 0
+      },
+      "validation": {
+        "reimported": true,
+        "meshCount": 1,
+        "vertexCount": 9288,
+        "boneCount": 43,
+        "animationCount": 0,
+        "dimensionsMeters": [
+          1.4868,
+          0.9162,
+          1.5515
+        ],
+        "materialCount": 1,
+        "imageTextureCount": 2,
+        "previewRendered": true
+      },
+      "files": {
+        "boy-mixamo.fbx": {
+          "bytes": 416076,
+          "sha256": "bf7462616a323ebb987bef4af67b391d2c2bf7081e5234d49eee72349018c5ae"
+        },
+        "hero-basecolor.png": {
+          "bytes": 7353,
+          "sha256": "4423f152cf968e33f5b3c17589cdee395a1783074b7759da061aea7aa4b83549"
+        },
+        "boy-mixamo-preview.png": {
+          "bytes": 131450,
+          "sha256": "d41e058b04d1575158641f3efea201de3e6f63625a9f705c967de540b6139090"
+        }
+      },
+      "zip": {
+        "path": "exports/runner-mixamo/boy-mixamo.zip",
+        "bytes": 438975,
+        "sha256": "388b20c008e869245b6676148bf295fdde3b96d3f6741514c36d2bdd819d8b08"
+      }
+    },
+    {
+      "character": "girl",
+      "format": "FBX Binary",
+      "mixamoPurpose": "rigged character without animation clip",
+      "export": {
+        "source": "public/assets/runner/heroes/girl.glb",
+        "sourceSha256": "7427c001bab827550d1eda9fad75ec344a1234cd98593b2d71a08cc3cba060b5",
+        "meshCount": 1,
+        "vertexCount": 9189,
+        "boneCount": 43,
+        "dimensionsMeters": [
+          1.4867,
+          0.8781,
+          1.5831
+        ],
+        "groundedMinZ": 0.0,
+        "embeddedAnimationCount": 0
+      },
+      "validation": {
+        "reimported": true,
+        "meshCount": 1,
+        "vertexCount": 9189,
+        "boneCount": 43,
+        "animationCount": 0,
+        "dimensionsMeters": [
+          1.4867,
+          0.8781,
+          1.5831
+        ],
+        "materialCount": 1,
+        "imageTextureCount": 2,
+        "previewRendered": true
+      },
+      "files": {
+        "girl-mixamo.fbx": {
+          "bytes": 411180,
+          "sha256": "9c60bf4aa0c891d5663bb7d487282c1696d8a2ca82c2ce6f15888257192944cc"
+        },
+        "hero-basecolor.png": {
+          "bytes": 7353,
+          "sha256": "4423f152cf968e33f5b3c17589cdee395a1783074b7759da061aea7aa4b83549"
+        },
+        "girl-mixamo-preview.png": {
+          "bytes": 117744,
+          "sha256": "5b163afa758dd73842f860f074f4d880341b1e69209a06aaf19e59d0c842ad38"
+        }
+      },
+      "zip": {
+        "path": "exports/runner-mixamo/girl-mixamo.zip",
+        "bytes": 420447,
+        "sha256": "a90f008b3d2a5469f50d46d4bb6bd69d96f61691e804a9482a2f5d25c3200fae"
+      }
+    }
+  ],
+  "characterCount": 2,
+  "expectedCharacterCount": 2,
+  "runtimeAssetsUnchanged": true,
+  "runtimeSha256": {
+    "boy.glb": "141ef20d5f0d6e6488bf54207ee4ece8ca9522cd96abee6fc6ba5a9d6d1da3c6",
+    "girl.glb": "7427c001bab827550d1eda9fad75ec344a1234cd98593b2d71a08cc3cba060b5",
+    "hero-basecolor.png": "4423f152cf968e33f5b3c17589cdee395a1783074b7759da061aea7aa4b83549"
+  }
+}

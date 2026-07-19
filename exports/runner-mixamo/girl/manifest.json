@@ -1,0 +1,48 @@
+{
+  "character": "girl",
+  "format": "FBX Binary",
+  "mixamoPurpose": "rigged character without animation clip",
+  "export": {
+    "source": "public/assets/runner/heroes/girl.glb",
+    "sourceSha256": "7427c001bab827550d1eda9fad75ec344a1234cd98593b2d71a08cc3cba060b5",
+    "meshCount": 1,
+    "vertexCount": 9189,
+    "boneCount": 43,
+    "dimensionsMeters": [
+      1.4867,
+      0.8781,
+      1.5831
+    ],
+    "groundedMinZ": 0.0,
+    "embeddedAnimationCount": 0
+  },
+  "validation": {
+    "reimported": true,
+    "meshCount": 1,
+    "vertexCount": 9189,
+    "boneCount": 43,
+    "animationCount": 0,
+    "dimensionsMeters": [
+      1.4867,
+      0.8781,
+      1.5831
+    ],
+    "materialCount": 1,
+    "imageTextureCount": 2,
+    "previewRendered": true
+  },
+  "files": {
+    "girl-mixamo.fbx": {
+      "bytes": 411180,
+      "sha256": "9c60bf4aa0c891d5663bb7d487282c1696d8a2ca82c2ce6f15888257192944cc"
+    },
+    "hero-basecolor.png": {
+      "bytes": 7353,
+      "sha256": "4423f152cf968e33f5b3c17589cdee395a1783074b7759da061aea7aa4b83549"
+    },
+    "girl-mixamo-preview.png": {
+      "bytes": 117744,
+      "sha256": "5b163afa758dd73842f860f074f4d880341b1e69209a06aaf19e59d0c842ad38"
+    }
+  }
+}

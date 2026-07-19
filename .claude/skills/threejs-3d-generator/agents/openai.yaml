@@ -1,0 +1,4 @@
+interface:
+  display_name: "Three.js 3D Generator"
+  short_description: "Generate 3D assets; rig humanoids with Mixamo via Browser"
+  default_prompt: "Load threejs-3d-generator/SKILL.md and follow its provider split exactly. Use Tripo only for model generation, texturing, stylization, conversion, and download; probe TRIPO_API_KEY only when that lane is selected. Route biped motion through Mixamo and authored non-biped work through BlenderMCP or the GDD-selected owner. Download outputs immediately and report provider, file paths, settings, and Three.js proof."

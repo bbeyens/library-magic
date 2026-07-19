@@ -7,6 +7,12 @@
       "skillPath": "skills/engineering/ask-matt/SKILL.md",
       "computedHash": "f3ac3351e2a242ce2591e4f8475424d58f62db3f5786332b78f330b15312d1e0"
     },
+    "blender-mcp": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/blender-mcp/SKILL.md",
+      "computedHash": "f64fd9498afd4d99e6a03e01781d265cbee512572c19dc663791f6251858cf08"
+    },
     "codebase-design": {
       "source": "mattpocock/skills",
       "sourceType": "github",
@@ -32,16 +38,64 @@
       "computedHash": "1a993ce9b2aaa653ee441c8d7efb7f27de03493c722be6dfb8137bcb8db1bc72"
     },
     "domain-modeling": {
-      "source": "mattpocock/skills",
+      "source": "zbeyens/threejs-template",
       "sourceType": "github",
-      "skillPath": "skills/engineering/domain-modeling/SKILL.md",
-      "computedHash": "67343881f5def98487d56243155716110afbcbf22ec92421c882d532b941cb17"
+      "skillPath": ".agents/skills/domain-modeling/SKILL.md",
+      "computedHash": "7ff99cc18d8c92fba4bb18ba42648803f463cd4be2e5fd32c553aec93e41b4d1"
     },
     "edit-article": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/personal/edit-article/SKILL.md",
       "computedHash": "8d7aec1987245a27e9c7d585b9f11d1129b8bd8ecb3a8596cdd3048974d9e302"
+    },
+    "game-3d-asset-pipeline": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-3d-asset-pipeline/SKILL.md",
+      "computedHash": "7e77280dd53396634eff8dfcac950df2db19f5dd21e77f97835b31425d093093"
+    },
+    "game-build": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-build/SKILL.md",
+      "computedHash": "1fa742c33ff94bb2bc95b56ed5252790fe1bf40c7aa788e19c07eaff6d377068"
+    },
+    "game-design": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-design/SKILL.md",
+      "computedHash": "6b32c04f148c44f8a495fba60e90352e6c004bdd0246d31d36bc5e9ed128c1b7"
+    },
+    "game-full": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-full/SKILL.md",
+      "computedHash": "8cdd378d64740190a62d14aa2cb845ba77108169d2977a9b1d9deb05e8e29c16"
+    },
+    "game-memory": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-memory/SKILL.md",
+      "computedHash": "8a15a057149aa7ef4638c9a742723b9dde84eb8e979bf0fbceb43b8be87774c2"
+    },
+    "game-polish": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-polish/SKILL.md",
+      "computedHash": "80b9b094dd6b15d7a59ab9a82d9d606fa3d2e69c7340408fc6be95a11266abfe"
+    },
+    "game-visual": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/game-visual/SKILL.md",
+      "computedHash": "811805f2a6b24019446eb21ac696560f6cc526086243ef356088e0fbaa184125"
+    },
+    "gameblocks": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/gameblocks/SKILL.md",
+      "computedHash": "61039bade2f22893c428bae694390758647a9e454b3e9568ea003511a577c6d9"
     },
     "git-guardrails-claude-code": {
       "source": "mattpocock/skills",
@@ -56,10 +110,10 @@
       "computedHash": "f321507f77702a54af1db66549ec1685fc625390d06c57d7949cdcda8eb1b5c7"
     },
     "grill-with-docs": {
-      "source": "mattpocock/skills",
+      "source": "zbeyens/threejs-template",
       "sourceType": "github",
-      "skillPath": "skills/engineering/grill-with-docs/SKILL.md",
-      "computedHash": "e7ef25bbee50cda2eb7b3a8ef541db0a0396dad7d369f7d14fb610671dd1864b"
+      "skillPath": ".agents/skills/grill-with-docs/SKILL.md",
+      "computedHash": "e9b5338c0c3f324fd4f7e47550964e8ad7ad0ed2c8dab137462e3ed3bfa004c7"
     },
     "grilling": {
       "source": "mattpocock/skills",
@@ -72,6 +126,12 @@
       "sourceType": "github",
       "skillPath": "skills/productivity/handoff/SKILL.md",
       "computedHash": "5d0f81e38abe6b984e1feaa731927de5291d040982106ac513cf54ec240e00ec"
+    },
+    "hard-cut": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/hard-cut/SKILL.md",
+      "computedHash": "3cfd8bb950936cec512f0be9977947671630c4b6ab0c8a839cf5f37a2ff8608e"
     },
     "implement": {
       "source": "mattpocock/skills",
@@ -146,16 +206,70 @@
       "computedHash": "f9aeedf0a1f560ec465c3939c54434c2d949ac8b958a0493db52216f688a0366"
     },
     "tdd": {
-      "source": "mattpocock/skills",
+      "source": "zbeyens/threejs-template",
       "sourceType": "github",
-      "skillPath": "skills/engineering/tdd/SKILL.md",
-      "computedHash": "d5ca5c8ae0615f343f1cfd71591f4a586046d77b1f36e8d67b8f643bad51043e"
+      "skillPath": ".agents/skills/tdd/SKILL.md",
+      "computedHash": "7b3dc2ad57ac69d085adba3bbe14b8efe88f845e57335e45be20cc95eac26bd6"
     },
     "teach": {
       "source": "mattpocock/skills",
       "sourceType": "github",
       "skillPath": "skills/productivity/teach/SKILL.md",
       "computedHash": "9cd31ea42b40915ea5fd3949ed229b217d1dfad07dd93d9b0db771dcdd6a6c8a"
+    },
+    "threejs-3d-generator": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-3d-generator/SKILL.md",
+      "computedHash": "b44aee5b28e73fdc45410581dfb4b1233656e4412fe75d2ced1477469b8f91cb"
+    },
+    "threejs-audio-generator": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-audio-generator/SKILL.md",
+      "computedHash": "b0aabb0fcedec414f3914096fe17921424b55fa7610a248e9fef9d9ab11a65dc"
+    },
+    "threejs-debug-profiler": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-debug-profiler/SKILL.md",
+      "computedHash": "17e750dd1f44d255e0407bbb06f2c7456cd6d4d53cbcb90a333da5bf80ff4664"
+    },
+    "threejs-game-director": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-game-director/SKILL.md",
+      "computedHash": "9e2cd603ca607977e799369b2d18c21f836dd62ecaba126fccbfe6249b0a078b"
+    },
+    "threejs-game-proof": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-game-proof/SKILL.md",
+      "computedHash": "e95f1d3c720f544af5cf0e0bdf1327a8e6dd8357b10f578bad31631d922dea14"
+    },
+    "threejs-game-ui-designer": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-game-ui-designer/SKILL.md",
+      "computedHash": "e312887f8aa2efbd2223399438ec5039d12a4d474ce28301b3a8810bde7b85b8"
+    },
+    "threejs-gameplay-systems": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-gameplay-systems/SKILL.md",
+      "computedHash": "c69f619cdd075598132a290259e89ac568c159f1fe8efde518be4c4cf0bee8dd"
+    },
+    "threejs-image-generator": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-image-generator/SKILL.md",
+      "computedHash": "d3252a73ef077b4e5b40c77191dc2173ea7ca90e82184d4cc60702aabdf168fd"
+    },
+    "threejs-polish-builder": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/threejs-polish-builder/SKILL.md",
+      "computedHash": "a7582a65be274601060a72e3afedb5aecc0c5831acac160595145460c77aaeb2"
     },
     "to-issues": {
       "source": "mattpocock/skills",
@@ -180,6 +294,12 @@
       "sourceType": "github",
       "skillPath": "skills/deprecated/ubiquitous-language/SKILL.md",
       "computedHash": "c8968b02b83c365bc81d85cc17fb4c8854b80f5b6dece322164fff5b00142231"
+    },
+    "world-builder": {
+      "source": "zbeyens/threejs-template",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/world-builder/SKILL.md",
+      "computedHash": "35dd7f14467d77e26ca22beaa04daf1b57e358d6dee8fe75053aae08dd5cd6d2"
     },
     "writing-beats": {
       "source": "mattpocock/skills",

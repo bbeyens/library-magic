@@ -1,0 +1,48 @@
+{
+  "character": "boy",
+  "format": "FBX Binary",
+  "mixamoPurpose": "rigged character without animation clip",
+  "export": {
+    "source": "public/assets/runner/heroes/boy.glb",
+    "sourceSha256": "141ef20d5f0d6e6488bf54207ee4ece8ca9522cd96abee6fc6ba5a9d6d1da3c6",
+    "meshCount": 1,
+    "vertexCount": 9288,
+    "boneCount": 43,
+    "dimensionsMeters": [
+      1.4868,
+      0.9162,
+      1.5515
+    ],
+    "groundedMinZ": 0.0,
+    "embeddedAnimationCount": 0
+  },
+  "validation": {
+    "reimported": true,
+    "meshCount": 1,
+    "vertexCount": 9288,
+    "boneCount": 43,
+    "animationCount": 0,
+    "dimensionsMeters": [
+      1.4868,
+      0.9162,
+      1.5515
+    ],
+    "materialCount": 1,
+    "imageTextureCount": 2,
+    "previewRendered": true
+  },
+  "files": {
+    "boy-mixamo.fbx": {
+      "bytes": 416076,
+      "sha256": "bf7462616a323ebb987bef4af67b391d2c2bf7081e5234d49eee72349018c5ae"
+    },
+    "hero-basecolor.png": {
+      "bytes": 7353,
+      "sha256": "4423f152cf968e33f5b3c17589cdee395a1783074b7759da061aea7aa4b83549"
+    },
+    "boy-mixamo-preview.png": {
+      "bytes": 131450,
+      "sha256": "d41e058b04d1575158641f3efea201de3e6f63625a9f705c967de540b6139090"
+    }
+  }
+}

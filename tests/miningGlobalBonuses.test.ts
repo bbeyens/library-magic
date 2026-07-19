@@ -53,7 +53,8 @@ for (const requiredRewardPath of [
   "const reward = miniGameResourceReward(state, defenseEnemyReward(state, enemy.kind ?? 'slime'));",
   'const resourceGain = miniGameResourceReward(state, totalGain);',
   'const reward = miniGameResourceReward(state, hundredReward(book.level, nextTotal));',
-  'const reward = miniGameResourceReward(state, targetReward(state.books.targets.level, target.maxHealth));',
+  // The runner ('runner') is deliberately absent: its coins are internal to its own shop,
+  // so it has no global resource reward to multiply.
   'const reward = miniGameResourceReward(state, slimeTrainerResourceReward(trainer.enemy, trainer.level));',
   'state.resources[bookDefinition.resourceId] += miniGameResourceReward(state, amount * 0.22);',
 ]) {

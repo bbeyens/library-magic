@@ -1,0 +1,6 @@
+{
+  "source": "/Users/zbeyens/Downloads/files-5/coin.fbx",
+  "runtimeAsset": "/assets/runner/effects/coin.glb",
+  "conversionScript": "scripts/convert-runner-coin.py",
+  "purpose": "Runner monster death resource popup"
+}

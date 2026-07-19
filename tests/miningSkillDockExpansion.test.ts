@@ -34,7 +34,6 @@ assert.equal(terrainSource.includes('miningHoldClickRate(state)'), true);
 assert.equal(terrainSource.includes('miningManualClickMinIntervalMs'), true);
 assert.equal(hudSource.includes('class="mining-counter-box"'), true);
 assert.equal(hudSource.includes('data-dynamic-value="mining-counter-total"'), true);
-assert.equal(hudSource.includes("setDynamicText('mining-counter-rate'"), true);
 assert.equal(hudSource.includes("trackDynamicResourceGain('mining-counter-total'"), true);
 assert.equal(styleSource.includes('.mining-grid-shell .mining-counter-box strong'), true);
 

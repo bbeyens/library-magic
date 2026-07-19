@@ -1,0 +1,105 @@
+{
+  "source": "exports/runner-fox/fox-source.fbx",
+  "sourceBytes": 1803068,
+  "sourceSha256": "4241c4a676841d77f7c25b76bd91238d305077706d17f8298ad6d52abff6bd61",
+  "runSource": "exports/runner-fox/running-source.fbx",
+  "runSourceBytes": 818992,
+  "runSourceSha256": "f2f2680975fcd68f07cde7bd77294cfe89423b90369c40f6d013edd84e8dd5af",
+  "runReplacement": {
+    "sourceAction": "Armature|mixamo.com|Layer0",
+    "frameRange": [
+      1,
+      27
+    ],
+    "boneCount": 33,
+    "sharedBoneCount": 33,
+    "maxBindDelta": 2.288818359375e-05,
+    "rootDelta": 5.861084597677675e-06,
+    "loopRootDelta": 5.861084597677675e-06,
+    "runtimeChannelCount": 102
+  },
+  "idleSource": "exports/runner-fox/sitting-idle-source.fbx",
+  "idleSourceBytes": 1212048,
+  "idleSourceSha256": "1f33111c21faa4fba6a2b7d70f7d3d5ad47fa4437c639d4eef20dac1f59ed905",
+  "idleReplacement": {
+    "sourceAction": "Armature|mixamo.com|Layer0",
+    "frameRange": [
+      1,
+      309
+    ],
+    "boneCount": 33,
+    "sharedBoneCount": 33,
+    "maxBindDelta": 2.288818359375e-05,
+    "rootDelta": 5.027415555451357e-06,
+    "loopRootDelta": 5.027415555451357e-06,
+    "runtimeChannelCount": 102
+  },
+  "standUpSource": "exports/runner-fox/stand-up-source.fbx",
+  "standUpSourceBytes": 919648,
+  "standUpSourceSha256": "c6769f8d995639cce85699190c5c8b6c44377c889940bf3c5b7210b471c1efbc",
+  "standUpReplacement": {
+    "sourceAction": "Armature|mixamo.com|Layer0",
+    "frameRange": [
+      1,
+      74
+    ],
+    "boneCount": 33,
+    "sharedBoneCount": 33,
+    "maxBindDelta": 2.288818359375e-05,
+    "rootDelta": 0.2942299175925417,
+    "runtimeChannelCount": 102,
+    "runtimeDurationSeconds": 2.466666666666667
+  },
+  "leftStrafeSource": "exports/runner-fox/left-strafe-source.fbx",
+  "leftStrafeSourceBytes": 810096,
+  "leftStrafeSourceSha256": "faa78f6b27263a940088e448d125a2084b407081b6bf2b84412ac6a9f78a041a",
+  "leftStrafeReplacement": {
+    "sourceAction": "Armature|mixamo.com|Layer0",
+    "frameRange": [
+      1,
+      23
+    ],
+    "boneCount": 33,
+    "sharedBoneCount": 33,
+    "maxBindDelta": 2.288818359375e-05,
+    "rootDelta": 1.1944189326376765e-07,
+    "loopRootDelta": 1.1944189326376765e-07,
+    "runtimeChannelCount": 102,
+    "runtimeDurationSeconds": 0.7666666666666667
+  },
+  "rightStrafeSource": "exports/runner-fox/right-strafe-source.fbx",
+  "rightStrafeSourceBytes": 810704,
+  "rightStrafeSourceSha256": "ea6ef185934433c8237d9a2af297c96dc77f935daa8f5a0462868d5c68adb4e7",
+  "rightStrafeReplacement": {
+    "sourceAction": "Armature|mixamo.com|Layer0",
+    "frameRange": [
+      1,
+      23
+    ],
+    "boneCount": 33,
+    "sharedBoneCount": 33,
+    "maxBindDelta": 2.288818359375e-05,
+    "rootDelta": 7.028863677424642e-08,
+    "loopRootDelta": 7.028863677424642e-08,
+    "runtimeChannelCount": 102,
+    "runtimeDurationSeconds": 0.7666666666666667
+  },
+  "blend": "exports/runner-fox/fox.blend",
+  "output": "public/assets/runner/heroes/boy.glb",
+  "outputBytes": 1199536,
+  "outputSha256": "f85d0c77f44d57c46ba4a5000ec5227b511d7175d5d57dc48297074684473aa5",
+  "meshCount": 1,
+  "skinCount": 1,
+  "materialCount": 3,
+  "animations": [
+    "FoxDeath",
+    "FoxIdle",
+    "FoxRun",
+    "FoxSitToStand",
+    "FoxStand",
+    "FoxStrafeLeft",
+    "FoxStrafeRight"
+  ],
+  "boneCount": 33,
+  "polygonCount": 13562
+}

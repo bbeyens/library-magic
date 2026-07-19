@@ -21,7 +21,7 @@ export const forbiddenGrimoireSeals: ForbiddenGrimoireSeal[] = [
   { level: 5, unlocksBookId: 'blackjack', requirements: [{ id: 'mana', amount: 620 }, { id: 'sigils', amount: 16 }] },
   { level: 6, unlocksBookId: 'hundred', requirements: [{ id: 'mana', amount: 860 }, { id: 'chips', amount: 18 }] },
   { level: 7, unlocksBookId: 'mine', requirements: [{ id: 'mana', amount: 1120 }, { id: 'fragments', amount: 20 }] },
-  { level: 8, unlocksBookId: 'targets', requirements: [{ id: 'mana', amount: 1380 }, { id: 'minerals', amount: 22 }] },
+  { level: 8, unlocksBookId: 'runner', requirements: [{ id: 'mana', amount: 1380 }, { id: 'minerals', amount: 22 }] },
   { level: 9, unlocksBookId: 'slimeTrainer', requirements: [{ id: 'mana', amount: 1680 }, { id: 'marks', amount: 24 }] },
 ];
 

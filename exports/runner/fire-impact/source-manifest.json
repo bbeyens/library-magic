@@ -1,0 +1,26 @@
+{
+  "sourceFile": "vfx_lowpolyfireparticles_6000070f1.unitypackage",
+  "sourceBytes": 406498,
+  "sourceSha256": "163e93b06e065af596a12f60c7e5d9ea28f74e3b3c0655bb605ab7796a760105",
+  "selectedPrefab": "Assets/Low Poly Fire Particles/Prefabs/Yellow-FireWood.prefab",
+  "particleMesh": "Unity built-in low-poly mesh 10202",
+  "startLifetimeSeconds": 3,
+  "startSpeed": 0.12,
+  "startSize": 0.3,
+  "emissionPerSecond": 12,
+  "coneAngleDegrees": 25,
+  "gradient": [
+    "#ffffff",
+    "#ffef38",
+    "#ffcd00",
+    "#ff7700",
+    "#ff4500"
+  ],
+  "runtimeAdaptation": {
+    "mode": "one-shot impact burst",
+    "lifetimeMs": 460,
+    "particlesPerImpact": 9,
+    "maxActiveImpacts": 24,
+    "geometry": "instanced low-poly cubes"
+  }
+}

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Three.js Gameplay Systems"
+  short_description: "Design and build playable Three.js systems"
+  default_prompt: "Load threejs-gameplay-systems/SKILL.md and follow it exactly. Non-negotiables: freeze the core loop before broad implementation; verify the complete input path through a deterministic procedural replay in the fast test lane; use only bounded visual spot checks; no default build, full browser traversal, or live bot."

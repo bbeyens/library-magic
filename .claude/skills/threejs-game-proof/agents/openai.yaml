@@ -1,0 +1,4 @@
+interface:
+  display_name: "Three.js Game Proof"
+  short_description: "Prove playable and polished game results"
+  default_prompt: "Load threejs-game-proof/SKILL.md. Prove only the current game-build or game-polish result with fast deterministic tests and bounded visible checks. Record proof directly in the GDD; never add another gate."

@@ -1,0 +1,73 @@
+{
+  "source": "exports/runner-demongirl/demongirl-source.fbx",
+  "sourceBytes": 42403308,
+  "sourceSha256": "0069e3af4ecfa85f974d5a05a57d8fe50f47d668a40f7e883a6c32b216d332b3",
+  "blend": "exports/runner-demongirl/demongirl.blend",
+  "preview": "public/assets/runner/heroes/girl-preview.png",
+  "animationPreviews": {
+    "idle": "exports/runner-demongirl/animation-previews/demongirl-idle.png",
+    "stand": "exports/runner-demongirl/animation-previews/demongirl-stand.png",
+    "sit-to-stand": "exports/runner-demongirl/animation-previews/demongirl-sit-to-stand.png",
+    "run": "exports/runner-demongirl/animation-previews/demongirl-run.png",
+    "death": "exports/runner-demongirl/animation-previews/demongirl-death.png",
+    "hair-idle": "exports/runner-demongirl/animation-previews/demongirl-hair-idle.png",
+    "hair-left": "exports/runner-demongirl/animation-previews/demongirl-hair-left.png",
+    "hair-right": "exports/runner-demongirl/animation-previews/demongirl-hair-right.png"
+  },
+  "output": "public/assets/runner/heroes/girl.glb",
+  "outputBytes": 3461712,
+  "outputSha256": "ed211f67ad4b8ca50e761a12b1d307771f613da6836dae4fe3eabed961f9822c",
+  "meshCount": 1,
+  "skinCount": 1,
+  "materialCount": 7,
+  "animations": [
+    "DemongirlDeath",
+    "DemongirlIdle",
+    "DemongirlRun",
+    "DemongirlSitToStand",
+    "DemongirlStand"
+  ],
+  "animationChannels": {
+    "DemongirlDeath": 51,
+    "DemongirlIdle": 51,
+    "DemongirlRun": 51,
+    "DemongirlSitToStand": 51,
+    "DemongirlStand": 51
+  },
+  "boneCount": 17,
+  "weightCounts": {
+    "DemongirlRoot": 0,
+    "DemongirlHips": 9038,
+    "DemongirlSpine": 10744,
+    "DemongirlHead": 21047,
+    "DemongirlHair.L": 2947,
+    "DemongirlHairTip.L": 2275,
+    "DemongirlHair.R": 1263,
+    "DemongirlHairTip.R": 713,
+    "DemongirlLeg.L": 1951,
+    "DemongirlShin.L": 1998,
+    "DemongirlLeg.R": 1940,
+    "DemongirlShin.R": 1985,
+    "DemongirlTail.01": 1095,
+    "DemongirlTail.02": 2020,
+    "DemongirlTail.03": 1782,
+    "DemongirlCoat.L": 1376,
+    "DemongirlCoat.R": 1453
+  },
+  "polygonCount": 84064,
+  "validation": {
+    "reimported": true,
+    "meshCount": 1,
+    "armatureCount": 1,
+    "boneCount": 17,
+    "animationCount": 5,
+    "animations": [
+      "DemongirlDeath",
+      "DemongirlIdle",
+      "DemongirlRun",
+      "DemongirlSitToStand",
+      "DemongirlStand"
+    ],
+    "materialCount": 7
+  }
+}

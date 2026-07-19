@@ -13,14 +13,67 @@ import {
   type HundredOptionId,
 } from './hundredRules';
 import {
-  targetAttackDamage,
-  targetAutomationInterval,
-  targetMaxActiveTargets,
-  targetReward,
-  targetSpawnInterval,
-  type TargetSkillId,
-} from './targetRules';
-export { targetAttackDamage, targetAutomationInterval, targetMaxActiveTargets, targetSpawnInterval } from './targetRules';
+  runnerBossHealth,
+  runnerAttackCount,
+  runnerAttackRange,
+  runnerBaseDamage,
+  runnerBaseFireRate,
+  runnerCheckpointUnlocked,
+  runnerCoinsPerKill,
+  runnerEffectiveUpgradeLevel,
+  runnerEnemyHealth,
+  runnerEnemySpawnInterval,
+  runnerGateShotsRequired,
+  runnerGateSpacing,
+  runnerGateUpgradeChance,
+  runnerHomingStrength,
+  runnerLateralSpeed,
+  runnerProjectileSpeed,
+  runnerUpgradeCost,
+  runnerUpgradeMaxLevel,
+  RUNNER_BASE_ATTACKS,
+  RUNNER_BOOST_PORTAL_CENTER_DEAD_ZONE,
+  RUNNER_BOOST_PORTAL_INTERVAL,
+  RUNNER_BOOST_UPGRADE_IDS,
+  RUNNER_BOSS_INTERVAL,
+  RUNNER_BOSS_REWARD_MULTIPLIER,
+  RUNNER_DESPAWN_BEHIND,
+  RUNNER_ENEMY_SPEED,
+  RUNNER_ENEMY_TARGETABLE_AHEAD,
+  RUNNER_GATE_HALF_WIDTH,
+  RUNNER_GATE_KINDS,
+  RUNNER_HIT_RADIUS,
+  RUNNER_LANE_HALF_WIDTH,
+  RUNNER_MAX_UNITS,
+  RUNNER_IMPACT_LIFETIME_MS,
+  RUNNER_DEFEAT_EFFECT_LIFETIME_MS,
+  RUNNER_MAX_ACTIVE_IMPACTS,
+  RUNNER_MAX_ACTIVE_DEFEAT_EFFECTS,
+  RUNNER_MAX_ACTIVE_PROJECTILES,
+  RUNNER_PROJECTILE_LAUNCH_OFFSET,
+  RUNNER_PROJECTILE_HIT_LOOKAHEAD,
+  RUNNER_SPAWN_AHEAD,
+  RUNNER_UPGRADE_IDS,
+  type RunnerGateKind,
+  type RunnerUpgradeId,
+} from './runnerRules';
+import {
+  runnerEnemyCollisionBounds,
+  type RunnerEditorConfig,
+  type RunnerEditorMonsterConfig,
+} from './runnerEditorRules';
+import {
+  RUNNER_MENU_FADE_IN_MS,
+  runnerDeathTransitionPhase,
+} from './runnerDeathTransition';
+export {
+  runnerBaseDamage,
+  runnerBaseFireRate,
+  runnerCoinsPerKill,
+  runnerStartUnits,
+  runnerUpgradeCost,
+  runnerUpgradeMaxLevel,
+} from './runnerRules';
 import {
   slimeTrainerCommandDamage,
   slimeTrainerCommandUnlocked,
@@ -91,7 +144,15 @@ import {
   type SnakeBonusFruitType,
   type SnakeCell,
   type SnakeDirection,
-  type TargetInstance,
+  createInitialRunnerUpgrades,
+  createRunnerRunState,
+  type RunnerBullet,
+  type RunnerBoostPortalPair,
+  type RunnerDefeatEffect,
+  type RunnerEnemy,
+  type RunnerGate,
+  type RunnerImpact,
+  type RunnerRunState,
 } from './state';
 import {
   defenseEnemyDistanceFromCenter,
@@ -213,7 +274,7 @@ export type MiningSkillId =
   | 'bombPower'
   | 'meteorite'
   | 'meteoriteBonus';
-export type { TargetSkillId };
+export type { RunnerUpgradeId, RunnerGateKind };
 export type { BlackjackSideBonusId };
 export type { BlackjackBonusUpgradeStep };
 export type { BlackjackUpgradeCellId };
@@ -309,11 +370,18 @@ const DEBUG_SNAKE_SKILL_MAX_LEVELS: Record<SnakeSkillId, number> = {
   edgeWrap: 1,
 };
 
-const DEBUG_TARGET_SKILL_MAX_LEVELS: Record<TargetSkillId, number> = {
-  spawnSpeed: 10,
-  targetCount: 5,
-  damage: 20,
-  automation: 10,
+const DEBUG_RUNNER_UPGRADE_MAX_LEVELS: Record<RunnerUpgradeId, number> = {
+  baseDamage: runnerUpgradeMaxLevel('baseDamage'),
+  startUnits: runnerUpgradeMaxLevel('startUnits'),
+  baseFireRate: runnerUpgradeMaxLevel('baseFireRate'),
+  lateralSpeed: runnerUpgradeMaxLevel('lateralSpeed'),
+  attackRange: runnerUpgradeMaxLevel('attackRange'),
+  multishot: runnerUpgradeMaxLevel('multishot'),
+  homing: runnerUpgradeMaxLevel('homing'),
+  projectileSpeed: runnerUpgradeMaxLevel('projectileSpeed'),
+  gateQuality: runnerUpgradeMaxLevel('gateQuality'),
+  coinFlat: runnerUpgradeMaxLevel('coinFlat'),
+  coinGain: runnerUpgradeMaxLevel('coinGain'),
 };
 
 const DEBUG_DEFENSE_SKILL_MAX_LEVELS: Record<DefenseSkillId, number> = {
@@ -518,8 +586,18 @@ export type GameAction =
   | { type: 'buyManaSkill'; skillId: ManaSkillId }
   | { type: 'startManaResearch'; skillId: ManaResearchSkillId }
   | { type: 'buySnakeSkill'; skillId: SnakeSkillId }
+  | { type: 'adjustSnakeSpeed'; delta: number }
   | { type: 'buyDefenseSkill'; skillId: DefenseSkillId }
-  | { type: 'buyTargetSkill'; skillId: TargetSkillId }
+  | { type: 'buyRunnerUpgrade'; upgradeId: RunnerUpgradeId }
+  | { type: 'selectRunnerCheckpoint'; distance: number }
+  | { type: 'startRunnerRun'; playerX?: number }
+  | { type: 'moveRunnerPlayer'; x: number }
+  | { type: 'addRunnerEditorEnemy'; monster: RunnerEditorMonsterConfig }
+  | { type: 'updateRunnerEditorEnemy'; enemyId: number; patch: Partial<RunnerEditorMonsterConfig> }
+  | { type: 'duplicateRunnerEditorEnemy'; enemyId: number }
+  | { type: 'removeRunnerEditorEnemy'; enemyId: number }
+  | { type: 'replaceRunnerEditorEnemies'; config: RunnerEditorConfig }
+  | { type: 'setRunnerEditorPaused'; paused: boolean }
   | { type: 'buyMiningSkill'; skillId: MiningSkillId }
   | { type: 'unlockBlackjackBonus'; bonusId: BlackjackSideBonusId }
   | { type: 'buyBlackjackBonusUpgrade'; bonusId: BlackjackSideBonusId }
@@ -556,7 +634,6 @@ export type GameAction =
   | { type: 'doubleBlackjack' }
   | { type: 'splitBlackjack' }
   | { type: 'chooseHundredOption'; optionId: HundredOptionId }
-  | { type: 'attackTarget'; targetId: number }
   | { type: 'digMiningBlock'; blockId: number }
   | { type: 'digMiningArea'; blockIds: number[] }
   | { type: 'selectMiningLevel'; cycle: number }
@@ -606,11 +683,41 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'buySnakeSkill':
       buySnakeSkill(state, action.skillId);
       return;
+    case 'adjustSnakeSpeed':
+      adjustSnakeSpeed(state, action.delta);
+      return;
     case 'buyDefenseSkill':
       buyDefenseSkill(state, action.skillId);
       return;
-    case 'buyTargetSkill':
-      buyTargetSkill(state, action.skillId);
+    case 'buyRunnerUpgrade':
+      buyRunnerUpgrade(state, action.upgradeId);
+      return;
+    case 'selectRunnerCheckpoint':
+      selectRunnerCheckpoint(state, action.distance);
+      return;
+    case 'startRunnerRun':
+      startRunnerRun(state, action.playerX);
+      return;
+    case 'moveRunnerPlayer':
+      moveRunnerPlayer(state, action.x);
+      return;
+    case 'addRunnerEditorEnemy':
+      addRunnerEditorEnemy(state, action.monster);
+      return;
+    case 'updateRunnerEditorEnemy':
+      updateRunnerEditorEnemy(state, action.enemyId, action.patch);
+      return;
+    case 'duplicateRunnerEditorEnemy':
+      duplicateRunnerEditorEnemy(state, action.enemyId);
+      return;
+    case 'removeRunnerEditorEnemy':
+      removeRunnerEditorEnemy(state, action.enemyId);
+      return;
+    case 'replaceRunnerEditorEnemies':
+      replaceRunnerEditorEnemies(state, action.config);
+      return;
+    case 'setRunnerEditorPaused':
+      state.runner.editorPaused = action.paused;
       return;
     case 'buyMiningSkill':
       buyMiningSkill(state, action.skillId);
@@ -720,9 +827,6 @@ export function applyAction(state: GameState, action: GameAction): void {
     case 'chooseHundredOption':
       chooseHundredOption(state, action.optionId);
       return;
-    case 'attackTarget':
-      attackTarget(state, action.targetId);
-      return;
     case 'digMiningBlock':
       digMiningBlock(state, action.blockId);
       return;
@@ -790,7 +894,7 @@ export function tickState(state: GameState, now: number): void {
   tickManaResearch(state, deltaSeconds);
   tickSnake(state, deltaSeconds);
   tickDefense(state, deltaSeconds);
-  tickTargets(state, deltaSeconds);
+  tickRunner(state, deltaSeconds);
   tickMining(state, deltaSeconds);
   tickSlimeTrainer(state, deltaSeconds);
 }
@@ -1613,8 +1717,13 @@ export function manaSkillMaxLevel(skillId: ManaSkillId): number | null {
   }
 }
 
+// The speed level currently in effect: the player's dialled setting, clamped to what they've bought.
+export function snakeActiveSpeedLevel(state: GameState): number {
+  return Math.min(Math.max(0, state.snakeSkills.speed), Math.max(0, state.snakeSkills.speedSetting));
+}
+
 export function snakeMoveInterval(state: GameState): number {
-  return snakeMoveIntervalForSpeedLevel(state.snakeSkills.speed);
+  return snakeMoveIntervalForSpeedLevel(snakeActiveSpeedLevel(state));
 }
 
 export function snakeGridSize(state: GameState): number {
@@ -1708,24 +1817,6 @@ export function snakeSkillCost(state: GameState, skillId: SnakeSkillId): number 
       return Math.round(320 * Math.pow(2.4, level));
     case 'edgeWrap':
       return Math.round(900 * Math.pow(2, level));
-  }
-}
-
-export function targetSkillMaxLevel(skillId: TargetSkillId): number {
-  return DEBUG_TARGET_SKILL_MAX_LEVELS[skillId];
-}
-
-export function targetSkillCost(state: GameState, skillId: TargetSkillId): number {
-  const level = state.targetSkills[skillId];
-  switch (skillId) {
-    case 'spawnSpeed':
-      return Math.round(85 * Math.pow(1.32, level));
-    case 'targetCount':
-      return Math.round(150 * Math.pow(1.58, level));
-    case 'damage':
-      return Math.round(100 * Math.pow(1.28, level));
-    case 'automation':
-      return Math.round(260 * Math.pow(1.44, level));
   }
 }
 
@@ -2495,6 +2586,10 @@ function buySnakeSkill(state: GameState, skillId: SnakeSkillId): void {
 
   state.resources.scales -= cost;
   state.snakeSkills[skillId] += 1;
+  if (skillId === 'speed') {
+    // Buying speed dials the active setting up to the new max (you can slow back down with −).
+    state.snakeSkills.speedSetting = state.snakeSkills.speed;
+  }
   if (skillId === 'gridSize') {
     resizeSnakeGrid(state);
   }
@@ -2509,19 +2604,35 @@ function buySnakeSkill(state: GameState, skillId: SnakeSkillId): void {
   }
 }
 
-function buyTargetSkill(state: GameState, skillId: TargetSkillId): void {
-  const maxLevel = targetSkillMaxLevel(skillId);
-  if (state.targetSkills[skillId] >= maxLevel) {
+// Dial the active speed level up/down within [0, purchased speed] without spending anything.
+function adjustSnakeSpeed(state: GameState, delta: number): void {
+  const max = Math.max(0, state.snakeSkills.speed);
+  const current = Math.min(max, Math.max(0, state.snakeSkills.speedSetting));
+  state.snakeSkills.speedSetting = Math.min(max, Math.max(0, current + Math.sign(delta)));
+}
+
+/**
+ * Runner upgrades are paid for with the mini-game's own coins from the home menu,
+ * so a run can never be topped up mid-flight.
+ */
+function buyRunnerUpgrade(state: GameState, upgradeId: RunnerUpgradeId): void {
+  const meta = state.runnerMeta;
+  if (!state.runner.dead && state.runner.running) {
     return;
   }
 
-  const cost = targetSkillCost(state, skillId);
-  if (state.mana < cost) {
+  const level = meta.upgrades[upgradeId];
+  if (level >= runnerUpgradeMaxLevel(upgradeId)) {
     return;
   }
 
-  state.mana -= cost;
-  state.targetSkills[skillId] += 1;
+  const cost = runnerUpgradeCost(upgradeId, level);
+  if (meta.coins < cost) {
+    return;
+  }
+
+  meta.coins -= cost;
+  meta.upgrades[upgradeId] = level + 1;
 }
 
 function buyDefenseSkill(state: GameState, skillId: DefenseSkillId): void {
@@ -2823,6 +2934,7 @@ function maxManaSkills(state: GameState): void {
 
 function maxSnakeSkills(state: GameState): void {
   state.snakeSkills.speed = DEBUG_SNAKE_SKILL_MAX_LEVELS.speed;
+  state.snakeSkills.speedSetting = DEBUG_SNAKE_SKILL_MAX_LEVELS.speed;
   state.snakeSkills.gridSize = DEBUG_SNAKE_SKILL_MAX_LEVELS.gridSize;
   state.snakeSkills.foodCount = DEBUG_SNAKE_SKILL_MAX_LEVELS.foodCount;
   state.snakeSkills.growthThreshold = DEBUG_SNAKE_SKILL_MAX_LEVELS.growthThreshold;
@@ -2860,13 +2972,11 @@ function maxMiningSkills(state: GameState): void {
   state.miningSkills.automationTimer = 0;
 }
 
-function maxTargetSkills(state: GameState): void {
-  state.targetSkills.spawnSpeed = DEBUG_TARGET_SKILL_MAX_LEVELS.spawnSpeed;
-  state.targetSkills.targetCount = DEBUG_TARGET_SKILL_MAX_LEVELS.targetCount;
-  state.targetSkills.damage = DEBUG_TARGET_SKILL_MAX_LEVELS.damage;
-  state.targetSkills.automation = DEBUG_TARGET_SKILL_MAX_LEVELS.automation;
-  state.targets.spawnTimer = 0;
-  state.targets.automationTimer = 0;
+function maxRunnerUpgrades(state: GameState): void {
+  for (const upgradeId of RUNNER_UPGRADE_IDS) {
+    state.runnerMeta.upgrades[upgradeId] = DEBUG_RUNNER_UPGRADE_MAX_LEVELS[upgradeId];
+  }
+  resetRunnerRun(state);
 }
 
 function maxDefenseSkills(state: GameState): void {
@@ -2919,7 +3029,7 @@ function maxBlackjackSkills(state: GameState): void {
 function maxAllSkills(state: GameState): void {
   maxManaSkills(state);
   maxSnakeSkills(state);
-  maxTargetSkills(state);
+  maxRunnerUpgrades(state);
   maxDefenseSkills(state);
   maxMiningSkills(state);
   maxBlackjackSkills(state);
@@ -2977,6 +3087,7 @@ function resetAllSkills(state: GameState): void {
   resetManaSkills(state);
 
   state.snakeSkills.speed = 0;
+  state.snakeSkills.speedSetting = 0;
   state.snakeSkills.gridSize = 0;
   state.snakeSkills.foodCount = 0;
   state.snakeSkills.growthThreshold = 0;
@@ -2994,12 +3105,13 @@ function resetAllSkills(state: GameState): void {
   state.snake.bonusFood = null;
   state.snake.moveTimer = 0;
 
-  state.targetSkills.spawnSpeed = 0;
-  state.targetSkills.targetCount = 0;
-  state.targetSkills.damage = 0;
-  state.targetSkills.automation = 0;
-  state.targets.spawnTimer = 0;
-  state.targets.automationTimer = 0;
+  state.runnerMeta.coins = 0;
+  state.runnerMeta.bestDistance = 0;
+  state.runnerMeta.lastRunCoins = 0;
+  state.runnerMeta.lastRunDistance = 0;
+  state.runnerMeta.selectedCheckpoint = 0;
+  state.runnerMeta.upgrades = createInitialRunnerUpgrades();
+  resetRunnerRun(state);
 
   state.defenseSkills.damage = 0;
   state.defenseSkills.damageMultiplier = 0;
@@ -3382,8 +3494,8 @@ function resetSelectedMiniGame(state: GameState): void {
     case 'mine':
       resetMiningRun(state);
       return;
-    case 'targets':
-      resetTargetRun(state);
+    case 'runner':
+      resetRunnerRun(state);
       return;
     case 'slimeTrainer':
       resetSlimeTrainerRun(state);
@@ -3446,16 +3558,14 @@ function resetHundredRun(state: GameState): void {
   hundred.lastOutcome = 'idle';
 }
 
-function resetTargetRun(state: GameState): void {
-  const targets = state.targets;
-  targets.running = false;
-  targets.score = 0;
-  targets.spawnTimer = 0;
-  targets.automationTimer = 0;
-  targets.nextTargetId = 1;
-  targets.lastReward = 0;
-  targets.shotPulse = 0;
-  targets.targets = [];
+/** Rebuild the run from the permanent upgrades, leaving the shop wallet untouched. */
+function resetRunnerRun(state: GameState): void {
+  const meta = state.runnerMeta;
+  const checkpoint = runnerCheckpointUnlocked(meta.selectedCheckpoint, meta.bestDistance)
+    ? meta.selectedCheckpoint
+    : 0;
+  meta.selectedCheckpoint = checkpoint;
+  state.runner = createRunnerRunState(meta.upgrades, checkpoint);
 }
 
 function resetMiningRun(state: GameState): void {
@@ -5774,99 +5884,650 @@ function chooseHundredOption(state: GameState, optionId: HundredOptionId): void 
   hundred.lastOutcome = 'rolled';
 }
 
-function tickTargets(state: GameState, deltaSeconds: number): void {
-  const book = state.books.targets;
-  const targetState = state.targets;
-  targetState.lastReward = 0;
+function tickRunner(state: GameState, deltaSeconds: number): void {
+  const run = state.runner;
 
-  if (!book.unlocked || !isBookPanelOpen(state, 'targets')) {
-    targetState.running = false;
+  if (!state.books.runner.unlocked || !isBookPanelOpen(state, 'runner')) {
     return;
   }
-
-  targetState.running = true;
-  spawnTargets(state, deltaSeconds);
-  automateTargetAttack(state, deltaSeconds);
-}
-
-function spawnTargets(state: GameState, deltaSeconds: number): void {
-  const targetState = state.targets;
-  if (targetState.targets.length >= targetMaxActiveTargets(state.targetSkills.targetCount)) {
-    return;
-  }
-
-  targetState.spawnTimer += deltaSeconds;
-  if (targetState.spawnTimer < targetSpawnInterval(state.targetSkills.spawnSpeed)) {
-    return;
-  }
-
-  targetState.spawnTimer = 0;
-  targetState.targets.push(createTargetInstance(state));
-}
-
-function createTargetInstance(state: GameState): TargetInstance {
-  const id = state.targets.nextTargetId;
-  state.targets.nextTargetId += 1;
-  const maxHealth = 1 + Math.floor(Math.max(1, state.books.targets.level) * 0.35);
-  return {
-    id,
-    x: 14 + ((id * 37) % 72),
-    y: 18 + ((id * 53) % 62),
-    health: maxHealth,
-    maxHealth,
-  };
-}
-
-function automateTargetAttack(state: GameState, deltaSeconds: number): void {
-  const interval = targetAutomationInterval(state.targetSkills.automation);
-  if (interval <= 0 || state.targets.targets.length === 0) {
-    state.targets.automationTimer = 0;
-    return;
-  }
-
-  state.targets.automationTimer += deltaSeconds;
-  if (state.targets.automationTimer < interval) {
-    return;
-  }
-
-  const shots = Math.max(1, Math.floor(state.targets.automationTimer / interval));
-  state.targets.automationTimer %= interval;
-  for (let shot = 0; shot < shots; shot += 1) {
-    const target = state.targets.targets[0];
-    if (!target) {
-      return;
+  if (run.dead) {
+    if (runnerDeathTransitionPhase(run, state.lastTick) === 'complete') {
+      resetRunnerRun(state);
+      state.runner.menuReturnAt = state.lastTick;
     }
-    damageTarget(state, target);
+    return;
+  }
+  if (!run.running) {
+    if (typeof run.menuReturnAt === 'number' && state.lastTick - run.menuReturnAt >= RUNNER_MENU_FADE_IN_MS) {
+      run.menuReturnAt = null;
+    }
+    return;
+  }
+
+  // Clamp the step: a backgrounded tab must not let enemies teleport through the squad.
+  const dt = Math.min(deltaSeconds, 0.05);
+  advanceRunnerPlayer(run, dt);
+  if (run.editorPaused) {
+    return;
+  }
+  run.distance += run.speed * dt;
+  resolveRunnerBoostPortals(state);
+  pruneRunnerImpacts(run, state.lastTick);
+  pruneRunnerDefeatEffects(run, state.lastTick);
+
+  fireRunnerVolley(state, dt);
+  advanceRunnerBullets(state, dt);
+  advanceRunnerEnemies(state, dt);
+  if (run.dead) {
+    return;
+  }
+  spawnRunnerEnemies(state, dt);
+  spawnRunnerGates(state);
+  spawnRunnerBoostPortals(state);
+  spawnRunnerBoss(state);
+  cullRunnerEntities(state);
+}
+
+/** Fire a bounded volley. Lives never change attack count or projectile damage. */
+function fireRunnerVolley(state: GameState, dt: number): void {
+  const run = state.runner;
+  if (run.units <= 0 || run.attacks <= 0) {
+    return;
+  }
+
+  run.fireCooldown -= dt;
+  if (run.fireCooldown > 0) {
+    return;
+  }
+  run.fireCooldown += 1 / Math.max(0.1, run.fireRate);
+
+  const availableProjectiles = Math.max(0, RUNNER_MAX_ACTIVE_PROJECTILES - run.bullets.length);
+  const streams = Math.min(run.attacks, availableProjectiles);
+  if (streams <= 0) {
+    return;
+  }
+
+  const extraAttacks = Math.max(0, run.attacks - RUNNER_BASE_ATTACKS);
+  const spreadWidth = 0.7 + extraAttacks * 0.16;
+  const launchZ = run.distance + RUNNER_PROJECTILE_LAUNCH_OFFSET;
+  for (let index = 0; index < streams; index += 1) {
+    const spread = streams === 1 ? 0 : (index / (streams - 1) - 0.5) * spreadWidth;
+    run.bullets.push({
+      id: run.nextEntityId,
+      x: run.playerX + spread,
+      z: launchZ,
+      maxZ: launchZ + run.attackRange,
+      damage: run.damage,
+    });
+    run.nextEntityId += 1;
   }
 }
 
-function attackTarget(state: GameState, targetId: number): void {
-  if (!state.books.targets.unlocked || !isBookPanelOpen(state, 'targets')) {
-    return;
+function advanceRunnerBullets(state: GameState, dt: number): void {
+  const run = state.runner;
+  const survivors: RunnerBullet[] = [];
+  const step = run.projectileSpeed * dt;
+
+  for (const bullet of run.bullets) {
+    if (run.homingStrength > 0) {
+      const target = nearestRunnerHomingTarget(run, bullet);
+      if (target) {
+        const lateralStep = run.homingStrength * dt;
+        bullet.x += Math.max(-lateralStep, Math.min(lateralStep, target.x - bullet.x));
+      }
+    }
+    // Swept collision. A bullet can travel more than a body's depth in a single tick
+    // (speed 34 x dt can exceed the hit radius), so a point test lets it skip a near enemy
+    // and get absorbed farther up the lane — the "untouchable monster / blocked too far"
+    // bug. Instead, test the whole travelled segment [zPrev, zNew] and resolve against the
+    // NEAREST thing it crosses, so the closest target is always hit first.
+    const zPrev = bullet.z;
+    const zNew = Math.min(zPrev + step, bullet.maxZ);
+    const enemyCollisionZNew = zNew + RUNNER_PROJECTILE_HIT_LOOKAHEAD;
+    bullet.z = zNew;
+
+    let hitGate: RunnerGate | null = null;
+    let hitEnemy: RunnerEnemy | null = null;
+    let hitZ = Infinity;
+
+    // Gates cost SHOTS, not damage — every bullet spent cracking one is a bullet the enemies
+    // behind it never took. A gate is a barrier, so at equal depth it keeps priority.
+    for (const gate of run.gates) {
+      if (
+        gate.activated ||
+        Math.abs(gate.x - bullet.x) >= RUNNER_GATE_HALF_WIDTH ||
+        zNew < gate.z - RUNNER_HIT_RADIUS ||
+        zPrev > gate.z + RUNNER_HIT_RADIUS
+      ) {
+        continue;
+      }
+      if (gate.z < hitZ) {
+        hitZ = gate.z;
+        hitGate = gate;
+        hitEnemy = null;
+      }
+    }
+
+    for (const enemy of run.enemies) {
+      if (!runnerEnemyIsTargetable(run, enemy)) {
+        continue;
+      }
+      const hitBounds = runnerEnemyCollisionBounds(enemy.id, enemy.modelId, enemy.scale);
+      if (
+        Math.abs(enemy.x - bullet.x) >= hitBounds.halfWidth ||
+        enemyCollisionZNew < enemy.z - hitBounds.halfDepth ||
+        zPrev > enemy.z + hitBounds.halfDepth
+      ) {
+        continue;
+      }
+      // Strictly nearer than the nearest gate wins; a gate at equal/nearer depth stays.
+      if (enemy.z < hitZ) {
+        hitZ = enemy.z;
+        hitEnemy = enemy;
+        hitGate = null;
+      }
+    }
+
+    if (hitGate) {
+      hitGate.shotsRemaining -= 1;
+      if (hitGate.shotsRemaining <= 0) {
+        activateRunnerGate(state, hitGate);
+      }
+      continue;
+    }
+    if (hitEnemy) {
+      recordRunnerImpact(run, bullet, hitZ, state.lastTick);
+      hitEnemy.health -= bullet.damage;
+      if (hitEnemy.health <= 0) {
+        killRunnerEnemy(state, hitEnemy);
+      }
+      continue;
+    }
+
+    if (bullet.z < bullet.maxZ) {
+      survivors.push(bullet);
+    }
   }
 
-  const target = state.targets.targets.find((candidate) => candidate.id === targetId);
-  if (!target) {
-    return;
-  }
-
-  damageTarget(state, target);
+  run.bullets = survivors;
 }
 
-function damageTarget(state: GameState, target: TargetInstance): void {
-  target.health -= targetAttackDamage(state.targetSkills.damage);
-  state.targets.shotPulse += 1;
-  if (target.health > 0) {
+function recordRunnerImpact(
+  run: RunnerRunState,
+  bullet: RunnerBullet,
+  hitZ: number,
+  createdAt: number,
+): void {
+  const impacts = run.impacts ?? (run.impacts = []);
+  const impact: RunnerImpact = { id: bullet.id, x: bullet.x, z: hitZ, createdAt };
+  impacts.push(impact);
+  if (impacts.length > RUNNER_MAX_ACTIVE_IMPACTS) {
+    impacts.splice(0, impacts.length - RUNNER_MAX_ACTIVE_IMPACTS);
+  }
+}
+
+function pruneRunnerImpacts(run: RunnerRunState, now: number): void {
+  const impacts = run.impacts ?? (run.impacts = []);
+  let writeIndex = 0;
+  for (const impact of impacts) {
+    const age = now - impact.createdAt;
+    if (age < 0 || age >= RUNNER_IMPACT_LIFETIME_MS) {
+      continue;
+    }
+    impacts[writeIndex] = impact;
+    writeIndex += 1;
+  }
+  impacts.length = writeIndex;
+}
+
+function killRunnerEnemy(state: GameState, enemy: RunnerEnemy): void {
+  const run = state.runner;
+  run.enemies = run.enemies.filter((candidate) => candidate.id !== enemy.id);
+  run.kills += 1;
+  run.hitPulse += 1;
+  const coinGainLevel = runnerRunUpgradeLevel(state, 'coinGain');
+  const coinFlatLevel = runnerRunUpgradeLevel(state, 'coinFlat');
+  const reward = enemy.coinReward ?? runnerCoinsPerKill(run.distance, coinGainLevel, coinFlatLevel);
+  run.coinsEarned += reward;
+  recordRunnerDefeatEffect(run, enemy, reward, state.lastTick);
+}
+
+function recordRunnerDefeatEffect(
+  run: RunnerRunState,
+  enemy: RunnerEnemy,
+  amount: number,
+  createdAt: number,
+): void {
+  const effect: RunnerDefeatEffect = {
+    id: enemy.id,
+    x: enemy.x,
+    z: enemy.z,
+    amount,
+    scale: enemy.scale ?? 1,
+    createdAt,
+  };
+  run.defeatEffects.push(effect);
+  if (run.defeatEffects.length > RUNNER_MAX_ACTIVE_DEFEAT_EFFECTS) {
+    run.defeatEffects.splice(0, run.defeatEffects.length - RUNNER_MAX_ACTIVE_DEFEAT_EFFECTS);
+  }
+}
+
+function pruneRunnerDefeatEffects(run: RunnerRunState, now: number): void {
+  run.defeatEffects = run.defeatEffects.filter((effect) => {
+    const age = now - effect.createdAt;
+    return age >= 0 && age < RUNNER_DEFEAT_EFFECT_LIFETIME_MS;
+  });
+}
+
+function nearestRunnerHomingTarget(run: RunnerRunState, bullet: RunnerBullet): RunnerEnemy | null {
+  let target: RunnerEnemy | null = null;
+  let nearestDistance = Infinity;
+  for (const enemy of run.enemies) {
+    if (!runnerEnemyIsTargetable(run, enemy)) {
+      continue;
+    }
+    const forwardDistance = enemy.z - bullet.z;
+    if (
+      forwardDistance < -RUNNER_HIT_RADIUS ||
+      enemy.z > bullet.maxZ + RUNNER_PROJECTILE_HIT_LOOKAHEAD + RUNNER_HIT_RADIUS
+    ) {
+      continue;
+    }
+    const distance = Math.hypot(forwardDistance, enemy.x - bullet.x);
+    if (distance < nearestDistance) {
+      nearestDistance = distance;
+      target = enemy;
+    }
+  }
+  return target;
+}
+
+function runnerEnemyIsTargetable(run: RunnerRunState, enemy: RunnerEnemy): boolean {
+  return enemy.z - run.distance <= RUNNER_ENEMY_TARGETABLE_AHEAD;
+}
+
+function activateRunnerGate(state: GameState, gate: RunnerGate): void {
+  const run = state.runner;
+  gate.activated = true;
+  gate.shotsRemaining = 0;
+  run.gatePulse += 1;
+  // Breaking a bonus gate triggers the same one-shot joyful jump as a boost portal.
+  run.lastBoostAt = state.lastTick;
+
+  switch (gate.kind) {
+    case 'unit':
+      run.units = Math.min(RUNNER_MAX_UNITS, run.units + gate.value);
+      break;
+    case 'damage':
+      run.damage += gate.value * 0.5;
+      break;
+    case 'fireRate':
+      run.fireRate += gate.value * 0.4;
+      break;
+    case 'speed':
+      run.speed += gate.value * 0.5;
+      break;
+  }
+}
+
+function advanceRunnerEnemies(state: GameState, dt: number): void {
+  const run = state.runner;
+  const survivors: RunnerEnemy[] = [];
+
+  for (const enemy of run.enemies) {
+    enemy.z -= RUNNER_ENEMY_SPEED * (enemy.speedMultiplier ?? 1) * dt;
+
+    // Normal enemies only connect when their model actually overlaps the Fox. Bosses and
+    // mini-bosses block the lane and therefore cannot be bypassed laterally.
+    if (enemy.z <= run.distance) {
+      const mandatoryContact = enemy.isBoss === true || enemy.isMiniBoss === true;
+      const hitBounds = runnerEnemyCollisionBounds(enemy.id, enemy.modelId, enemy.scale);
+      const touchesFox = Math.abs(enemy.x - run.playerX) <= hitBounds.halfWidth + RUNNER_HIT_RADIUS;
+      if (!mandatoryContact && !touchesFox) {
+        continue;
+      }
+
+      // Whatever health survives the volley is removed directly from the squad on contact.
+      run.units -= Math.max(0, enemy.health);
+      run.hitPulse += 1;
+      run.lastDamageAt = state.lastTick;
+      if (run.units <= 0) {
+        run.units = 0;
+        run.enemies = survivors;
+        endRunnerRun(state);
+        return;
+      }
+      continue;
+    }
+
+    survivors.push(enemy);
+  }
+
+  run.enemies = survivors;
+}
+
+/** Death banks the run's coins into the shop wallet. Nothing else carries over. */
+function endRunnerRun(state: GameState): void {
+  const run = state.runner;
+  const meta = state.runnerMeta;
+
+  run.running = false;
+  run.dead = true;
+  run.deathPulse += 1;
+  run.deathAt = state.lastTick;
+  run.bullets = [];
+
+  const banked = Math.floor(run.coinsEarned);
+  meta.coins += banked;
+  meta.lastRunCoins = banked;
+  meta.lastRunDistance = run.distance;
+  meta.bestDistance = Math.max(meta.bestDistance, run.distance);
+}
+
+function spawnRunnerEnemies(state: GameState, dt: number): void {
+  const run = state.runner;
+  run.enemySpawnTimer -= dt;
+  if (run.enemySpawnTimer > 0) {
+    return;
+  }
+  run.enemySpawnTimer += runnerEnemySpawnInterval(run.distance);
+
+  const health = runnerEnemyHealth(run.distance);
+  run.enemies.push({
+    id: run.nextEntityId,
+    x: randomRunnerLaneX(),
+    z: run.distance + RUNNER_SPAWN_AHEAD,
+    health,
+    maxHealth: health,
+  });
+  run.nextEntityId += 1;
+}
+
+function spawnRunnerGates(state: GameState): void {
+  const run = state.runner;
+  if (run.distance + RUNNER_SPAWN_AHEAD < run.nextGateDistance) {
     return;
   }
 
-  const reward = miniGameResourceReward(state, targetReward(state.books.targets.level, target.maxHealth));
-  state.targets.targets = state.targets.targets.filter((candidate) => candidate.id !== target.id);
-  state.targets.score += reward;
-  state.targets.best = Math.max(state.targets.best, state.targets.score);
-  state.targets.lastReward = reward;
-  state.resources.marks += reward;
-  state.mana += reward * (0.35 + state.books.targets.level * 0.12);
+  const upgradeChance = runnerGateUpgradeChance(runnerRunUpgradeLevel(state, 'gateQuality'));
+  const kindIndex = Math.floor(Math.random() * RUNNER_GATE_KINDS.length);
+  const kind: RunnerGateKind = RUNNER_GATE_KINDS[kindIndex] ?? 'unit';
+  // gateQuality is exactly the "+1 sometimes rolls as +2" upgrade.
+  const value = Math.random() < upgradeChance ? 2 : 1;
+  const shots = runnerGateShotsRequired(run.gateIndex);
+
+  run.gates.push({
+    id: run.nextEntityId,
+    x: randomRunnerLaneX(),
+    z: run.nextGateDistance,
+    kind,
+    value,
+    shotsRequired: shots,
+    shotsRemaining: shots,
+    activated: false,
+  });
+  run.nextEntityId += 1;
+  run.gateIndex += 1;
+  run.nextGateDistance += runnerGateSpacing(run.gateIndex);
+}
+
+function spawnRunnerBoostPortals(state: GameState): void {
+  const run = state.runner;
+  if (run.distance + RUNNER_SPAWN_AHEAD < run.nextBoostPortalDistance) {
+    return;
+  }
+
+  const leftIndex = Math.floor(Math.random() * RUNNER_BOOST_UPGRADE_IDS.length);
+  const rightOffset = 1 + Math.floor(Math.random() * (RUNNER_BOOST_UPGRADE_IDS.length - 1));
+  const leftUpgradeId = RUNNER_BOOST_UPGRADE_IDS[leftIndex] ?? 'baseDamage';
+  const rightUpgradeId =
+    RUNNER_BOOST_UPGRADE_IDS[(leftIndex + rightOffset) % RUNNER_BOOST_UPGRADE_IDS.length] ?? 'startUnits';
+
+  run.boostPortals.push({
+    id: run.nextEntityId,
+    z: run.nextBoostPortalDistance,
+    leftUpgradeId,
+    rightUpgradeId,
+  });
+  run.nextEntityId += 1;
+  run.nextBoostPortalDistance += RUNNER_BOOST_PORTAL_INTERVAL;
+}
+
+function resolveRunnerBoostPortals(state: GameState): void {
+  const run = state.runner;
+  const survivors: RunnerBoostPortalPair[] = [];
+
+  for (const pair of run.boostPortals) {
+    if (pair.z > run.distance) {
+      survivors.push(pair);
+      continue;
+    }
+
+    const choice = runnerBoostPortalChoiceForX(pair, run.playerX);
+    if (choice) {
+      applyRunnerTemporaryUpgrade(state, choice);
+    }
+  }
+
+  run.boostPortals = survivors;
+}
+
+function runnerBoostPortalChoiceForX(
+  pair: RunnerBoostPortalPair,
+  playerX: number,
+): RunnerUpgradeId | null {
+  if (playerX >= RUNNER_BOOST_PORTAL_CENTER_DEAD_ZONE) {
+    return pair.leftUpgradeId;
+  }
+  if (playerX <= -RUNNER_BOOST_PORTAL_CENTER_DEAD_ZONE) {
+    return pair.rightUpgradeId;
+  }
+  return null;
+}
+
+function applyRunnerTemporaryUpgrade(state: GameState, id: RunnerUpgradeId): void {
+  const run = state.runner;
+  const previousLevel = runnerRunUpgradeLevel(state, id);
+  run.temporaryUpgrades[id] += 1;
+  const nextLevel = previousLevel + 1;
+
+  switch (id) {
+    case 'baseDamage':
+      run.damage += runnerBaseDamage(nextLevel) - runnerBaseDamage(previousLevel);
+      break;
+    case 'startUnits':
+      run.units += 1;
+      break;
+    case 'baseFireRate':
+      run.fireRate += runnerBaseFireRate(nextLevel) - runnerBaseFireRate(previousLevel);
+      break;
+    case 'lateralSpeed':
+      run.lateralSpeed = runnerLateralSpeed(nextLevel);
+      break;
+    case 'attackRange':
+      run.attackRange = runnerAttackRange(nextLevel);
+      break;
+    case 'multishot':
+      run.attacks = runnerAttackCount(nextLevel);
+      break;
+    case 'homing':
+      run.homingStrength = runnerHomingStrength(nextLevel);
+      break;
+    case 'projectileSpeed':
+      run.projectileSpeed = runnerProjectileSpeed(nextLevel);
+      break;
+    case 'gateQuality':
+    case 'coinFlat':
+    case 'coinGain':
+      break;
+  }
+
+  run.boostPortalPulse += 1;
+  run.lastBoostUpgradeId = id;
+  run.lastBoostAt = state.lastTick;
+}
+
+function runnerRunUpgradeLevel(state: GameState, id: RunnerUpgradeId): number {
+  return runnerEffectiveUpgradeLevel(
+    state.runnerMeta.upgrades,
+    state.runner.temporaryUpgrades,
+    id,
+  );
+}
+
+function spawnRunnerBoss(state: GameState): void {
+  const run = state.runner;
+  if (run.distance + RUNNER_SPAWN_AHEAD < run.nextBossDistance) {
+    return;
+  }
+
+  const bossDistance = run.nextBossDistance;
+  const health = runnerBossHealth(bossDistance);
+  run.enemies.push({
+    id: run.nextEntityId,
+    x: 0,
+    z: bossDistance,
+    health,
+    maxHealth: health,
+    modelId: 'chest-monster',
+    coinReward:
+      runnerCoinsPerKill(
+        bossDistance,
+        runnerRunUpgradeLevel(state, 'coinGain'),
+        runnerRunUpgradeLevel(state, 'coinFlat'),
+      ) * RUNNER_BOSS_REWARD_MULTIPLIER,
+    scale: 2,
+    speedMultiplier: 0.65,
+    isBoss: true,
+  });
+  run.nextEntityId += 1;
+  run.nextBossDistance += RUNNER_BOSS_INTERVAL;
+}
+
+function randomRunnerLaneX(): number {
+  return (Math.random() * 2 - 1) * RUNNER_LANE_HALF_WIDTH;
+}
+
+/** Anything left behind the squad is gone — a gate you failed to crack is simply missed. */
+function cullRunnerEntities(state: GameState): void {
+  const run = state.runner;
+  const behind = run.distance - RUNNER_DESPAWN_BEHIND;
+  const ahead = run.distance + RUNNER_SPAWN_AHEAD + 10;
+
+  run.gates = run.gates.filter((gate) => gate.z > behind);
+  run.boostPortals = run.boostPortals.filter((pair) => pair.z > behind);
+  run.enemies = run.enemies.filter((enemy) => enemy.z > behind);
+  run.bullets = run.bullets.filter((bullet) => bullet.z > behind && bullet.z < ahead);
+}
+
+function startRunnerRun(state: GameState, playerX?: number): void {
+  if (!state.books.runner.unlocked) {
+    return;
+  }
+  resetRunnerRun(state);
+  if (typeof playerX === 'number' && Number.isFinite(playerX)) {
+    const clampedX = Math.max(-RUNNER_LANE_HALF_WIDTH, Math.min(RUNNER_LANE_HALF_WIDTH, playerX));
+    state.runner.playerX = clampedX;
+    state.runner.playerTargetX = clampedX;
+  }
+  state.runner.running = true;
+}
+
+function selectRunnerCheckpoint(state: GameState, distance: number): void {
+  if (state.runner.running || !runnerCheckpointUnlocked(distance, state.runnerMeta.bestDistance)) {
+    return;
+  }
+  state.runnerMeta.selectedCheckpoint = distance;
+}
+
+function moveRunnerPlayer(state: GameState, x: number): void {
+  const run = state.runner;
+  if (!run.running || run.dead) {
+    return;
+  }
+  run.playerTargetX = Math.max(-RUNNER_LANE_HALF_WIDTH, Math.min(RUNNER_LANE_HALF_WIDTH, x));
+}
+
+function advanceRunnerPlayer(run: RunnerRunState, dt: number): void {
+  const delta = run.playerTargetX - run.playerX;
+  const step = run.lateralSpeed * dt;
+  run.playerX += Math.max(-step, Math.min(step, delta));
+}
+
+function addRunnerEditorEnemy(state: GameState, monster: RunnerEditorMonsterConfig): void {
+  const run = state.runner;
+  run.enemies.push({
+    id: run.nextEntityId,
+    x: monster.x,
+    z: run.distance + monster.distance,
+    health: monster.health,
+    maxHealth: monster.health,
+    modelId: monster.modelId,
+    contactDamage: monster.contactDamage,
+    coinReward: monster.coinReward,
+    scale: monster.scale,
+    speedMultiplier: monster.speedMultiplier,
+    editorPlaced: true,
+  });
+  run.nextEntityId += 1;
+}
+
+function updateRunnerEditorEnemy(
+  state: GameState,
+  enemyId: number,
+  patch: Partial<RunnerEditorMonsterConfig>,
+): void {
+  const run = state.runner;
+  const enemy = run.enemies.find((candidate) => candidate.id === enemyId);
+  if (!enemy) {
+    return;
+  }
+
+  enemy.editorPlaced = true;
+  if (patch.modelId !== undefined) enemy.modelId = patch.modelId;
+  if (patch.x !== undefined) enemy.x = clampRunnerEditorValue(patch.x, -RUNNER_LANE_HALF_WIDTH, RUNNER_LANE_HALF_WIDTH);
+  if (patch.distance !== undefined) enemy.z = run.distance + clampRunnerEditorValue(patch.distance, -2, 64);
+  if (patch.health !== undefined) {
+    enemy.maxHealth = clampRunnerEditorValue(patch.health, 1, 1_000_000);
+    enemy.health = enemy.maxHealth;
+  }
+  if (patch.contactDamage !== undefined) enemy.contactDamage = clampRunnerEditorValue(patch.contactDamage, 1, RUNNER_MAX_UNITS);
+  if (patch.coinReward !== undefined) enemy.coinReward = clampRunnerEditorValue(patch.coinReward, 0, 1_000_000);
+  if (patch.scale !== undefined) enemy.scale = clampRunnerEditorValue(patch.scale, 0.25, 3);
+  if (patch.speedMultiplier !== undefined) enemy.speedMultiplier = clampRunnerEditorValue(patch.speedMultiplier, 0, 4);
+}
+
+function duplicateRunnerEditorEnemy(state: GameState, enemyId: number): void {
+  const run = state.runner;
+  const enemy = run.enemies.find((candidate) => candidate.id === enemyId);
+  if (!enemy) {
+    return;
+  }
+  addRunnerEditorEnemy(state, {
+    modelId: enemy.modelId ?? 'beholder',
+    x: clampRunnerEditorValue(enemy.x + 0.35, -RUNNER_LANE_HALF_WIDTH, RUNNER_LANE_HALF_WIDTH),
+    distance: clampRunnerEditorValue(enemy.z - run.distance + 1.5, -2, 64),
+    health: enemy.maxHealth,
+    contactDamage: enemy.contactDamage ?? 1,
+    coinReward: enemy.coinReward ?? 1,
+    scale: enemy.scale ?? 1,
+    speedMultiplier: enemy.speedMultiplier ?? 1,
+  });
+}
+
+function removeRunnerEditorEnemy(state: GameState, enemyId: number): void {
+  state.runner.enemies = state.runner.enemies.filter((enemy) => enemy.id !== enemyId);
+}
+
+function replaceRunnerEditorEnemies(state: GameState, config: RunnerEditorConfig): void {
+  state.runner.enemies = state.runner.enemies.filter((enemy) => !enemy.editorPlaced);
+  for (const monster of config.monsters) {
+    addRunnerEditorEnemy(state, monster);
+  }
+}
+
+function clampRunnerEditorValue(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
 }
 
 function tickMining(state: GameState, deltaSeconds: number): void {
@@ -6428,6 +7089,7 @@ function grantDebugResources(state: GameState): void {
   state.resources.marks += debugResourceAmount;
   state.resources.minerals += debugResourceAmount;
   state.resources.gels += debugResourceAmount;
+  state.runnerMeta.coins += debugResourceAmount;
   state.mining.materials = createInitialMiningMaterials();
   for (const resourceId of MINING_MATERIAL_RESOURCE_IDS) {
     state.mining.materials[resourceId as MiningMaterialResourceId] = debugResourceAmount;

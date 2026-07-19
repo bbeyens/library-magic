@@ -1,0 +1,85 @@
+{
+  "pipeline": "runner-shared-animation-only-v1",
+  "assets": [
+    {
+      "id": "sit-to-stand",
+      "source": "exports/runner-mixamo/shared/animations/sit-to-stand-source.fbx",
+      "sourceBytes": 681424,
+      "sourceSha256": "226431b6f2b41c9a834c5e067a5904668f9a1dc6f4dc0c0a6bd5c2c4834c3da5",
+      "sourceFrames": [
+        1.0,
+        69.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerSitToStand",
+      "output": "public/assets/runner/heroes/sit-to-stand.glb",
+      "outputBytes": 73352,
+      "outputSha256": "595e183d221ba101cf8d3b8378281de61447a79dbd71db8c8718da62d7418725",
+      "channelCount": 132
+    },
+    {
+      "id": "stand-to-sit",
+      "source": "exports/runner-mixamo/shared/animations/stand-to-sit-source.fbx",
+      "sourceBytes": 679296,
+      "sourceSha256": "7a57cb0419722d2818b73cf86161cd5eb1b65d183e034e78f9d7c29ec7e3b6c0",
+      "sourceFrames": [
+        1.0,
+        68.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerStandToSit",
+      "output": "public/assets/runner/heroes/stand-to-sit.glb",
+      "outputBytes": 72628,
+      "outputSha256": "ae1cada15e6d9717aa799ac3a448e2c77fe6c8c551b8975484195506953ef064",
+      "channelCount": 132
+    },
+    {
+      "id": "injured-run",
+      "source": "exports/runner-mixamo/shared/animations/injured-run-source.fbx",
+      "sourceBytes": 577056,
+      "sourceSha256": "e682f96572951c97a72d70eb77eddb861c8e4f765cc5b1b2f08355e1258a0616",
+      "sourceFrames": [
+        1.0,
+        20.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerInjuredRun",
+      "output": "public/assets/runner/heroes/injured-run.glb",
+      "outputBytes": 50132,
+      "outputSha256": "36625797e72ac11082efdb925860df336df4ac3b8b70307f246900df8b4ed299",
+      "channelCount": 132
+    },
+    {
+      "id": "standard-run",
+      "source": "exports/runner-mixamo/shared/animations/standard-run-source.fbx",
+      "sourceBytes": 594048,
+      "sourceSha256": "285706607eded28970fc421cac8a38e3fb998c17ba09dde4d7c5718a2d11420c",
+      "sourceFrames": [
+        1.0,
+        23.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerStandardRun",
+      "output": "public/assets/runner/heroes/standard-run.glb",
+      "outputBytes": 51960,
+      "outputSha256": "163a7bcd13c1fc7a0373a56574d027751337600425bbefd0d332ed7bcd6283cf",
+      "channelCount": 132
+    },
+    {
+      "id": "fall-flat",
+      "source": "exports/runner-mixamo/shared/animations/fall-flat-source.fbx",
+      "sourceBytes": 704208,
+      "sourceSha256": "10eb1c5aac70cb3fcf9518d9ff1c28ff165c6de52834be5f0c3b972abe330675",
+      "sourceFrames": [
+        1.0,
+        77.0
+      ],
+      "boneCount": 43,
+      "clip": "RunnerFallFlat",
+      "output": "public/assets/runner/heroes/fall-flat.glb",
+      "outputBytes": 76716,
+      "outputSha256": "724cb15761675f8426af4e9e8de9cb9bc326f81dbeed0b39ad10c80471e506ce",
+      "channelCount": 132
+    }
+  ]
+}
